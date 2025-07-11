@@ -93,7 +93,12 @@ export function Dashboard() {
       id: Date.now().toString(),
       name: projectData.name,
       description: projectData.description,
+      priority: projectData.priority || 'medium',
+      category: projectData.category || 'professional',
       color: projectData.color,
+      is_shared: projectData.is_shared || false,
+      notifications_enabled: projectData.notifications_enabled || false,
+      repeat_enabled: projectData.repeat_enabled || false,
       owner_id: 'current-user',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -108,19 +113,23 @@ export function Dashboard() {
   const handleCreateGoal = (goalData: any) => {
     const newGoal: Goal = {
       id: Date.now().toString(),
-      title: goalData.title,
+      name: goalData.name,
       description: goalData.description,
-      target_value: goalData.target_value,
-      current_value: 0,
-      unit: goalData.unit,
-      category: goalData.category,
+      priority: goalData.priority || 'medium',
+      category: goalData.category || 'professional',
+      progress: 0,
       start_date: goalData.start_date,
-      target_date: goalData.target_date,
-      is_active: true,
+      due_date: goalData.due_date,
+      is_shared: goalData.is_shared || false,
+      notifications_enabled: goalData.notifications_enabled || false,
+      reward_enabled: goalData.reward_enabled || false,
+      reward_description: goalData.reward_description,
+      assigned_projects: [],
+      assigned_tasks: [],
+      notes: goalData.notes,
       created_by: 'current-user',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      milestones: []
     };
     setGoals([...goals, newGoal]);
     setIsGoalFormOpen(false);
@@ -373,20 +382,17 @@ export function Dashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {goals.slice(0, 3).map((goal) => {
-                  const progress = goal.target_value > 0 ? (goal.current_value / goal.target_value) * 100 : 0;
-                  return (
-                    <div key={goal.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-sm">{goal.title}</h4>
-                        <span className="text-xs text-muted-foreground">
-                          {goal.current_value}/{goal.target_value} {goal.unit}
-                        </span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
+                {goals.slice(0, 3).map((goal) => (
+                  <div key={goal.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">{goal.name}</h4>
+                      <span className="text-xs text-muted-foreground">
+                        {goal.progress}%
+                      </span>
                     </div>
-                  );
-                })}
+                    <Progress value={goal.progress} className="h-2" />
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
