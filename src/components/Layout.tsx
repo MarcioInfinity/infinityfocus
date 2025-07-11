@@ -1,3 +1,4 @@
+
 import { ReactNode } from 'react';
 import { 
   Home, 
@@ -7,12 +8,14 @@ import {
   Bell, 
   Settings, 
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,12 +33,20 @@ const navItems = [
 export function Layout({ children }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { showSuccessToast } = useToastNotifications();
 
   const isActivePath = (path: string) => {
     if (path === '/') {
       return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
+  };
+
+  const handleLogout = () => {
+    // Here you would implement actual logout logic
+    showSuccessToast('Logout realizado com sucesso!');
+    navigate('/login');
   };
 
   return (
@@ -79,7 +90,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 flex-1">
           {navItems.map((item) => {
             const isActive = isActivePath(item.path);
             return (
@@ -102,14 +113,25 @@ export function Layout({ children }: LayoutProps) {
 
         {/* User Profile */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
-              <span className="text-sm font-semibold text-primary">U</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
+                <span className="text-sm font-semibold text-primary">U</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">Usuário Demo</p>
+                <p className="text-xs text-muted-foreground truncate">usuario@exemplo.com</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">Usuário Demo</p>
-              <p className="text-xs text-muted-foreground truncate">usuario@exemplo.com</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>

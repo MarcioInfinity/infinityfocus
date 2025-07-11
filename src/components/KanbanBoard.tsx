@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Plus, 
@@ -26,6 +25,7 @@ import { TaskForm } from './forms/TaskForm';
 import { InviteModal } from './modals/InviteModal';
 import { EditColumnModal } from './modals/EditColumnModal';
 import { Task, KanbanColumn, Priority } from '@/types';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 const mockColumns: KanbanColumn[] = [
   {
@@ -88,6 +88,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<KanbanColumn | null>(null);
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+  const { showSuccessToast } = useToastNotifications();
 
   const handleDragStart = (task: Task) => {
     setDraggedTask(task);
@@ -143,13 +144,27 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
   const handleCreateTask = (taskData: any) => {
     const newTask: Task = {
       id: Date.now().toString(),
-      ...taskData,
+      title: taskData.title,
+      description: taskData.description,
+      priority: taskData.priority,
       status: selectedColumn ? columns.find(col => col.id === selectedColumn)?.status || 'todo' : 'todo',
+      category: taskData.category,
+      start_date: taskData.start_date?.toISOString(),
+      due_date: taskData.due_date?.toISOString(),
+      is_indefinite: taskData.is_indefinite,
+      start_time: taskData.time,
+      notifications_enabled: taskData.notify_enabled,
+      repeat_enabled: taskData.frequency_enabled,
+      repeat_type: taskData.frequency_type,
+      repeat_days: taskData.frequency_days?.map(String),
       project_id: projectId,
+      assigned_to: taskData.assigned_to,
       created_by: 'current-user-id',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      notifications: []
+      notifications: [],
+      tags: taskData.tags || [],
+      checklist: taskData.checklist || []
     };
 
     if (selectedColumn) {
@@ -158,10 +173,18 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
           ? { ...column, tasks: [...column.tasks, newTask] }
           : column
       ));
+    } else {
+      // Add to first column if no specific column selected
+      setColumns(prev => prev.map((column, index) => 
+        index === 0 
+          ? { ...column, tasks: [...column.tasks, newTask] }
+          : column
+      ));
     }
 
     setIsTaskFormOpen(false);
     setSelectedColumn(null);
+    showSuccessToast('Tarefa criada com sucesso!');
   };
 
   const handleUpdateColumn = (updatedColumn: KanbanColumn) => {
@@ -200,10 +223,24 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button className="glow-button" onClick={() => setIsTaskFormOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Tarefa
-          </Button>
+          <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+            <DialogTrigger asChild>
+              <Button className="glow-button">
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Tarefa
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <TaskForm
+                onSubmit={handleCreateTask}
+                onCancel={() => {
+                  setIsTaskFormOpen(false);
+                  setSelectedColumn(null);
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+          
           <Button 
             variant="outline" 
             className="neon-border"
@@ -383,12 +420,12 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       </div>
 
       {/* Floating Action Button */}
-      <Button className="floating-action animate-glow" onClick={() => setIsTaskFormOpen(true)}>
-        <Plus className="w-6 h-6" />
-      </Button>
-
-      {/* Modals */}
       <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+        <DialogTrigger asChild>
+          <Button className="floating-action animate-glow">
+            <Plus className="w-6 h-6" />
+          </Button>
+        </DialogTrigger>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <TaskForm
             onSubmit={handleCreateTask}
@@ -400,6 +437,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Modals */}
       <InviteModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}

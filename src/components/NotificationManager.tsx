@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { CustomNotification, NotificationType } from '@/types';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 const mockNotifications: CustomNotification[] = [];
 
@@ -51,10 +52,40 @@ export function NotificationManager() {
     message: '',
     is_active: true
   });
+  const { showSuccessToast } = useToastNotifications();
 
   const handleCreateNotification = () => {
-    // Here we would save to Supabase
-    console.log('Creating notification:', newNotification);
+    // Validate required fields
+    if (!newNotification.message.trim()) {
+      return;
+    }
+
+    if (newNotification.type === 'time' && !newNotification.time) {
+      return;
+    }
+
+    if (newNotification.type === 'day' && newNotification.days_of_week.length === 0) {
+      return;
+    }
+
+    if (newNotification.type === 'date' && !newNotification.specific_date) {
+      return;
+    }
+
+    const notification: CustomNotification = {
+      id: Date.now().toString(),
+      task_id: newNotification.task_id,
+      type: newNotification.type,
+      time: newNotification.time,
+      days_of_week: newNotification.days_of_week,
+      specific_date: newNotification.specific_date,
+      message: newNotification.message,
+      is_active: newNotification.is_active,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    setNotifications(prev => [...prev, notification]);
     setShowCreateForm(false);
     setNewNotification({
       task_id: '',
@@ -65,6 +96,7 @@ export function NotificationManager() {
       message: '',
       is_active: true
     });
+    showSuccessToast('Notificação criada com sucesso!');
   };
 
   const toggleNotification = (id: string) => {
@@ -75,6 +107,7 @@ export function NotificationManager() {
 
   const deleteNotification = (id: string) => {
     setNotifications(prev => prev.filter(notif => notif.id !== id));
+    showSuccessToast('Notificação excluída com sucesso!');
   };
 
   const getNotificationIcon = (type: NotificationType) => {

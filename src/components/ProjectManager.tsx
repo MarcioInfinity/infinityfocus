@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Plus, 
@@ -17,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,8 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Project, ProjectRole } from '@/types';
+import { ProjectForm } from './forms/ProjectForm';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 const mockProjects: Project[] = [];
 
@@ -37,6 +39,8 @@ const roleColors = {
 export function ProjectManager() {
   const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [filter, setFilter] = useState<'all' | 'owned' | 'member'>('all');
+  const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
+  const { showSuccessToast } = useToastNotifications();
 
   const filteredProjects = projects.filter(project => {
     switch (filter) {
@@ -62,6 +66,23 @@ export function ProjectManager() {
     return member?.role || 'viewer';
   };
 
+  const handleCreateProject = (projectData: any) => {
+    const newProject: Project = {
+      id: Date.now().toString(),
+      name: projectData.name,
+      description: projectData.description,
+      color: projectData.color,
+      owner_id: 'current-user-id',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      members: [],
+      tasks: []
+    };
+    setProjects([...projects, newProject]);
+    setIsProjectFormOpen(false);
+    showSuccessToast('Projeto criado com sucesso!');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -74,10 +95,20 @@ export function ProjectManager() {
             Gerencie projetos colaborativos e equipes
           </p>
         </div>
-        <Button className="glow-button">
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Projeto
-        </Button>
+        <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
+          <DialogTrigger asChild>
+            <Button className="glow-button">
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Projeto
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <ProjectForm
+              onSubmit={handleCreateProject}
+              onCancel={() => setIsProjectFormOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
@@ -112,10 +143,20 @@ export function ProjectManager() {
                   : 'Tente ajustar os filtros ou criar um novo projeto'
                 }
               </p>
-              <Button className="glow-button">
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Primeiro Projeto
-              </Button>
+              <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
+                <DialogTrigger asChild>
+                  <Button className="glow-button">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar Primeiro Projeto
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <ProjectForm
+                    onSubmit={handleCreateProject}
+                    onCancel={() => setIsProjectFormOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </CardContent>
           </Card>
         ) : (
@@ -257,9 +298,19 @@ export function ProjectManager() {
       </div>
 
       {/* Floating Action Button */}
-      <Button className="floating-action animate-pulse-glow">
-        <Plus className="w-6 h-6" />
-      </Button>
+      <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
+        <DialogTrigger asChild>
+          <Button className="floating-action animate-pulse-glow">
+            <Plus className="w-6 h-6" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <ProjectForm
+            onSubmit={handleCreateProject}
+            onCancel={() => setIsProjectFormOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
