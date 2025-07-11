@@ -14,7 +14,7 @@ export interface Task {
   title: string;
   description?: string;
   priority: Priority;
-  category: string;
+  category: CategoryType;
   status: TaskStatus;
   due_date?: string;
   start_date?: string;
@@ -76,7 +76,7 @@ export interface Project {
   name: string;
   description?: string;
   priority: Priority;
-  category: string;
+  category: CategoryType;
   color: string;
   is_shared: boolean;
   start_date?: string;
@@ -128,7 +128,7 @@ export interface Goal {
   name: string;
   description?: string;
   priority: Priority;
-  category: string;
+  category: CategoryType;
   progress: number;
   start_date?: string;
   due_date?: string;

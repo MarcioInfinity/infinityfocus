@@ -29,12 +29,6 @@ export function useProjects() {
               email,
               avatar
             )
-          ),
-          tasks (
-            id,
-            title,
-            status,
-            created_at
           )
         `)
         .order('created_at', { ascending: false });
@@ -58,7 +52,8 @@ export function useProjects() {
             email: member.profiles?.email || '',
             avatar: member.profiles?.avatar
           }
-        }))
+        })),
+        tasks: [] // Will be populated separately when needed
       })) as Project[];
     },
     enabled: !!user,

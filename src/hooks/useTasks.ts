@@ -53,7 +53,12 @@ export function useTasks(projectId?: string) {
       return data.map(task => ({
         ...task,
         checklist: task.checklist_items || [],
-        notifications: task.custom_notifications || [],
+        notifications: task.custom_notifications?.map(notif => ({
+          ...notif,
+          type: 'reminder' as const,
+          scheduled_for: new Date().toISOString(),
+          sent: false
+        })) || [],
       })) as Task[];
     },
     enabled: !!user,
