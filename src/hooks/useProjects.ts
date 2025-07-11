@@ -23,12 +23,7 @@ export function useProjects() {
             id,
             user_id,
             role,
-            joined_at,
-            profiles!project_members_user_id_fkey (
-              name,
-              email,
-              avatar
-            )
+            joined_at
           )
         `)
         .order('created_at', { ascending: false });
@@ -38,23 +33,42 @@ export function useProjects() {
         throw error;
       }
 
-      return data.map(project => ({
-        ...project,
-        members: project.project_members.map(member => ({
-          id: member.id,
-          user_id: member.user_id,
-          project_id: project.id,
-          role: member.role,
-          joined_at: member.joined_at,
-          user: {
-            id: member.user_id,
-            name: member.profiles?.name || 'Unknown',
-            email: member.profiles?.email || '',
-            avatar: member.profiles?.avatar
-          }
-        })),
-        tasks: [] // Will be populated separately when needed
-      })) as Project[];
+      // Fetch profiles separately for each project member
+      const projectsWithMembers = await Promise.all(
+        data.map(async (project) => {
+          const membersWithProfiles = await Promise.all(
+            project.project_members.map(async (member) => {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('name, email, avatar')
+                .eq('user_id', member.user_id)
+                .single();
+
+              return {
+                id: member.id,
+                user_id: member.user_id,
+                project_id: project.id,
+                role: member.role,
+                joined_at: member.joined_at,
+                user: {
+                  id: member.user_id,
+                  name: profile?.name || 'Unknown',
+                  email: profile?.email || '',
+                  avatar: profile?.avatar
+                }
+              };
+            })
+          );
+
+          return {
+            ...project,
+            members: membersWithProfiles,
+            tasks: [] // Will be populated separately when needed
+          };
+        })
+      );
+
+      return projectsWithMembers as Project[];
     },
     enabled: !!user,
   });
