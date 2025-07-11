@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Plus, 
@@ -28,36 +27,39 @@ const mockColumns: KanbanColumn[] = [
     title: 'A Fazer',
     status: 'todo',
     color: '#64748b',
-    tasks: []
+    tasks: [],
+    position: 0
   },
   {
     id: '2',
     title: 'Em Progresso',
     status: 'in-progress',
     color: '#3b82f6',
-    tasks: []
+    tasks: [],
+    position: 1
   },
   {
     id: '3',
     title: 'Em Revisão',
     status: 'review',
     color: '#f59e0b',
-    tasks: []
+    tasks: [],
+    position: 2
   },
   {
     id: '4',
     title: 'Concluído',
     status: 'done',
     color: '#10b981',
-    tasks: []
+    tasks: [],
+    position: 3
   }
 ];
 
 const priorityColors = {
   low: 'bg-green-500/20 text-green-400 border-green-500/30',
   medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  urgent: 'bg-red-500/20 text-red-400 border-red-500/30'
+  high: 'bg-red-500/20 text-red-400 border-red-500/30'
 };
 
 const statusIcons = {
@@ -99,8 +101,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
 
   const getPriorityIcon = (priority: Priority) => {
     switch (priority) {
-      case 'urgent': return '🔴';
-      case 'high': return '🟠';
+      case 'high': return '🔴';
       case 'medium': return '🟡';
       case 'low': return '🟢';
     }

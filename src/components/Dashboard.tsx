@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Calendar, 
@@ -154,8 +153,7 @@ export function Dashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${
-                          task.priority === 'urgent' ? 'bg-red-500' :
-                          task.priority === 'high' ? 'bg-orange-500' :
+                          task.priority === 'high' ? 'bg-red-500' :
                           task.priority === 'medium' ? 'bg-yellow-500' :
                           'bg-green-500'
                         }`} />
