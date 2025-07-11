@@ -3,6 +3,12 @@ export type Priority = 'low' | 'medium' | 'high';
 
 export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done';
 
+export type CategoryType = 'professional' | 'intellectual' | 'finance' | 'social' | 'relationship' | 'family' | 'leisure' | 'health' | 'spiritual' | 'emotional' | 'other';
+
+export type FrequencyType = 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
+
+export type NotificationType = 'time' | 'day' | 'date';
+
 export interface Task {
   id: string;
   title: string;
@@ -44,6 +50,25 @@ export interface Notification {
   scheduled_for: string;
   sent: boolean;
   created_at: string;
+  // Additional properties for custom notifications
+  task_id?: string;
+  time?: string;
+  days_of_week?: number[];
+  specific_date?: string;
+  is_active?: boolean;
+}
+
+export interface CustomNotification {
+  id: string;
+  task_id: string;
+  type: NotificationType;
+  time?: string;
+  days_of_week?: number[];
+  specific_date?: string;
+  message: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Project {
@@ -130,7 +155,7 @@ export interface User {
 
 export interface NotificationSettings {
   id: string;
-  user_id: string;
+  user_id: string; 
   tasks_enabled: boolean;
   projects_enabled: boolean;
   goals_enabled: boolean;

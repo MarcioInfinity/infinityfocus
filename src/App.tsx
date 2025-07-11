@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { TaskManager } from "./components/TaskManager";
@@ -28,7 +28,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           
           {/* Main App Routes */}
-          <Route path="/" element={<Layout />}>
+          <Route path="/" element={<Layout><Outlet /></Layout>}>
             <Route index element={<Dashboard />} />
             <Route path="tasks" element={<TaskManager />} />
             <Route path="goals" element={<Goals />} />

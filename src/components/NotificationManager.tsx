@@ -25,9 +25,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Notification, NotificationType } from '@/types';
+import { CustomNotification, NotificationType } from '@/types';
 
-const mockNotifications: Notification[] = [];
+const mockNotifications: CustomNotification[] = [];
 
 const daysOfWeek = [
   { value: 0, label: 'Domingo' },
@@ -40,7 +40,7 @@ const daysOfWeek = [
 ];
 
 export function NotificationManager() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<CustomNotification[]>(mockNotifications);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newNotification, setNewNotification] = useState({
     task_id: '',
@@ -85,7 +85,7 @@ export function NotificationManager() {
     }
   };
 
-  const formatNotificationDetails = (notification: Notification) => {
+  const formatNotificationDetails = (notification: CustomNotification) => {
     switch (notification.type) {
       case 'time':
         return `Horário: ${notification.time}`;

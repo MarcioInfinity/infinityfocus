@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Plus, 
@@ -56,15 +55,14 @@ export function TaskManager() {
       priority: taskData.priority,
       status: 'todo' as const,
       category: taskData.category,
-      custom_category_id: taskData.custom_category ? 'custom-' + Date.now() : undefined,
       start_date: taskData.start_date?.toISOString(),
       due_date: taskData.due_date?.toISOString(),
       is_indefinite: taskData.is_indefinite,
-      time: taskData.time,
-      notify_enabled: taskData.notify_enabled,
-      frequency_enabled: taskData.frequency_enabled,
-      frequency_type: taskData.frequency_type,
-      frequency_days: taskData.frequency_days,
+      start_time: taskData.time,
+      notifications_enabled: taskData.notify_enabled,
+      repeat_enabled: taskData.frequency_enabled,
+      repeat_type: taskData.frequency_type,
+      repeat_days: taskData.frequency_days?.map(String),
       project_id: taskData.assign_to_project ? taskData.project_id : undefined,
       assigned_to: undefined,
       created_by: 'current-user',
@@ -72,7 +70,6 @@ export function TaskManager() {
       updated_at: new Date().toISOString(),
       notifications: [],
       tags: [],
-      position: 0,
       checklist: taskData.checklist || [],
     };
     setTasks([...tasks, newTask]);
