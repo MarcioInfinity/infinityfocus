@@ -145,10 +145,7 @@ export function Dashboard() {
 
           <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="neon-border">
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Projeto
-              </Button>
+              
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <ProjectForm onSubmit={handleCreateProject} onCancel={() => setIsProjectFormOpen(false)} />
@@ -157,10 +154,7 @@ export function Dashboard() {
 
           <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="neon-border">
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Meta
-              </Button>
+              
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <GoalForm onSubmit={handleCreateGoal} onCancel={() => setIsGoalFormOpen(false)} />
