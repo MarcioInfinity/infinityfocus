@@ -1,124 +1,139 @@
 
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { ReactNode } from 'react';
 import { 
-  Calendar, 
+  Home, 
   CheckSquare, 
   FolderKanban, 
-  Settings, 
+  Target, 
   Bell, 
+  Settings, 
   Menu,
-  X,
-  Plus,
-  Target,
-  Infinity
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: Calendar },
-  { name: 'Minhas Tarefas', href: '/tasks', icon: CheckSquare },
-  { name: 'Metas', href: '/goals', icon: Target },
-  { name: 'Projetos', href: '/projects', icon: FolderKanban },
-  { name: 'Notificações', href: '/notifications', icon: Bell },
-  { name: 'Configurações', href: '/settings', icon: Settings },
+interface LayoutProps {
+  children: ReactNode;
+}
+
+const navItems = [
+  { icon: Home, label: 'Dashboard', path: '/' },
+  { icon: CheckSquare, label: 'Tarefas', path: '/tasks' },
+  { icon: FolderKanban, label: 'Projetos', path: '/projects' },
+  { icon: Target, label: 'Metas', path: '/goals' },
+  { icon: Bell, label: 'Notificações', path: '/notifications' },
+  { icon: Settings, label: 'Configurações', path: '/settings' }
 ];
 
-export function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+export function Layout({ children }: LayoutProps) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const isActivePath = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] animate-pulse" />
+      
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
+        <div className="absolute top-10 right-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-float-delayed"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
+      </div>
+
+      {/* Mobile Menu Button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="glass-card neon-border"
+        >
+          {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        </Button>
+      </div>
 
       {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="glass-card h-full p-4 border-r border-white/10">
-          {/* Logo/Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <Infinity className="w-5 h-5 text-white" />
-              </div>
+      <div className={`fixed left-0 top-0 z-40 h-full w-64 glass-card border-r border-white/20 transform transition-transform duration-300 ease-in-out ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0`}>
+        {/* Logo */}
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
+              <Target className="h-6 w-6 text-white" />
+            </div>
+            <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 INFINITY FOCUS
               </h1>
+              <p className="text-xs text-muted-foreground">Gestão & Produtividade</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="w-5 h-5" />
-            </Button>
           </div>
+        </div>
 
-          {/* Navigation */}
-          <nav className="space-y-2">
-            {navigation.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                className="flex items-center space-x-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 group"
+        {/* Navigation */}
+        <nav className="p-4 space-y-2">
+          {navItems.map((item) => {
+            const isActive = isActivePath(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? 'bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 text-primary glow-text'
+                    : 'hover:bg-white/5 text-muted-foreground hover:text-white'
+                }`}
               >
-                <item.icon className="w-5 h-5 group-hover:text-primary transition-colors" />
-                <span className="font-medium">{item.name}</span>
-              </a>
-            ))}
-          </nav>
+                <item.icon className={`h-5 w-5 ${isActive ? 'text-primary' : ''}`} />
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-          {/* Quick Actions */}
-          <div className="mt-8 space-y-2">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Ações Rápidas
-            </h3>
-            <Button className="w-full glow-button justify-start" size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Tarefa
-            </Button>
-            <Button variant="outline" className="w-full justify-start neon-border" size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Projeto
-            </Button>
-            <Button variant="outline" className="w-full justify-start neon-border" size="sm">
-              <Target className="w-4 h-4 mr-2" />
-              Nova Meta
-            </Button>
+        {/* User Profile */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
+              <span className="text-sm font-semibold text-primary">U</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">Usuário Demo</p>
+              <p className="text-xs text-muted-foreground truncate">usuario@exemplo.com</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="lg:pl-64">
-        {/* Mobile header */}
-        <div className="lg:hidden flex items-center justify-between p-4 glass-card border-b border-white/10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">INFINITY FOCUS</h1>
-          <div className="w-10" />
-        </div>
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-        {/* Page content */}
-        <main className="p-4 lg:p-8">
-          <Outlet />
+      {/* Main Content */}
+      <div className="lg:ml-64 min-h-screen">
+        <main className="p-4 lg:p-8 pt-16 lg:pt-8">
+          {children}
         </main>
       </div>
+
+      {/* Toast Notifications */}
+      <Toaster />
     </div>
   );
 }

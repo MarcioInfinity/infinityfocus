@@ -16,6 +16,8 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { GoalForm } from './forms/GoalForm';
+import { EditGoalModal } from './modals/EditGoalModal';
+import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { Goal } from '@/types';
 
 const mockGoals: Goal[] = [];
@@ -29,6 +31,8 @@ const priorityColors = {
 export function Goals() {
   const [goals, setGoals] = useState<Goal[]>(mockGoals);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [viewingGoal, setViewingGoal] = useState<Goal | null>(null);
 
   const handleCreateGoal = (goalData: any) => {
     const newGoal: Goal = {
@@ -43,6 +47,18 @@ export function Goals() {
     };
     setGoals([...goals, newGoal]);
     setIsFormOpen(false);
+  };
+
+  const handleUpdateGoal = (updatedGoal: Goal) => {
+    setGoals(goals.map(goal => 
+      goal.id === updatedGoal.id ? updatedGoal : goal
+    ));
+    setEditingGoal(null);
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    setGoals(goals.filter(goal => goal.id !== goalId));
+    setViewingGoal(null);
   };
 
   const getPriorityIcon = (priority: 'low' | 'medium' | 'high') => {
@@ -251,10 +267,19 @@ export function Goals() {
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
-                      <Button size="sm" variant="outline" className="flex-1 neon-border">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 neon-border"
+                        onClick={() => setEditingGoal(goal)}
+                      >
                         Editar
                       </Button>
-                      <Button size="sm" className="flex-1 glow-button">
+                      <Button 
+                        size="sm" 
+                        className="flex-1 glow-button"
+                        onClick={() => setViewingGoal(goal)}
+                      >
                         Ver Detalhes
                       </Button>
                     </div>
@@ -273,6 +298,26 @@ export function Goals() {
       >
         <Plus className="w-6 h-6" />
       </Button>
+
+      {/* Modals */}
+      {editingGoal && (
+        <EditGoalModal
+          goal={editingGoal}
+          isOpen={!!editingGoal}
+          onClose={() => setEditingGoal(null)}
+          onSave={handleUpdateGoal}
+        />
+      )}
+
+      {viewingGoal && (
+        <GoalDetailsModal
+          goal={viewingGoal}
+          isOpen={!!viewingGoal}
+          onClose={() => setViewingGoal(null)}
+          onDelete={handleDeleteGoal}
+          onUpdate={handleUpdateGoal}
+        />
+      )}
     </div>
   );
 }

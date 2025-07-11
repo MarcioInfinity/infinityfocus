@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { 
   Plus, 
@@ -7,18 +8,23 @@ import {
   Flag,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  UserPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { TaskForm } from './forms/TaskForm';
+import { InviteModal } from './modals/InviteModal';
+import { EditColumnModal } from './modals/EditColumnModal';
 import { Task, KanbanColumn, Priority } from '@/types';
 
 const mockColumns: KanbanColumn[] = [
@@ -77,9 +83,18 @@ interface KanbanBoardProps {
 export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
   const [columns, setColumns] = useState<KanbanColumn[]>(mockColumns);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<KanbanColumn | null>(null);
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<KanbanColumn | null>(null);
+  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
 
   const handleDragStart = (task: Task) => {
     setDraggedTask(task);
+  };
+
+  const handleColumnDragStart = (column: KanbanColumn) => {
+    setDraggedColumn(column);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -99,12 +114,77 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
     setDraggedTask(null);
   };
 
+  const handleColumnDrop = (targetColumnId: string) => {
+    if (!draggedColumn) return;
+
+    const targetColumn = columns.find(col => col.id === targetColumnId);
+    if (!targetColumn) return;
+
+    setColumns(prev => {
+      const newColumns = [...prev];
+      const draggedIndex = newColumns.findIndex(col => col.id === draggedColumn.id);
+      const targetIndex = newColumns.findIndex(col => col.id === targetColumnId);
+
+      // Remove the dragged column
+      const [removed] = newColumns.splice(draggedIndex, 1);
+      // Insert it at the target position
+      newColumns.splice(targetIndex, 0, removed);
+
+      // Update positions
+      return newColumns.map((col, index) => ({
+        ...col,
+        position: index
+      }));
+    });
+
+    setDraggedColumn(null);
+  };
+
+  const handleCreateTask = (taskData: any) => {
+    const newTask: Task = {
+      id: Date.now().toString(),
+      ...taskData,
+      status: selectedColumn ? columns.find(col => col.id === selectedColumn)?.status || 'todo' : 'todo',
+      project_id: projectId,
+      created_by: 'current-user-id',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      notifications: []
+    };
+
+    if (selectedColumn) {
+      setColumns(prev => prev.map(column => 
+        column.id === selectedColumn 
+          ? { ...column, tasks: [...column.tasks, newTask] }
+          : column
+      ));
+    }
+
+    setIsTaskFormOpen(false);
+    setSelectedColumn(null);
+  };
+
+  const handleUpdateColumn = (updatedColumn: KanbanColumn) => {
+    setColumns(prev => prev.map(col => 
+      col.id === updatedColumn.id ? updatedColumn : col
+    ));
+  };
+
+  const handleDeleteColumn = (columnId: string) => {
+    setColumns(prev => prev.filter(col => col.id !== columnId));
+  };
+
   const getPriorityIcon = (priority: Priority) => {
     switch (priority) {
       case 'high': return '🔴';
       case 'medium': return '🟡';
       case 'low': return '🟢';
     }
+  };
+
+  const openTaskForm = (columnId: string) => {
+    setSelectedColumn(columnId);
+    setIsTaskFormOpen(true);
   };
 
   return (
@@ -120,11 +200,15 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button className="glow-button">
+          <Button className="glow-button" onClick={() => setIsTaskFormOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nova Tarefa
           </Button>
-          <Button variant="outline" className="neon-border">
+          <Button 
+            variant="outline" 
+            className="neon-border"
+            onClick={() => setIsInviteModalOpen(true)}
+          >
             <User className="w-4 h-4 mr-2" />
             Convidar Membro
           </Button>
@@ -139,21 +223,46 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
           return (
             <div
               key={column.id}
-              className="kanban-column min-w-[300px] flex-shrink-0"
+              className="kanban-column min-w-[280px] flex-shrink-0"
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(column.id, column.status)}
             >
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-2 cursor-move"
+                  draggable
+                  onDragStart={() => handleColumnDragStart(column)}
+                  onDragOver={handleDragOver}
+                  onDrop={() => handleColumnDrop(column.id)}
+                >
                   <StatusIcon className="w-5 h-5" style={{ color: column.color }} />
                   <h3 className="font-semibold text-lg">{column.title}</h3>
                   <Badge variant="secondary" className="text-xs">
                     {column.tasks.length}
                   </Badge>
                 </div>
-                <Button variant="ghost" size="sm">
-                  <Plus className="w-4 h-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="glass-card border-white/20">
+                    <DropdownMenuItem onClick={() => openTaskForm(column.id)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar Tarefa
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditingColumn(column)}>
+                      Editar Coluna
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-red-400"
+                      onClick={() => handleDeleteColumn(column.id)}
+                    >
+                      Excluir Coluna
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <div className="space-y-3">
@@ -165,6 +274,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
                       variant="ghost" 
                       size="sm" 
                       className="mt-2 text-xs"
+                      onClick={() => openTaskForm(column.id)}
                     >
                       <Plus className="w-3 h-3 mr-1" />
                       Adicionar
@@ -273,9 +383,39 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       </div>
 
       {/* Floating Action Button */}
-      <Button className="floating-action animate-glow">
+      <Button className="floating-action animate-glow" onClick={() => setIsTaskFormOpen(true)}>
         <Plus className="w-6 h-6" />
       </Button>
+
+      {/* Modals */}
+      <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <TaskForm
+            onSubmit={handleCreateTask}
+            onCancel={() => {
+              setIsTaskFormOpen(false);
+              setSelectedColumn(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <InviteModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        projectName={projectName}
+        projectId={projectId}
+      />
+
+      {editingColumn && (
+        <EditColumnModal
+          column={editingColumn}
+          isOpen={!!editingColumn}
+          onClose={() => setEditingColumn(null)}
+          onSave={handleUpdateColumn}
+          onDelete={handleDeleteColumn}
+        />
+      )}
     </div>
   );
 }

@@ -1,141 +1,116 @@
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
-  Settings as SettingsIcon, 
   User, 
   Bell, 
-  Camera, 
-  Lock,
-  Mail,
-  Smartphone,
-  Clock,
-  Calendar
+  Lock, 
+  Upload,
+  Save,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-
-const profileSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-});
-
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Senha atual é obrigatória'),
-  newPassword: z.string().min(6, 'Nova senha deve ter pelo menos 6 caracteres'),
-  confirmPassword: z.string().min(6, 'Confirmação de senha é obrigatória'),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Senhas não coincidem",
-  path: ["confirmPassword"],
-});
-
-const notificationSchema = z.object({
-  notify_tasks: z.boolean(),
-  notify_projects: z.boolean(),
-  notify_goals: z.boolean(),
-  notify_app: z.boolean(),
-  notify_email: z.boolean(),
-  quiet_hours_start: z.string().optional(),
-  quiet_hours_end: z.string().optional(),
-});
-
-const weekDays = [
-  { value: 0, label: 'Domingo' },
-  { value: 1, label: 'Segunda-feira' },
-  { value: 2, label: 'Terça-feira' },
-  { value: 3, label: 'Quarta-feira' },
-  { value: 4, label: 'Quinta-feira' },
-  { value: 5, label: 'Sexta-feira' },
-  { value: 6, label: 'Sábado' },
-];
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 export function Settings() {
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [quietDays, setQuietDays] = useState<number[]>([]);
-  const [profileImage, setProfileImage] = useState<string>('');
-
-  // Mock user data
-  const currentUser = {
-    name: 'João Silva',
-    email: 'joao@exemplo.com',
-    avatar: profileImage,
-  };
-
-  const profileForm = useForm<z.infer<typeof profileSchema>>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      name: currentUser.name,
-      email: currentUser.email,
-    },
+  const [profileData, setProfileData] = useState({
+    name: 'Usuário Demo',
+    email: 'usuario@exemplo.com',
+    avatar: ''
   });
 
-  const passwordForm = useForm<z.infer<typeof passwordSchema>>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    },
+  const [notificationSettings, setNotificationSettings] = useState({
+    tasks: true,
+    projects: true,
+    goals: true,
+    app_notifications: true,
+    email_notifications: false,
+    quiet_hours_enabled: false,
+    quiet_start: '22:00',
+    quiet_end: '08:00',
+    quiet_days: []
   });
 
-  const notificationForm = useForm<z.infer<typeof notificationSchema>>({
-    resolver: zodResolver(notificationSchema),
-    defaultValues: {
-      notify_tasks: true,
-      notify_projects: true,
-      notify_goals: true,
-      notify_app: true,
-      notify_email: false,
-      quiet_hours_start: '22:00',
-      quiet_hours_end: '08:00',
-    },
+  const [passwordData, setPasswordData] = useState({
+    current: '',
+    new: '',
+    confirm: ''
   });
 
-  const handleProfileUpdate = (values: z.infer<typeof profileSchema>) => {
-    console.log('Updating profile:', values);
-    // Aqui seria implementada a atualização do perfil via Supabase
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const { showSuccessToast, showErrorToast } = useToastNotifications();
+
+  const handleSaveProfile = () => {
+    // Aqui seria integrado com Supabase para salvar dados do perfil
+    showSuccessToast('Perfil salvo!', 'Suas informações de perfil foram atualizadas com sucesso');
   };
 
-  const handlePasswordChange = (values: z.infer<typeof passwordSchema>) => {
-    console.log('Changing password');
-    // Aqui seria implementada a mudança de senha via Supabase
-    setIsPasswordDialogOpen(false);
-    passwordForm.reset();
+  const handleSaveNotifications = () => {
+    // Aqui seria integrado com Supabase para salvar configurações de notificação
+    showSuccessToast('Configurações salvas!', 'Suas preferências de notificação foram atualizadas');
   };
 
-  const handleNotificationUpdate = (values: z.infer<typeof notificationSchema>) => {
-    console.log('Updating notifications:', values, { quietDays });
-    // Aqui seria implementada a atualização das configurações de notificação via Supabase
+  const handleChangePassword = () => {
+    if (passwordData.new !== passwordData.confirm) {
+      showErrorToast('Erro!', 'As senhas não coincidem');
+      return;
+    }
+    
+    if (passwordData.new.length < 6) {
+      showErrorToast('Erro!', 'A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    // Aqui seria integrado com Supabase para alterar senha
+    showSuccessToast('Senha alterada!', 'Sua senha foi alterada com sucesso');
+    setPasswordData({ current: '', new: '', confirm: '' });
+    setIsPasswordModalOpen(false);
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Aqui seria integrado com Supabase Storage para upload da imagem
       const reader = new FileReader();
       reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setProfileImage(result);
-        // Aqui seria implementado o upload da imagem para o Supabase Storage
+        setProfileData({ ...profileData, avatar: e.target?.result as string });
+        showSuccessToast('Foto atualizada!', 'Sua foto de perfil foi atualizada');
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const toggleQuietDay = (day: number) => {
-    setQuietDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day)
-        : [...prev, day]
-    );
+  const weekDays = [
+    { id: 'monday', label: 'Segunda' },
+    { id: 'tuesday', label: 'Terça' },
+    { id: 'wednesday', label: 'Quarta' },
+    { id: 'thursday', label: 'Quinta' },
+    { id: 'friday', label: 'Sexta' },
+    { id: 'saturday', label: 'Sábado' },
+    { id: 'sunday', label: 'Domingo' }
+  ];
+
+  const toggleQuietDay = (dayId: string) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      quiet_days: prev.quiet_days.includes(dayId)
+        ? prev.quiet_days.filter(d => d !== dayId)
+        : [...prev.quiet_days, dayId]
+    }));
   };
 
   return (
@@ -146,25 +121,23 @@ export function Settings() {
           Configurações
         </h1>
         <p className="text-muted-foreground mt-1">
-          Gerencie seu perfil e preferências de notificação
+          Gerencie suas preferências e configurações da conta
         </p>
       </div>
 
-      {/* Settings Tabs */}
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-2 glass-card">
-          <TabsTrigger value="profile" className="data-[state=active]:glow-button">
-            <User className="w-4 h-4 mr-2" />
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="w-4 h-4" />
             Perfil e Conta
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:glow-button">
-            <Bell className="w-4 h-4 mr-2" />
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="w-4 h-4" />
             Notificações
           </TabsTrigger>
         </TabsList>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="mt-6 space-y-6">
+        <TabsContent value="profile" className="space-y-6">
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -173,168 +146,170 @@ export function Settings() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Profile Picture */}
-              <div className="flex items-center space-x-4">
+              {/* Avatar */}
+              <div className="flex items-center gap-4">
                 <Avatar className="w-20 h-20">
-                  <AvatarImage src={profileImage} />
-                  <AvatarFallback className="text-2xl">
-                    {currentUser.name.split(' ').map(n => n[0]).join('')}
+                  <AvatarImage src={profileData.avatar} />
+                  <AvatarFallback className="text-lg bg-primary/20">
+                    {profileData.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-medium">{currentUser.name}</h3>
-                  <label htmlFor="avatar-upload">
-                    <Button size="sm" className="glow-button cursor-pointer" asChild>
+                  <Label htmlFor="avatar-upload" className="cursor-pointer">
+                    <Button variant="outline" className="neon-border" asChild>
                       <span>
-                        <Camera className="w-4 h-4 mr-2" />
+                        <Upload className="w-4 h-4 mr-2" />
                         Alterar Foto
                       </span>
                     </Button>
-                    <input
-                      id="avatar-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                    />
-                  </label>
+                  </Label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    JPG, PNG ou GIF (máx. 2MB)
+                  </p>
                 </div>
               </div>
 
-              {/* Profile Form */}
-              <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-4">
-                  <FormField
-                    control={profileForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="glass-card border-white/20" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <Separator />
 
-                  <FormField
-                    control={profileForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Mail className="w-4 h-4" />
-                          Email
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field} disabled className="glass-card border-white/20 opacity-50" />
-                        </FormControl>
-                        <div className="text-sm text-muted-foreground">
-                          O email não pode ser alterado
+              {/* Nome */}
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={profileData.name}
+                  onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                  className="neon-border"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={profileData.email}
+                  disabled
+                  className="bg-muted/50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O email não pode ser alterado por questões de segurança
+                </p>
+              </div>
+
+              {/* Senha */}
+              <div className="space-y-2">
+                <Label>Senha</Label>
+                <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="neon-border">
+                      <Lock className="w-4 h-4 mr-2" />
+                      Trocar Senha
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="glass-card">
+                    <DialogHeader>
+                      <DialogTitle>Alterar Senha</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Senha Atual</Label>
+                        <div className="relative">
+                          <Input
+                            type={showPassword.current ? "text" : "password"}
+                            value={passwordData.current}
+                            onChange={(e) => setPasswordData({...passwordData, current: e.target.value})}
+                            className="neon-border pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2"
+                            onClick={() => setShowPassword({...showPassword, current: !showPassword.current})}
+                          >
+                            {showPassword.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      </div>
 
-                  <Button type="submit" className="glow-button">
-                    Salvar Alterações
-                  </Button>
-                </form>
-              </Form>
-
-              {/* Password Change */}
-              <div className="pt-6 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-medium flex items-center gap-2">
-                      <Lock className="w-5 h-5" />
-                      Senha
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Altere sua senha para manter sua conta segura
-                    </p>
-                  </div>
-                  <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="neon-border">
-                        Trocar Senha
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="glass-card">
-                      <DialogHeader>
-                        <DialogTitle>Alterar Senha</DialogTitle>
-                      </DialogHeader>
-                      <Form {...passwordForm}>
-                        <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-4">
-                          <FormField
-                            control={passwordForm.control}
-                            name="currentPassword"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Senha Atual</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="password" className="glass-card border-white/20" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
+                      <div className="space-y-2">
+                        <Label>Nova Senha</Label>
+                        <div className="relative">
+                          <Input
+                            type={showPassword.new ? "text" : "password"}
+                            value={passwordData.new}
+                            onChange={(e) => setPasswordData({...passwordData, new: e.target.value})}
+                            className="neon-border pr-10"
                           />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2"
+                            onClick={() => setShowPassword({...showPassword, new: !showPassword.new})}
+                          >
+                            {showPassword.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      </div>
 
-                          <FormField
-                            control={passwordForm.control}
-                            name="newPassword"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Nova Senha</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="password" className="glass-card border-white/20" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
+                      <div className="space-y-2">
+                        <Label>Confirmar Nova Senha</Label>
+                        <div className="relative">
+                          <Input
+                            type={showPassword.confirm ? "text" : "password"}
+                            value={passwordData.confirm}
+                            onChange={(e) => setPasswordData({...passwordData, confirm: e.target.value})}
+                            className="neon-border pr-10"
                           />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2"
+                            onClick={() => setShowPassword({...showPassword, confirm: !showPassword.confirm})}
+                          >
+                            {showPassword.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      </div>
 
-                          <FormField
-                            control={passwordForm.control}
-                            name="confirmPassword"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Confirmar Nova Senha</FormLabel>
-                                <FormControl>
-                                  <Input {...field} type="password" className="glass-card border-white/20" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="flex gap-2 pt-4">
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              className="flex-1 neon-border"
-                              onClick={() => setIsPasswordDialogOpen(false)}
-                            >
-                              Cancelar
-                            </Button>
-                            <Button type="submit" className="flex-1 glow-button">
-                              Alterar Senha
-                            </Button>
-                          </div>
-                        </form>
-                      </Form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                      <div className="flex gap-3 pt-4">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setIsPasswordModalOpen(false)}
+                          className="flex-1"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button 
+                          onClick={handleChangePassword}
+                          className="flex-1 glow-button"
+                        >
+                          Alterar Senha
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
+
+              <Button onClick={handleSaveProfile} className="w-full glow-button">
+                <Save className="w-4 h-4 mr-2" />
+                Salvar Perfil
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="mt-6 space-y-6">
+        <TabsContent value="notifications" className="space-y-6">
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -342,205 +317,118 @@ export function Settings() {
                 Preferências de Notificação
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <Form {...notificationForm}>
-                <form onSubmit={notificationForm.handleSubmit(handleNotificationUpdate)} className="space-y-6">
-                  {/* Notification Types */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-medium">O que Notificar</h4>
-                    
-                    <FormField
-                      control={notificationForm.control}
-                      name="notify_tasks"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              Tarefas
-                            </FormLabel>
-                            <div className="text-sm text-muted-foreground">
-                              Receber notificações sobre suas tarefas
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+            <CardContent className="space-y-6">
+              {/* Tipos de Notificação */}
+              <div className="space-y-4">
+                <h3 className="font-medium">O que notificar</h3>
+                
+                <div className="flex items-center justify-between">
+                  <Label>Tarefas</Label>
+                  <Switch
+                    checked={notificationSettings.tasks}
+                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, tasks: checked})}
+                  />
+                </div>
 
-                    <FormField
-                      control={notificationForm.control}
-                      name="notify_projects"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              Projetos
-                            </FormLabel>
-                            <div className="text-sm text-muted-foreground">
-                              Receber notificações sobre projetos compartilhados
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                <div className="flex items-center justify-between">
+                  <Label>Projetos</Label>
+                  <Switch
+                    checked={notificationSettings.projects}
+                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, projects: checked})}
+                  />
+                </div>
 
-                    <FormField
-                      control={notificationForm.control}
-                      name="notify_goals"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">
-                              Metas
-                            </FormLabel>
-                            <div className="text-sm text-muted-foreground">
-                              Receber notificações sobre progresso das metas
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label>Metas</Label>
+                  <Switch
+                    checked={notificationSettings.goals}
+                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, goals: checked})}
+                  />
+                </div>
+              </div>
 
-                  {/* Notification Methods */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-medium">Como Notificar</h4>
-                    
-                    <FormField
-                      control={notificationForm.control}
-                      name="notify_app"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
-                          <div className="space-y-0.5">
-                            <FormLabel className="flex items-center gap-2 text-base">
-                              <Smartphone className="w-4 h-4" />
-                              Notificar por App
-                            </FormLabel>
-                            <div className="text-sm text-muted-foreground">
-                              Notificações do navegador (requer autorização)
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+              <Separator />
 
-                    <FormField
-                      control={notificationForm.control}
-                      name="notify_email"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
-                          <div className="space-y-0.5">
-                            <FormLabel className="flex items-center gap-2 text-base">
-                              <Mail className="w-4 h-4" />
-                              Notificar por Email
-                            </FormLabel>
-                            <div className="text-sm text-muted-foreground">
-                              Receber notificações importantes por email
-                            </div>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+              {/* Métodos de Notificação */}
+              <div className="space-y-4">
+                <h3 className="font-medium">Como notificar</h3>
+                
+                <div className="flex items-center justify-between">
+                  <Label>Notificar por App</Label>
+                  <Switch
+                    checked={notificationSettings.app_notifications}
+                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, app_notifications: checked})}
+                  />
+                </div>
 
-                  {/* Quiet Hours */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-medium flex items-center gap-2">
-                      <Clock className="w-5 h-5" />
-                      Horário Silencioso
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={notificationForm.control}
-                        name="quiet_hours_start"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Início</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="time" className="glass-card border-white/20" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                <div className="flex items-center justify-between">
+                  <Label>Notificar por Email</Label>
+                  <Switch
+                    checked={notificationSettings.email_notifications}
+                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, email_notifications: checked})}
+                  />
+                </div>
+              </div>
 
-                      <FormField
-                        control={notificationForm.control}
-                        name="quiet_hours_end"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Fim</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="time" className="glass-card border-white/20" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+              <Separator />
+
+              {/* Horário Silencioso */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Não notificar em horários específicos</Label>
+                  <Switch
+                    checked={notificationSettings.quiet_hours_enabled}
+                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, quiet_hours_enabled: checked})}
+                  />
+                </div>
+
+                {notificationSettings.quiet_hours_enabled && (
+                  <div className="glass-card p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Início</Label>
+                        <Input
+                          type="time"
+                          value={notificationSettings.quiet_start}
+                          onChange={(e) => setNotificationSettings({...notificationSettings, quiet_start: e.target.value})}
+                          className="neon-border"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fim</Label>
+                        <Input
+                          type="time"
+                          value={notificationSettings.quiet_end}
+                          onChange={(e) => setNotificationSettings({...notificationSettings, quiet_end: e.target.value})}
+                          className="neon-border"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Dias da semana para não notificar</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {weekDays.map((day) => (
+                          <Button
+                            key={day.id}
+                            variant={notificationSettings.quiet_days.includes(day.id) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => toggleQuietDay(day.id)}
+                            className={notificationSettings.quiet_days.includes(day.id) ? "glow-button" : "neon-border"}
+                          >
+                            {day.label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
 
-                  {/* Quiet Days */}
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-medium flex items-center gap-2">
-                      <Calendar className="w-5 h-5" />
-                      Dias Silenciosos
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Selecione os dias em que não deseja receber notificações
-                    </p>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {weekDays.map((day) => (
-                        <Button
-                          key={day.value}
-                          type="button"
-                          variant={quietDays.includes(day.value) ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => toggleQuietDay(day.value)}
-                          className={quietDays.includes(day.value) ? "glow-button" : "neon-border"}
-                        >
-                          {day.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full glow-button">
-                    Salvar Configurações
-                  </Button>
-                </form>
-              </Form>
+              <Button onClick={handleSaveNotifications} className="w-full glow-button">
+                <Save className="w-4 h-4 mr-2" />
+                Salvar Configurações
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
