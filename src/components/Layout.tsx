@@ -9,7 +9,9 @@ import {
   Bell, 
   Menu,
   X,
-  Plus
+  Plus,
+  Target,
+  Infinity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -17,6 +19,7 @@ import { cn } from '@/lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Calendar },
   { name: 'Minhas Tarefas', href: '/tasks', icon: CheckSquare },
+  { name: 'Metas', href: '/goals', icon: Target },
   { name: 'Projetos', href: '/projects', icon: FolderKanban },
   { name: 'Notificações', href: '/notifications', icon: Bell },
   { name: 'Configurações', href: '/settings', icon: Settings },
@@ -45,10 +48,10 @@ export function Layout() {
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <CheckSquare className="w-5 h-5 text-white" />
+                <Infinity className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                TaskFlow
+                INFINITY FOCUS
               </h1>
             </div>
             <Button
@@ -88,6 +91,10 @@ export function Layout() {
               <Plus className="w-4 h-4 mr-2" />
               Novo Projeto
             </Button>
+            <Button variant="outline" className="w-full justify-start neon-border" size="sm">
+              <Target className="w-4 h-4 mr-2" />
+              Nova Meta
+            </Button>
           </div>
         </div>
       </div>
@@ -103,7 +110,7 @@ export function Layout() {
           >
             <Menu className="w-5 h-5" />
           </Button>
-          <h1 className="text-lg font-semibold">TaskFlow</h1>
+          <h1 className="text-lg font-semibold">INFINITY FOCUS</h1>
           <div className="w-10" />
         </div>
 
