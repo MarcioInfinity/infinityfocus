@@ -9,37 +9,49 @@ import { GoalForm } from './forms/GoalForm';
 import { EditGoalModal } from './modals/EditGoalModal';
 import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { Goal } from '@/types';
-const mockGoals: Goal[] = [];
+import { useGoals } from '@/hooks/useGoals';
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
 const priorityColors = {
   low: 'bg-green-500/20 text-green-400 border-green-500/30',
   medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   high: 'bg-red-500/20 text-red-400 border-red-500/30'
 };
 export function Goals() {
-  const [goals, setGoals] = useState<Goal[]>(mockGoals);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [viewingGoal, setViewingGoal] = useState<Goal | null>(null);
+  
+  // Real data hooks
+  const { goals, createGoal, updateGoal, deleteGoal, isLoading } = useGoals();
+  const { tasks } = useTasks();
+  const { projects } = useProjects();
   const handleCreateGoal = (goalData: any) => {
-    const newGoal: Goal = {
-      id: Date.now().toString(),
-      ...goalData,
-      progress: 0,
-      created_by: 'current-user-id',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    createGoal({
+      name: goalData.name,
+      description: goalData.description,
+      priority: goalData.priority || 'medium',
+      category: goalData.category || 'professional',
+      start_date: goalData.start_date,
+      due_date: goalData.due_date,
+      is_shared: goalData.is_shared || false,
+      notifications_enabled: goalData.notifications_enabled || false,
+      reward_enabled: goalData.reward_enabled || false,
+      reward_description: goalData.reward_description,
       assigned_projects: goalData.assigned_projects || [],
-      assigned_tasks: goalData.assigned_tasks || []
-    };
-    setGoals([...goals, newGoal]);
+      assigned_tasks: goalData.assigned_tasks || [],
+      notes: goalData.notes,
+    });
     setIsFormOpen(false);
   };
-  const handleUpdateGoal = (updatedGoal: Goal) => {
-    setGoals(goals.map(goal => goal.id === updatedGoal.id ? updatedGoal : goal));
-    setEditingGoal(null);
+  const handleUpdateGoal = (updates: Partial<Goal>) => {
+    if (editingGoal) {
+      updateGoal({ id: editingGoal.id, updates });
+      setEditingGoal(null);
+    }
   };
   const handleDeleteGoal = (goalId: string) => {
-    setGoals(goals.filter(goal => goal.id !== goalId));
+    deleteGoal(goalId);
     setViewingGoal(null);
   };
   const getPriorityIcon = (priority: 'low' | 'medium' | 'high') => {

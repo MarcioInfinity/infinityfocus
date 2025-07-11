@@ -9,7 +9,9 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Task, Priority } from '@/types';
 import { TaskForm } from './forms/TaskForm';
-const mockTasks: Task[] = [];
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 const priorityColors = {
   low: 'bg-green-500/20 text-green-400 border-green-500/30',
   medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -22,70 +24,85 @@ const statusIcons = {
   'done': CheckCircle
 };
 export function TaskManager() {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
   const [filter, setFilter] = useState<'all' | 'today' | 'overdue' | 'completed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  // Real data hooks
+  const { tasks, createTask, updateTask, deleteTask, isLoading } = useTasks();
+  const { projects } = useProjects();
+  const { showSuccessToast } = useToastNotifications();
   const handleCreateTask = (taskData: any) => {
-    const newTask: Task = {
-      id: Date.now().toString(),
+    createTask({
       title: taskData.title,
       description: taskData.description,
       priority: taskData.priority,
-      status: 'todo' as const,
       category: taskData.category,
-      start_date: taskData.start_date?.toISOString(),
-      due_date: taskData.due_date?.toISOString(),
-      is_indefinite: taskData.is_indefinite,
+      start_date: taskData.start_date,
+      due_date: taskData.due_date,
       start_time: taskData.time,
+      end_time: taskData.end_time,
+      is_indefinite: taskData.is_indefinite,
       notifications_enabled: taskData.notify_enabled,
       repeat_enabled: taskData.frequency_enabled,
       repeat_type: taskData.frequency_type,
-      repeat_days: taskData.frequency_days?.map(String),
+      repeat_days: taskData.frequency_days,
       project_id: taskData.assign_to_project ? taskData.project_id : undefined,
-      assigned_to: undefined,
-      created_by: 'current-user',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      notifications: [],
-      tags: [],
-      checklist: taskData.checklist || []
-    };
-    setTasks([...tasks, newTask]);
+      goal_id: taskData.goal_id,
+      tags: taskData.tags || [],
+    });
     setIsFormOpen(false);
   };
   const getFilteredTasks = (type: 'personal' | 'shared' | 'all') => {
     let filteredTasks = tasks;
 
     // Filter by type
-    switch (type) {
-      case 'personal':
-        filteredTasks = tasks.filter(task => !task.project_id);
-        break;
-      case 'shared':
-        filteredTasks = tasks.filter(task => task.project_id);
-        break;
-      case 'all':
-      default:
-        filteredTasks = tasks;
-        break;
+    if (type === 'personal') {
+      // Personal tasks are tasks not assigned to shared projects
+      filteredTasks = tasks.filter(task => {
+        if (!task.project_id) return true;
+        const project = projects.find(p => p.id === task.project_id);
+        return project ? !project.is_shared : true;
+      });
+    } else if (type === 'shared') {
+      // Shared tasks are tasks assigned to shared projects
+      filteredTasks = tasks.filter(task => {
+        if (!task.project_id) return false;
+        const project = projects.find(p => p.id === task.project_id);
+        return project ? project.is_shared : false;
+      });
     }
 
     // Apply search and filters
-    return filteredTasks.filter(task => {
-      const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) || task.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      if (!matchesSearch) return false;
-      switch (filter) {
-        case 'today':
-          return task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString();
-        case 'overdue':
-          return task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
-        case 'completed':
-          return task.status === 'done';
-        default:
-          return true;
-      }
-    });
+    return filteredTasks
+      .filter(task => {
+        const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            task.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+        if (!matchesSearch) return false;
+        
+        switch (filter) {
+          case 'today':
+            return task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString();
+          case 'overdue':
+            return task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
+          case 'completed':
+            return task.status === 'done';
+          default:
+            return true;
+        }
+      })
+      .sort((a, b) => {
+        // Sort by priority and due date
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        if (a.priority !== b.priority) {
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        }
+        if (a.due_date && b.due_date) {
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
   };
   const getPriorityIcon = (priority: Priority) => {
     switch (priority) {
@@ -136,9 +153,18 @@ export function TaskManager() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="glass-card border-white/20">
+                        <DropdownMenuItem onClick={() => updateTask({ id: task.id, updates: { status: task.status === 'done' ? 'todo' : 'done' } })}>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          {task.status === 'done' ? 'Marcar como Pendente' : 'Marcar como Concluída'}
+                        </DropdownMenuItem>
                         <DropdownMenuItem>Editar</DropdownMenuItem>
                         <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-400">Excluir</DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-red-400"
+                          onClick={() => deleteTask(task.id)}
+                        >
+                          Excluir
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -180,7 +206,11 @@ export function TaskManager() {
                     <div className="text-xs text-muted-foreground">
                       Criada em {new Date(task.created_at).toLocaleDateString('pt-BR')}
                     </div>
-                    {task.status !== 'done' && <Button size="sm" className="glow-button">
+                    {task.status !== 'done' && <Button 
+                        size="sm" 
+                        className="glow-button"
+                        onClick={() => updateTask({ id: task.id, updates: { status: 'done' } })}
+                      >
                         Marcar como Concluída
                       </Button>}
                   </div>
@@ -205,8 +235,7 @@ export function TaskManager() {
             
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <TaskForm onSubmit={handleCreateTask} onCancel={() => setIsFormOpen(false)} projects={[]} // Aqui viriam os projetos do usuário
-          />
+            <TaskForm onSubmit={handleCreateTask} onCancel={() => setIsFormOpen(false)} projects={projects} />
           </DialogContent>
         </Dialog>
       </div>
@@ -234,10 +263,10 @@ export function TaskManager() {
             Geral ({tasks.length})
           </TabsTrigger>
           <TabsTrigger value="personal" className="data-[state=active]:glow-button">
-            Pessoal ({tasks.filter(t => !t.project_id).length})
+            Pessoal ({getFilteredTasks('personal').length})
           </TabsTrigger>
           <TabsTrigger value="shared" className="data-[state=active]:glow-button">
-            Compartilhadas ({tasks.filter(t => t.project_id).length})
+            Compartilhadas ({getFilteredTasks('shared').length})
           </TabsTrigger>
         </TabsList>
         

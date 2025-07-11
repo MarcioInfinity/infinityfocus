@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Calendar, CheckCircle, Clock, FolderKanban, TrendingUp, Plus, Bell, Target, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,71 +9,100 @@ import { TaskForm } from './forms/TaskForm';
 import { ProjectForm } from './forms/ProjectForm';
 import { GoalForm } from './forms/GoalForm';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
-
-// Mock data for demonstration - will be replaced with Supabase data
-const mockTasks: Task[] = [];
-const mockProjects: Project[] = [];
-const mockGoals: Goal[] = [];
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useGoals } from '@/hooks/useGoals';
 export function Dashboard() {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
-  const [goals, setGoals] = useState<Goal[]>(mockGoals);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
-  const {
-    showSuccessToast
-  } = useToastNotifications();
+  
+  // Real data hooks
+  const { tasks, createTask, isLoading: tasksLoading } = useTasks();
+  const { projects, createProject, isLoading: projectsLoading } = useProjects();
+  const { goals, createGoal, isLoading: goalsLoading } = useGoals();
+  
+  const { showSuccessToast } = useToastNotifications();
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-  const todayTasks = tasks.filter(task => {
-    if (!task.due_date) return false;
+  // Computed data with better filtering and sorting
+  const todayTasks = useMemo(() => {
     const today = new Date().toDateString();
-    const taskDate = new Date(task.due_date).toDateString();
-    return today === taskDate;
-  });
-  const overdueTasks = tasks.filter(task => {
-    if (!task.due_date) return false;
-    return new Date(task.due_date) < new Date() && task.status !== 'done';
-  });
+    return tasks
+      .filter(task => {
+        if (!task.due_date && !task.start_date) return false;
+        const taskDate = task.due_date ? new Date(task.due_date).toDateString() : new Date(task.start_date!).toDateString();
+        return today === taskDate;
+      })
+      .sort((a, b) => {
+        // Sort by time if available, then by priority
+        if (a.start_time && b.start_time) {
+          return a.start_time.localeCompare(b.start_time);
+        }
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      });
+  }, [tasks]);
+
+  const overdueTasks = useMemo(() => {
+    const now = new Date();
+    return tasks.filter(task => {
+      if (!task.due_date || task.status === 'done') return false;
+      return new Date(task.due_date) < now;
+    });
+  }, [tasks]);
+
+  const recentProjects = useMemo(() => {
+    return [...projects]
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, 5);
+  }, [projects]);
+
+  const activeGoals = useMemo(() => {
+    return [...goals]
+      .filter(goal => goal.progress < 100)
+      .sort((a, b) => {
+        // Sort by due_date first, then by priority
+        if (a.due_date && b.due_date) {
+          const dateComparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+          if (dateComparison !== 0) return dateComparison;
+        }
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      })
+      .slice(0, 3);
+  }, [goals]);
+
   const completedTasks = tasks.filter(task => task.status === 'done');
   const totalTasks = tasks.length;
   const completionRate = totalTasks > 0 ? completedTasks.length / totalTasks * 100 : 0;
   const handleCreateTask = (taskData: any) => {
-    const newTask: Task = {
-      id: Date.now().toString(),
+    createTask({
       title: taskData.title,
       description: taskData.description,
       priority: taskData.priority,
-      status: 'todo' as const,
       category: taskData.category,
-      start_date: taskData.start_date?.toISOString(),
-      due_date: taskData.due_date?.toISOString(),
-      is_indefinite: taskData.is_indefinite,
+      start_date: taskData.start_date,
+      due_date: taskData.due_date,
       start_time: taskData.time,
+      end_time: taskData.end_time,
+      is_indefinite: taskData.is_indefinite,
       notifications_enabled: taskData.notify_enabled,
       repeat_enabled: taskData.frequency_enabled,
       repeat_type: taskData.frequency_type,
-      repeat_days: taskData.frequency_days?.map(String),
+      repeat_days: taskData.frequency_days,
       project_id: taskData.assign_to_project ? taskData.project_id : undefined,
-      assigned_to: undefined,
-      created_by: 'current-user',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      notifications: [],
-      tags: [],
-      checklist: taskData.checklist || []
-    };
-    setTasks([...tasks, newTask]);
+      goal_id: taskData.goal_id,
+      tags: taskData.tags || [],
+    });
     setIsTaskFormOpen(false);
-    showSuccessToast('Tarefa criada com sucesso!');
   };
+
   const handleCreateProject = (projectData: any) => {
-    const newProject: Project = {
-      id: Date.now().toString(),
+    createProject({
       name: projectData.name,
       description: projectData.description,
       priority: projectData.priority || 'medium',
@@ -82,40 +111,32 @@ export function Dashboard() {
       is_shared: projectData.is_shared || false,
       notifications_enabled: projectData.notifications_enabled || false,
       repeat_enabled: projectData.repeat_enabled || false,
-      owner_id: 'current-user',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      members: [],
-      tasks: []
-    };
-    setProjects([...projects, newProject]);
+      start_date: projectData.start_date,
+      due_date: projectData.due_date,
+      start_time: projectData.start_time,
+      end_time: projectData.end_time,
+      is_indefinite: projectData.is_indefinite,
+      repeat_type: projectData.repeat_type,
+      repeat_days: projectData.repeat_days,
+    });
     setIsProjectFormOpen(false);
-    showSuccessToast('Projeto criado com sucesso!');
   };
+
   const handleCreateGoal = (goalData: any) => {
-    const newGoal: Goal = {
-      id: Date.now().toString(),
+    createGoal({
       name: goalData.name,
       description: goalData.description,
       priority: goalData.priority || 'medium',
       category: goalData.category || 'professional',
-      progress: 0,
       start_date: goalData.start_date,
       due_date: goalData.due_date,
       is_shared: goalData.is_shared || false,
       notifications_enabled: goalData.notifications_enabled || false,
       reward_enabled: goalData.reward_enabled || false,
       reward_description: goalData.reward_description,
-      assigned_projects: [],
-      assigned_tasks: [],
       notes: goalData.notes,
-      created_by: 'current-user',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    setGoals([...goals, newGoal]);
+    });
     setIsGoalFormOpen(false);
-    showSuccessToast('Meta criada com sucesso!');
   };
   return <div className="space-y-8 animate-fade-in">
       {/* Header */}
@@ -268,7 +289,7 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {projects.length === 0 ? <div className="text-center py-8 text-muted-foreground">
+              {recentProjects.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                 <FolderKanban className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Nenhum projeto criado ainda</p>
                 <Button className="mt-4 glow-button" size="sm" onClick={() => setIsProjectFormOpen(true)}>
@@ -276,7 +297,7 @@ export function Dashboard() {
                   Criar Projeto
                 </Button>
               </div> : <div className="space-y-3">
-                {projects.slice(0, 5).map(project => <div key={project.id} className="project-card">
+                {recentProjects.map(project => <div key={project.id} className="project-card">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-4 h-4 rounded-full" style={{
@@ -307,15 +328,15 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {goals.length === 0 ? <div className="text-center py-8 text-muted-foreground">
+            {activeGoals.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                 <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhuma meta definida ainda</p>
+                <p>Nenhuma meta ativa ainda</p>
                 <Button className="mt-4 glow-button" size="sm" onClick={() => setIsGoalFormOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Criar Meta
                 </Button>
               </div> : <div className="space-y-3">
-                {goals.slice(0, 3).map(goal => <div key={goal.id} className="space-y-2">
+                {activeGoals.map(goal => <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-sm">{goal.name}</h4>
                       <span className="text-xs text-muted-foreground">
@@ -323,6 +344,11 @@ export function Dashboard() {
                       </span>
                     </div>
                     <Progress value={goal.progress} className="h-2" />
+                    {goal.due_date && (
+                      <p className="text-xs text-muted-foreground">
+                        Prazo: {new Date(goal.due_date).toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
                   </div>)}
               </div>}
           </CardContent>
