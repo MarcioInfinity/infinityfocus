@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Plus, X } from 'lucide-react';
-import { Goal, Priority } from '@/types';
+import { Goal, Priority, CategoryType } from '@/types';
 
 interface EditGoalModalProps {
   goal: Goal;
@@ -21,7 +21,7 @@ interface EditGoalModalProps {
 
 export function EditGoalModal({ goal, isOpen, onClose, onSave }: EditGoalModalProps) {
   const [formData, setFormData] = useState<Goal>(goal);
-  const [customCategory, setCustomCategory] = useState('');
+  const [customCategory, setCustomCategory] = useState<CategoryType>('other');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
 
   useEffect(() => {
@@ -29,13 +29,21 @@ export function EditGoalModal({ goal, isOpen, onClose, onSave }: EditGoalModalPr
   }, [goal]);
 
   const categories = [
-    'Profissional', 'Intelectual', 'Finanças', 'Social', 
-    'Relacionamento', 'Família', 'Lazer', 'Saúde', 
-    'Espiritual', 'Emocional', 'Outros'
+    { value: 'professional', label: 'Profissional' },
+    { value: 'intellectual', label: 'Intelectual' },
+    { value: 'finance', label: 'Finanças' },
+    { value: 'social', label: 'Social' },
+    { value: 'relationship', label: 'Relacionamento' },
+    { value: 'family', label: 'Família' },
+    { value: 'leisure', label: 'Lazer' },
+    { value: 'health', label: 'Saúde' },
+    { value: 'spiritual', label: 'Espiritual' },
+    { value: 'emotional', label: 'Emocional' },
+    { value: 'other', label: 'Outros' }
   ];
 
   const handleSave = () => {
-    const updatedGoal = {
+    const updatedGoal: Goal = {
       ...formData,
       category: showCustomCategory ? customCategory : formData.category,
       updated_at: new Date().toISOString()
@@ -90,7 +98,7 @@ export function EditGoalModal({ goal, isOpen, onClose, onSave }: EditGoalModalPr
                   setShowCustomCategory(true);
                 } else {
                   setShowCustomCategory(false);
-                  setFormData({...formData, category: value});
+                  setFormData({...formData, category: value as CategoryType});
                 }
               }}
             >
@@ -99,7 +107,7 @@ export function EditGoalModal({ goal, isOpen, onClose, onSave }: EditGoalModalPr
               </SelectTrigger>
               <SelectContent className="glass-card">
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
                 ))}
                 <SelectItem value="custom">
                   <Plus className="w-4 h-4 mr-2" />
@@ -109,18 +117,22 @@ export function EditGoalModal({ goal, isOpen, onClose, onSave }: EditGoalModalPr
             </Select>
             {showCustomCategory && (
               <div className="flex gap-2">
-                <Input
-                  placeholder="Digite a categoria personalizada"
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  className="neon-border"
-                />
+                <Select value={customCategory} onValueChange={(value: CategoryType) => setCustomCategory(value)}>
+                  <SelectTrigger className="neon-border">
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card">
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     setShowCustomCategory(false);
-                    setCustomCategory('');
+                    setCustomCategory('other');
                   }}
                 >
                   <X className="w-4 h-4" />

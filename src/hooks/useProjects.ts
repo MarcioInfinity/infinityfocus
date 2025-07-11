@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/types';
@@ -24,7 +23,7 @@ export function useProjects() {
             user_id,
             role,
             joined_at,
-            profiles:user_id (
+            profiles (
               name,
               email,
               avatar
