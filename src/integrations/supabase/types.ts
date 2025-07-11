@@ -14,7 +14,537 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      checklist_items: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          task_id: string
+          text: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          task_id: string
+          text: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          task_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_notifications: {
+        Row: {
+          created_at: string
+          days_of_week: number[] | null
+          id: string
+          is_active: boolean
+          message: string
+          specific_date: string | null
+          task_id: string
+          time: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[] | null
+          id?: string
+          is_active?: boolean
+          message: string
+          specific_date?: string | null
+          task_id: string
+          time?: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[] | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          specific_date?: string | null
+          task_id?: string
+          time?: string | null
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          assigned_projects: string[] | null
+          assigned_tasks: string[] | null
+          category: Database["public"]["Enums"]["category_type"]
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          is_shared: boolean
+          name: string
+          notes: string | null
+          notifications_enabled: boolean
+          priority: Database["public"]["Enums"]["priority"]
+          progress: number
+          reward_description: string | null
+          reward_enabled: boolean
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_projects?: string[] | null
+          assigned_tasks?: string[] | null
+          category?: Database["public"]["Enums"]["category_type"]
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_shared?: boolean
+          name: string
+          notes?: string | null
+          notifications_enabled?: boolean
+          priority?: Database["public"]["Enums"]["priority"]
+          progress?: number
+          reward_description?: string | null
+          reward_enabled?: boolean
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_projects?: string[] | null
+          assigned_tasks?: string[] | null
+          category?: Database["public"]["Enums"]["category_type"]
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_shared?: boolean
+          name?: string
+          notes?: string | null
+          notifications_enabled?: boolean
+          priority?: Database["public"]["Enums"]["priority"]
+          progress?: number
+          reward_description?: string | null
+          reward_enabled?: boolean
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kanban_columns: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          notification_days: number | null
+          notifications_enabled: boolean
+          position: number
+          project_id: string
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          notification_days?: number | null
+          notifications_enabled?: boolean
+          position?: number
+          project_id: string
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          notification_days?: number | null
+          notifications_enabled?: boolean
+          position?: number
+          project_id?: string
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_columns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_settings: {
+        Row: {
+          app_notifications: boolean
+          email_notifications: boolean
+          goals_enabled: boolean
+          id: string
+          projects_enabled: boolean
+          quiet_days: string[] | null
+          quiet_end_time: string | null
+          quiet_hours_enabled: boolean
+          quiet_start_time: string | null
+          tasks_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_notifications?: boolean
+          email_notifications?: boolean
+          goals_enabled?: boolean
+          id?: string
+          projects_enabled?: boolean
+          quiet_days?: string[] | null
+          quiet_end_time?: string | null
+          quiet_hours_enabled?: boolean
+          quiet_start_time?: string | null
+          tasks_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_notifications?: boolean
+          email_notifications?: boolean
+          goals_enabled?: boolean
+          id?: string
+          projects_enabled?: boolean
+          quiet_days?: string[] | null
+          quiet_end_time?: string | null
+          quiet_hours_enabled?: boolean
+          quiet_start_time?: string | null
+          tasks_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          days_of_week: number[] | null
+          goal_id: string | null
+          id: string
+          is_active: boolean
+          message: string
+          project_id: string | null
+          scheduled_for: string
+          sent: boolean
+          specific_date: string | null
+          task_id: string | null
+          time: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[] | null
+          goal_id?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          project_id?: string | null
+          scheduled_for: string
+          sent?: boolean
+          specific_date?: string | null
+          task_id?: string | null
+          time?: string | null
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[] | null
+          goal_id?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          project_id?: string | null
+          scheduled_for?: string
+          sent?: boolean
+          specific_date?: string | null
+          task_id?: string | null
+          time?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_members: {
+        Row: {
+          id: string
+          joined_at: string
+          project_id: string
+          role: Database["public"]["Enums"]["project_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          project_id: string
+          role?: Database["public"]["Enums"]["project_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          project_id?: string
+          role?: Database["public"]["Enums"]["project_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          category: Database["public"]["Enums"]["category_type"]
+          color: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          end_time: string | null
+          id: string
+          invite_link: string | null
+          is_indefinite: boolean
+          is_shared: boolean
+          name: string
+          notifications_enabled: boolean
+          owner_id: string
+          priority: Database["public"]["Enums"]["priority"]
+          repeat_days: string[] | null
+          repeat_enabled: boolean
+          repeat_type: Database["public"]["Enums"]["frequency_type"] | null
+          start_date: string | null
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["category_type"]
+          color?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          end_time?: string | null
+          id?: string
+          invite_link?: string | null
+          is_indefinite?: boolean
+          is_shared?: boolean
+          name: string
+          notifications_enabled?: boolean
+          owner_id: string
+          priority?: Database["public"]["Enums"]["priority"]
+          repeat_days?: string[] | null
+          repeat_enabled?: boolean
+          repeat_type?: Database["public"]["Enums"]["frequency_type"] | null
+          start_date?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["category_type"]
+          color?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          end_time?: string | null
+          id?: string
+          invite_link?: string | null
+          is_indefinite?: boolean
+          is_shared?: boolean
+          name?: string
+          notifications_enabled?: boolean
+          owner_id?: string
+          priority?: Database["public"]["Enums"]["priority"]
+          repeat_days?: string[] | null
+          repeat_enabled?: boolean
+          repeat_type?: Database["public"]["Enums"]["frequency_type"] | null
+          start_date?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["category_type"]
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          end_time: string | null
+          goal_id: string | null
+          id: string
+          is_indefinite: boolean
+          notifications_enabled: boolean
+          priority: Database["public"]["Enums"]["priority"]
+          project_id: string | null
+          repeat_days: string[] | null
+          repeat_enabled: boolean
+          repeat_type: Database["public"]["Enums"]["frequency_type"] | null
+          start_date: string | null
+          start_time: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["category_type"]
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          end_time?: string | null
+          goal_id?: string | null
+          id?: string
+          is_indefinite?: boolean
+          notifications_enabled?: boolean
+          priority?: Database["public"]["Enums"]["priority"]
+          project_id?: string | null
+          repeat_days?: string[] | null
+          repeat_enabled?: boolean
+          repeat_type?: Database["public"]["Enums"]["frequency_type"] | null
+          start_date?: string | null
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["category_type"]
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          end_time?: string | null
+          goal_id?: string | null
+          id?: string
+          is_indefinite?: boolean
+          notifications_enabled?: boolean
+          priority?: Database["public"]["Enums"]["priority"]
+          project_id?: string | null
+          repeat_days?: string[] | null
+          repeat_enabled?: boolean
+          repeat_type?: Database["public"]["Enums"]["frequency_type"] | null
+          start_date?: string | null
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +553,23 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      category_type:
+        | "professional"
+        | "intellectual"
+        | "finance"
+        | "social"
+        | "relationship"
+        | "family"
+        | "leisure"
+        | "health"
+        | "spiritual"
+        | "emotional"
+        | "other"
+      frequency_type: "daily" | "weekly" | "monthly" | "weekdays" | "custom"
+      notification_type: "time" | "day" | "date"
+      priority: "low" | "medium" | "high"
+      project_role: "owner" | "admin" | "member" | "viewer"
+      task_status: "todo" | "in-progress" | "review" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +696,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      category_type: [
+        "professional",
+        "intellectual",
+        "finance",
+        "social",
+        "relationship",
+        "family",
+        "leisure",
+        "health",
+        "spiritual",
+        "emotional",
+        "other",
+      ],
+      frequency_type: ["daily", "weekly", "monthly", "weekdays", "custom"],
+      notification_type: ["time", "day", "date"],
+      priority: ["low", "medium", "high"],
+      project_role: ["owner", "admin", "member", "viewer"],
+      task_status: ["todo", "in-progress", "review", "done"],
+    },
   },
 } as const

@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { AuthProvider } from "./hooks/useAuth";
+import { AuthGuard } from "./components/auth/AuthGuard";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./components/Dashboard";
 import { TaskManager } from "./components/TaskManager";
@@ -15,7 +17,15 @@ import { Settings } from "./components/Settings";
 import { Login } from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -23,24 +33,32 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          
-          {/* Main App Routes */}
-          <Route path="/" element={<Layout><Outlet /></Layout>}>
-            <Route index element={<Dashboard />} />
-            <Route path="tasks" element={<TaskManager />} />
-            <Route path="goals" element={<Goals />} />
-            <Route path="projects" element={<ProjectManager />} />
-            <Route path="projects/:id/kanban" element={<KanbanBoard projectId="1" projectName="Projeto Exemplo" />} />
-            <Route path="notifications" element={<NotificationManager />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-          
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            {/* Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Main App Routes - Protected */}
+            <Route path="/" element={
+              <AuthGuard>
+                <Layout>
+                  <Outlet />
+                </Layout>
+              </AuthGuard>
+            }>
+              <Route index element={<Dashboard />} />
+              <Route path="tasks" element={<TaskManager />} />
+              <Route path="goals" element={<Goals />} />
+              <Route path="projects" element={<ProjectManager />} />
+              <Route path="projects/:id/kanban" element={<KanbanBoard projectId="1" projectName="Projeto Exemplo" />} />
+              <Route path="notifications" element={<NotificationManager />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
