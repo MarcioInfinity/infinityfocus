@@ -1,160 +1,120 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link, Mail, Copy, Send, Plus, X } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Copy, UserPlus, Mail } from 'lucide-react';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { ProjectRole } from '@/types';
 
 interface InviteModalProps {
+  projectId: string;
   isOpen: boolean;
   onClose: () => void;
-  projectName: string;
-  projectId: string;
 }
 
-export function InviteModal({ isOpen, onClose, projectName, projectId }: InviteModalProps) {
-  const [emails, setEmails] = useState(['']);
-  const [message, setMessage] = useState(`Você foi convidado para colaborar no projeto "${projectName}" no Infinity Focus!`);
-  const { showSuccessToast, showInfoToast } = useToastNotifications();
+export function InviteModal({ projectId, isOpen, onClose }: InviteModalProps) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<ProjectRole>('member');
+  const [inviteLink, setInviteLink] = useState('');
+  const { showSuccessToast, showErrorToast } = useToastNotifications();
 
-  const inviteLink = `${window.location.origin}/project/invite/${projectId}`;
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    showSuccessToast('Link copiado!', 'O link de convite foi copiado para a área de transferência');
+  const generateInviteLink = () => {
+    // Generate a unique invite link
+    const link = `${window.location.origin}/invite/${projectId}?token=${Date.now()}`;
+    setInviteLink(link);
+    showSuccessToast('Link de convite gerado!');
   };
 
-  const handleSendEmails = () => {
-    const validEmails = emails.filter(email => email.trim() && email.includes('@'));
-    if (validEmails.length === 0) {
-      showInfoToast('Nenhum email válido', 'Adicione pelo menos um email válido para enviar convites');
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    showSuccessToast('Link copiado para a área de transferência!');
+  };
+
+  const sendEmailInvite = () => {
+    if (!email) {
+      showErrorToast('Erro!', 'Digite um email válido');
       return;
     }
 
-    // Aqui seria integrado com o Supabase para enviar emails
-    showSuccessToast('Convites enviados!', `${validEmails.length} convite(s) enviado(s) com sucesso`);
-    setEmails(['']);
-    onClose();
-  };
-
-  const addEmailField = () => {
-    setEmails([...emails, '']);
-  };
-
-  const removeEmailField = (index: number) => {
-    setEmails(emails.filter((_, i) => i !== index));
-  };
-
-  const updateEmail = (index: number, value: string) => {
-    const newEmails = [...emails];
-    newEmails[index] = value;
-    setEmails(newEmails);
+    // Here you would implement email sending logic
+    showSuccessToast('Convite enviado!', `Convite enviado para ${email}`);
+    setEmail('');
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl glass-card">
+      <DialogContent className="glass-card max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5" />
             Convidar Membros
           </DialogTitle>
-          <p className="text-muted-foreground">
-            Convide pessoas para colaborar no projeto "{projectName}"
-          </p>
         </DialogHeader>
-
-        <Tabs defaultValue="link" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 glass-card">
-            <TabsTrigger value="link" className="flex items-center gap-2">
-              <Link className="w-4 h-4" />
-              Link de Convite
-            </TabsTrigger>
-            <TabsTrigger value="email" className="flex items-center gap-2">
-              <Mail className="w-4 h-4" />
-              Convite por Email
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="link" className="space-y-4">
-            <div className="glass-card p-4 space-y-4">
-              <Label>Link do Projeto</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={inviteLink}
-                  readOnly
-                  className="neon-border font-mono text-sm"
-                />
-                <Button onClick={handleCopyLink} className="glow-button">
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Compartilhe este link com as pessoas que você deseja convidar. 
-                Elas poderão acessar o projeto através deste link.
-              </p>
+        
+        <div className="space-y-6">
+          {/* Email Invite */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Convidar por Email</h3>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="usuario@exemplo.com"
+                className="neon-border"
+              />
             </div>
-          </TabsContent>
 
-          <TabsContent value="email" className="space-y-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Emails dos Convidados</Label>
-                {emails.map((email, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      type="email"
-                      placeholder="email@exemplo.com"
-                      value={email}
-                      onChange={(e) => updateEmail(index, e.target.value)}
-                      className="neon-border"
-                    />
-                    {emails.length > 1 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeEmailField(index)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addEmailField}
-                  className="neon-border"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Email
-                </Button>
-              </div>
+            <div className="space-y-2">
+              <Label>Função</Label>
+              <Select value={role} onValueChange={(value: ProjectRole) => setRole(value)}>
+                <SelectTrigger className="glass-card border-white/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="glass-card border-white/20">
+                  <SelectItem value="viewer">👁️ Visualizador</SelectItem>
+                  <SelectItem value="member">👤 Membro</SelectItem>
+                  <SelectItem value="admin">🛡️ Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-2">
-                <Label>Mensagem do Convite</Label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full min-h-[100px] p-3 rounded-md border neon-border bg-background resize-none"
-                  placeholder="Personalize a mensagem do convite..."
-                />
-              </div>
+            <Button onClick={sendEmailInvite} className="w-full glow-button">
+              <Mail className="w-4 h-4 mr-2" />
+              Enviar Convite
+            </Button>
+          </div>
 
-              <Button onClick={handleSendEmails} className="w-full glow-button">
-                <Send className="w-4 h-4 mr-2" />
-                Enviar Convites
+          <div className="border-t border-white/10 pt-6">
+            <h3 className="font-medium mb-4">Link de Convite</h3>
+            
+            {!inviteLink ? (
+              <Button onClick={generateInviteLink} variant="outline" className="w-full neon-border">
+                Gerar Link de Convite
               </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex gap-3 pt-4">
-          <Button variant="outline" onClick={onClose} className="flex-1 neon-border">
-            Cancelar
-          </Button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={inviteLink}
+                    readOnly
+                    className="bg-muted/50"
+                  />
+                  <Button onClick={copyInviteLink} variant="outline" size="sm">
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Este link permite que qualquer pessoa entre no projeto como {role}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

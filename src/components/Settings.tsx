@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,29 +16,20 @@ import {
   Upload,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2
 } from 'lucide-react';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { useProfile } from '@/hooks/useProfile';
+import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 export function Settings() {
-  const [profileData, setProfileData] = useState({
-    name: 'Usuário Demo',
-    email: 'usuario@exemplo.com',
-    avatar: ''
-  });
-
-  const [notificationSettings, setNotificationSettings] = useState({
-    tasks: true,
-    projects: true,
-    goals: true,
-    app_notifications: true,
-    email_notifications: false,
-    quiet_hours_enabled: false,
-    quiet_start: '22:00',
-    quiet_end: '08:00',
-    quiet_days: []
-  });
-
+  const { user } = useAuth();
+  const { profile, updateProfile, uploadAvatar, removeAvatar, isLoading, isUpdating, isUploading, isRemoving } = useProfile();
+  const { settings, updateSettings, isLoading: isLoadingSettings, isUpdating: isUpdatingSettings } = useNotificationSettings();
+  
   const [passwordData, setPasswordData] = useState({
     current: '',
     new: '',
@@ -54,17 +45,64 @@ export function Settings() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const { showSuccessToast, showErrorToast } = useToastNotifications();
 
+  // Local states for form data
+  const [profileForm, setProfileForm] = useState({
+    name: profile?.name || '',
+    email: profile?.email || ''
+  });
+
+  const [notificationForm, setNotificationForm] = useState({
+    tasks_enabled: settings?.tasks_enabled ?? true,
+    projects_enabled: settings?.projects_enabled ?? true,
+    goals_enabled: settings?.goals_enabled ?? true,
+    app_notifications: settings?.app_notifications ?? true,
+    email_notifications: settings?.email_notifications ?? false,
+    quiet_hours_enabled: settings?.quiet_hours_enabled ?? false,
+    quiet_start_time: settings?.quiet_start_time ?? '22:00',
+    quiet_end_time: settings?.quiet_end_time ?? '08:00',
+    quiet_days: settings?.quiet_days ?? []
+  });
+
+  // Update form when data loads
+  React.useEffect(() => {
+    if (profile) {
+      setProfileForm({
+        name: profile.name,
+        email: profile.email
+      });
+    }
+  }, [profile]);
+
+  React.useEffect(() => {
+    if (settings) {
+      setNotificationForm({
+        tasks_enabled: settings.tasks_enabled,
+        projects_enabled: settings.projects_enabled,
+        goals_enabled: settings.goals_enabled,
+        app_notifications: settings.app_notifications,
+        email_notifications: settings.email_notifications,
+        quiet_hours_enabled: settings.quiet_hours_enabled,
+        quiet_start_time: settings.quiet_start_time || '22:00',
+        quiet_end_time: settings.quiet_end_time || '08:00',
+        quiet_days: settings.quiet_days || []
+      });
+    }
+  }, [settings]);
+
   const handleSaveProfile = () => {
-    // Aqui seria integrado com Supabase para salvar dados do perfil
-    showSuccessToast('Perfil salvo!', 'Suas informações de perfil foram atualizadas com sucesso');
+    if (!profileForm.name.trim()) {
+      showErrorToast('Erro!', 'O nome é obrigatório');
+      return;
+    }
+    
+    updateProfile({ name: profileForm.name });
   };
 
   const handleSaveNotifications = () => {
-    // Aqui seria integrado com Supabase para salvar configurações de notificação
-    showSuccessToast('Configurações salvas!', 'Suas preferências de notificação foram atualizadas');
+    updateSettings(notificationForm);
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (passwordData.new !== passwordData.confirm) {
       showErrorToast('Erro!', 'As senhas não coincidem');
       return;
@@ -75,23 +113,31 @@ export function Settings() {
       return;
     }
 
-    // Aqui seria integrado com Supabase para alterar senha
-    showSuccessToast('Senha alterada!', 'Sua senha foi alterada com sucesso');
-    setPasswordData({ current: '', new: '', confirm: '' });
-    setIsPasswordModalOpen(false);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.new
+      });
+
+      if (error) throw error;
+      
+      showSuccessToast('Senha alterada!', 'Sua senha foi alterada com sucesso');
+      setPasswordData({ current: '', new: '', confirm: '' });
+      setIsPasswordModalOpen(false);
+    } catch (error) {
+      console.error('Error changing password:', error);
+      showErrorToast('Erro!', 'Não foi possível alterar a senha');
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Aqui seria integrado com Supabase Storage para upload da imagem
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileData({ ...profileData, avatar: e.target?.result as string });
-        showSuccessToast('Foto atualizada!', 'Sua foto de perfil foi atualizada');
-      };
-      reader.readAsDataURL(file);
+      uploadAvatar(file);
     }
+  };
+
+  const handleRemoveAvatar = () => {
+    removeAvatar();
   };
 
   const weekDays = [
@@ -105,13 +151,30 @@ export function Settings() {
   ];
 
   const toggleQuietDay = (dayId: string) => {
-    setNotificationSettings(prev => ({
+    setNotificationForm(prev => ({
       ...prev,
       quiet_days: prev.quiet_days.includes(dayId)
         ? prev.quiet_days.filter(d => d !== dayId)
         : [...prev.quiet_days, dayId]
     }));
   };
+
+  if (isLoading || isLoadingSettings) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Configurações
+          </h1>
+          <p className="text-muted-foreground mt-1">Carregando configurações...</p>
+        </div>
+        <div className="animate-pulse">
+          <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+          <div className="h-32 bg-muted rounded mb-4"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -149,26 +212,45 @@ export function Settings() {
               {/* Avatar */}
               <div className="flex items-center gap-4">
                 <Avatar className="w-20 h-20">
-                  <AvatarImage src={profileData.avatar} />
+                  <AvatarImage src={profile?.avatar || ''} />
                   <AvatarFallback className="text-lg bg-primary/20">
-                    {profileData.name.charAt(0).toUpperCase()}
+                    {(profile?.name || user?.email || 'U').charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
-                  <Label htmlFor="avatar-upload" className="cursor-pointer">
-                    <Button variant="outline" className="neon-border" asChild>
-                      <span>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Alterar Foto
-                      </span>
-                    </Button>
-                  </Label>
+                  <div className="flex gap-2">
+                    <Label htmlFor="avatar-upload" className="cursor-pointer">
+                      <Button 
+                        variant="outline" 
+                        className="neon-border" 
+                        asChild
+                        disabled={isUploading}
+                      >
+                        <span>
+                          <Upload className="w-4 h-4 mr-2" />
+                          {isUploading ? 'Enviando...' : 'Alterar Foto'}
+                        </span>
+                      </Button>
+                    </Label>
+                    {profile?.avatar && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleRemoveAvatar}
+                        disabled={isRemoving}
+                        className="text-red-400 border-red-400/30 hover:bg-red-400/10"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                   <input
                     id="avatar-upload"
                     type="file"
                     accept="image/*"
                     onChange={handleFileUpload}
                     className="hidden"
+                    disabled={isUploading}
                   />
                   <p className="text-xs text-muted-foreground">
                     JPG, PNG ou GIF (máx. 2MB)
@@ -183,8 +265,8 @@ export function Settings() {
                 <Label htmlFor="name">Nome</Label>
                 <Input
                   id="name"
-                  value={profileData.name}
-                  onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
                   className="neon-border"
                 />
               </div>
@@ -194,7 +276,7 @@ export function Settings() {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  value={profileData.email}
+                  value={profile?.email || user?.email || ''}
                   disabled
                   className="bg-muted/50"
                 />
@@ -301,9 +383,13 @@ export function Settings() {
                 </Dialog>
               </div>
 
-              <Button onClick={handleSaveProfile} className="w-full glow-button">
+              <Button 
+                onClick={handleSaveProfile} 
+                className="w-full glow-button"
+                disabled={isUpdating}
+              >
                 <Save className="w-4 h-4 mr-2" />
-                Salvar Perfil
+                {isUpdating ? 'Salvando...' : 'Salvar Perfil'}
               </Button>
             </CardContent>
           </Card>
@@ -325,24 +411,24 @@ export function Settings() {
                 <div className="flex items-center justify-between">
                   <Label>Tarefas</Label>
                   <Switch
-                    checked={notificationSettings.tasks}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, tasks: checked})}
+                    checked={notificationForm.tasks_enabled}
+                    onCheckedChange={(checked) => setNotificationForm({...notificationForm, tasks_enabled: checked})}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <Label>Projetos</Label>
                   <Switch
-                    checked={notificationSettings.projects}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, projects: checked})}
+                    checked={notificationForm.projects_enabled}
+                    onCheckedChange={(checked) => setNotificationForm({...notificationForm, projects_enabled: checked})}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <Label>Metas</Label>
                   <Switch
-                    checked={notificationSettings.goals}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, goals: checked})}
+                    checked={notificationForm.goals_enabled}
+                    onCheckedChange={(checked) => setNotificationForm({...notificationForm, goals_enabled: checked})}
                   />
                 </div>
               </div>
@@ -356,16 +442,16 @@ export function Settings() {
                 <div className="flex items-center justify-between">
                   <Label>Notificar por App</Label>
                   <Switch
-                    checked={notificationSettings.app_notifications}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, app_notifications: checked})}
+                    checked={notificationForm.app_notifications}
+                    onCheckedChange={(checked) => setNotificationForm({...notificationForm, app_notifications: checked})}
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <Label>Notificar por Email</Label>
                   <Switch
-                    checked={notificationSettings.email_notifications}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, email_notifications: checked})}
+                    checked={notificationForm.email_notifications}
+                    onCheckedChange={(checked) => setNotificationForm({...notificationForm, email_notifications: checked})}
                   />
                 </div>
               </div>
@@ -377,20 +463,20 @@ export function Settings() {
                 <div className="flex items-center justify-between">
                   <Label>Não notificar em horários específicos</Label>
                   <Switch
-                    checked={notificationSettings.quiet_hours_enabled}
-                    onCheckedChange={(checked) => setNotificationSettings({...notificationSettings, quiet_hours_enabled: checked})}
+                    checked={notificationForm.quiet_hours_enabled}
+                    onCheckedChange={(checked) => setNotificationForm({...notificationForm, quiet_hours_enabled: checked})}
                   />
                 </div>
 
-                {notificationSettings.quiet_hours_enabled && (
+                {notificationForm.quiet_hours_enabled && (
                   <div className="glass-card p-4 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Início</Label>
                         <Input
                           type="time"
-                          value={notificationSettings.quiet_start}
-                          onChange={(e) => setNotificationSettings({...notificationSettings, quiet_start: e.target.value})}
+                          value={notificationForm.quiet_start_time}
+                          onChange={(e) => setNotificationForm({...notificationForm, quiet_start_time: e.target.value})}
                           className="neon-border"
                         />
                       </div>
@@ -398,8 +484,8 @@ export function Settings() {
                         <Label>Fim</Label>
                         <Input
                           type="time"
-                          value={notificationSettings.quiet_end}
-                          onChange={(e) => setNotificationSettings({...notificationSettings, quiet_end: e.target.value})}
+                          value={notificationForm.quiet_end_time}
+                          onChange={(e) => setNotificationForm({...notificationForm, quiet_end_time: e.target.value})}
                           className="neon-border"
                         />
                       </div>
@@ -411,10 +497,10 @@ export function Settings() {
                         {weekDays.map((day) => (
                           <Button
                             key={day.id}
-                            variant={notificationSettings.quiet_days.includes(day.id) ? "default" : "outline"}
+                            variant={notificationForm.quiet_days.includes(day.id) ? "default" : "outline"}
                             size="sm"
                             onClick={() => toggleQuietDay(day.id)}
-                            className={notificationSettings.quiet_days.includes(day.id) ? "glow-button" : "neon-border"}
+                            className={notificationForm.quiet_days.includes(day.id) ? "glow-button" : "neon-border"}
                           >
                             {day.label}
                           </Button>
@@ -425,9 +511,13 @@ export function Settings() {
                 )}
               </div>
 
-              <Button onClick={handleSaveNotifications} className="w-full glow-button">
+              <Button 
+                onClick={handleSaveNotifications} 
+                className="w-full glow-button"
+                disabled={isUpdatingSettings}
+              >
                 <Save className="w-4 h-4 mr-2" />
-                Salvar Configurações
+                {isUpdatingSettings ? 'Salvando...' : 'Salvar Configurações'}
               </Button>
             </CardContent>
           </Card>

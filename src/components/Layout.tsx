@@ -1,5 +1,5 @@
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { 
   Home, 
   CheckSquare, 
@@ -12,10 +12,13 @@ import {
   LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LayoutProps {
   children: ReactNode;
@@ -35,6 +38,8 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { showSuccessToast } = useToastNotifications();
+  const { user } = useAuth();
+  const { profile } = useProfile();
 
   const isActivePath = (path: string) => {
     if (path === '/') {
@@ -43,10 +48,14 @@ export function Layout({ children }: LayoutProps) {
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = () => {
-    // Here you would implement actual logout logic
-    showSuccessToast('Logout realizado com sucesso!');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      showSuccessToast('Logout realizado com sucesso!');
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (
@@ -115,12 +124,19 @@ export function Layout({ children }: LayoutProps) {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center">
-                <span className="text-sm font-semibold text-primary">U</span>
-              </div>
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={profile?.avatar || ''} />
+                <AvatarFallback className="text-sm font-semibold bg-primary/20 text-primary">
+                  {(profile?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">Usuário Demo</p>
-                <p className="text-xs text-muted-foreground truncate">usuario@exemplo.com</p>
+                <p className="text-sm font-medium text-white truncate">
+                  {profile?.name || user?.email || 'Usuário'}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {profile?.email || user?.email || ''}
+                </p>
               </div>
             </div>
             <Button

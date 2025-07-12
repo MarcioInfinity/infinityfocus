@@ -441,7 +441,6 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       <InviteModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
-        projectName={projectName}
         projectId={projectId}
       />
 

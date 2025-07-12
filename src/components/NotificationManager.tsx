@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bell, Clock, Calendar, CalendarDays, Plus, Settings, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CustomNotification, NotificationType } from '@/types';
+import { NotificationType } from '@/types';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
-const mockNotifications: CustomNotification[] = [];
+import { useNotifications } from '@/hooks/useNotifications';
+import { useTasks } from '@/hooks/useTasks';
+
 const daysOfWeek = [{
   value: 0,
   label: 'Domingo'
@@ -34,7 +36,17 @@ const daysOfWeek = [{
   label: 'Sábado'
 }];
 export function NotificationManager() {
-  const [notifications, setNotifications] = useState<CustomNotification[]>(mockNotifications);
+  const { 
+    notifications, 
+    createNotification, 
+    updateNotification, 
+    deleteNotification, 
+    isLoading,
+    requestNotificationPermission,
+    showBrowserNotification 
+  } = useNotifications();
+  const { tasks } = useTasks();
+  
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newNotification, setNewNotification] = useState({
     task_id: '',
@@ -45,36 +57,43 @@ export function NotificationManager() {
     message: '',
     is_active: true
   });
-  const {
-    showSuccessToast
-  } = useToastNotifications();
+  
+  const { showSuccessToast, showErrorToast } = useToastNotifications();
+
+  // Request notification permission on component mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
   const handleCreateNotification = () => {
     // Validate required fields
     if (!newNotification.message.trim()) {
+      showErrorToast('Erro!', 'A mensagem é obrigatória');
       return;
     }
     if (newNotification.type === 'time' && !newNotification.time) {
+      showErrorToast('Erro!', 'O horário é obrigatório para notificações por horário');
       return;
     }
     if (newNotification.type === 'day' && newNotification.days_of_week.length === 0) {
+      showErrorToast('Erro!', 'Selecione pelo menos um dia da semana');
       return;
     }
     if (newNotification.type === 'date' && !newNotification.specific_date) {
+      showErrorToast('Erro!', 'A data é obrigatória para notificações por data específica');
       return;
     }
-    const notification: CustomNotification = {
-      id: Date.now().toString(),
-      task_id: newNotification.task_id,
+
+    const notificationData = {
+      task_id: newNotification.task_id || null,
       type: newNotification.type,
-      time: newNotification.time,
-      days_of_week: newNotification.days_of_week,
-      specific_date: newNotification.specific_date,
+      time: newNotification.time || null,
+      days_of_week: newNotification.days_of_week.length > 0 ? newNotification.days_of_week : null,
+      specific_date: newNotification.specific_date || null,
       message: newNotification.message,
-      is_active: newNotification.is_active,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      is_active: newNotification.is_active
     };
-    setNotifications(prev => [...prev, notification]);
+
+    createNotification(notificationData);
     setShowCreateForm(false);
     setNewNotification({
       task_id: '',
@@ -85,17 +104,28 @@ export function NotificationManager() {
       message: '',
       is_active: true
     });
-    showSuccessToast('Notificação criada com sucesso!');
+
+    // Show browser notification as example
+    showBrowserNotification('Nova notificação criada!', {
+      body: newNotification.message,
+      icon: '/favicon.ico'
+    });
   };
+
   const toggleNotification = (id: string) => {
-    setNotifications(prev => prev.map(notif => notif.id === id ? {
-      ...notif,
-      is_active: !notif.is_active
-    } : notif));
+    const notification = notifications?.find(n => n.id === id);
+    if (notification) {
+      updateNotification({
+        id,
+        updates: { is_active: !notification.is_active }
+      });
+    }
   };
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
-    showSuccessToast('Notificação excluída com sucesso!');
+
+  const handleDeleteNotification = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta notificação?')) {
+      deleteNotification(id);
+    }
   };
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
@@ -107,18 +137,35 @@ export function NotificationManager() {
         return Calendar;
     }
   };
-  const formatNotificationDetails = (notification: CustomNotification) => {
+  const formatNotificationDetails = (notification: any) => {
     switch (notification.type) {
       case 'time':
         return `Horário: ${notification.time}`;
       case 'day':
-        return `Dias: ${notification.days_of_week?.map(day => daysOfWeek.find(d => d.value === day)?.label).join(', ')}`;
+        return `Dias: ${notification.days_of_week?.map((day: number) => daysOfWeek.find(d => d.value === day)?.label).join(', ')}`;
       case 'date':
         return `Data: ${new Date(notification.specific_date || '').toLocaleDateString('pt-BR')}`;
       default:
         return '';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Notificações
+          </h1>
+          <p className="text-muted-foreground mt-1">Carregando notificações...</p>
+        </div>
+        <div className="animate-pulse">
+          <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+          <div className="h-32 bg-muted rounded mb-4"></div>
+        </div>
+      </div>
+    );
+  }
   return <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -130,7 +177,10 @@ export function NotificationManager() {
             Configure lembretes e notificações para suas tarefas
           </p>
         </div>
-        
+        <Button className="glow-button" onClick={() => setShowCreateForm(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nova Notificação
+        </Button>
       </div>
 
       {/* Create Notification Form */}
@@ -156,6 +206,26 @@ export function NotificationManager() {
                     <SelectItem value="time">Por Horário</SelectItem>
                     <SelectItem value="day">Dias da Semana</SelectItem>
                     <SelectItem value="date">Data Específica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="task-select">Tarefa (Opcional)</Label>
+                <Select 
+                  value={newNotification.task_id} 
+                  onValueChange={(value) => setNewNotification(prev => ({...prev, task_id: value}))}
+                >
+                  <SelectTrigger className="glass-card border-white/20">
+                    <SelectValue placeholder="Selecionar tarefa..." />
+                  </SelectTrigger>
+                  <SelectContent className="glass-card border-white/20">
+                    <SelectItem value="">Nenhuma tarefa</SelectItem>
+                    {tasks?.map(task => (
+                      <SelectItem key={task.id} value={task.id}>
+                        {task.title}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -223,7 +293,7 @@ export function NotificationManager() {
 
       {/* Notifications List */}
       <div className="space-y-4">
-        {notifications.length === 0 ? <Card className="glass-card">
+        {!notifications || notifications.length === 0 ? <Card className="glass-card">
             <CardContent className="text-center py-12">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-lg font-semibold mb-2">Nenhuma notificação configurada</h3>
@@ -251,7 +321,7 @@ export function NotificationManager() {
                         <Button variant="ghost" size="sm" onClick={() => toggleNotification(notification.id)}>
                           {notification.is_active ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => deleteNotification(notification.id)} className="text-red-400 hover:text-red-300">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteNotification(notification.id)} className="text-red-400 hover:text-red-300">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

@@ -12,6 +12,8 @@ import { ProjectRole } from '@/types';
 import { ProjectForm } from './forms/ProjectForm';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
+import { KanbanBoard } from './KanbanBoard';
+import { InviteModal } from './modals/InviteModal';
 
 const roleColors = {
   owner: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
@@ -22,9 +24,13 @@ const roleColors = {
 
 export function ProjectManager() {
   const { user } = useAuth();
-  const { projects, createProject, deleteProject, isLoading } = useProjects();
+  const { projects, createProject, updateProject, deleteProject, isLoading } = useProjects();
   const [filter, setFilter] = useState<'all' | 'owned' | 'member'>('all');
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [isKanbanOpen, setIsKanbanOpen] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteProjectId, setInviteProjectId] = useState<string>('');
 
   const filteredProjects = projects.filter(project => {
     if (!user) return false;
@@ -61,6 +67,16 @@ export function ProjectManager() {
     if (confirm('Tem certeza que deseja excluir este projeto?')) {
       deleteProject(projectId);
     }
+  };
+
+  const handleOpenKanban = (project: any) => {
+    setSelectedProject(project);
+    setIsKanbanOpen(true);
+  };
+
+  const handleOpenInvite = (projectId: string) => {
+    setInviteProjectId(projectId);
+    setIsInviteModalOpen(true);
   };
 
   if (isLoading) {
@@ -197,7 +213,7 @@ export function ProjectManager() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="glass-card border-white/20">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenKanban(project)}>
                             <Eye className="w-4 h-4 mr-2" />
                             Visualizar
                           </DropdownMenuItem>
@@ -207,7 +223,7 @@ export function ProjectManager() {
                                 <Edit className="w-4 h-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenInvite(project.id)}>
                                 <UserPlus className="w-4 h-4 mr-2" />
                                 Convidar Membros
                               </DropdownMenuItem>
@@ -283,12 +299,21 @@ export function ProjectManager() {
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-2">
-                      <Button className="flex-1 glow-button" size="sm">
+                      <Button 
+                        className="flex-1 glow-button" 
+                        size="sm"
+                        onClick={() => handleOpenKanban(project)}
+                      >
                         <FolderKanban className="w-4 h-4 mr-2" />
                         Abrir Quadro
                       </Button>
                       {(userRole === 'owner' || userRole === 'admin') && (
-                        <Button variant="outline" size="sm" className="neon-border">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="neon-border"
+                          onClick={() => handleOpenInvite(project.id)}
+                        >
                           <UserPlus className="w-4 h-4" />
                         </Button>
                       )}
@@ -320,6 +345,25 @@ export function ProjectManager() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Kanban Board Modal */}
+      <Dialog open={isKanbanOpen} onOpenChange={setIsKanbanOpen}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
+          {selectedProject && (
+            <KanbanBoard 
+              projectId={selectedProject.id}
+              projectName={selectedProject.name}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Modal */}
+      <InviteModal
+        projectId={inviteProjectId}
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+      />
     </div>
   );
 }
