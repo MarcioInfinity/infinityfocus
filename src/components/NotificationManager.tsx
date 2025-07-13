@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Bell, Clock, Calendar, CalendarDays, Plus, Settings, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { Bell, Clock, Calendar, CalendarDays, Plus, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,28 +14,15 @@ import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTasks } from '@/hooks/useTasks';
 
-const daysOfWeek = [{
-  value: 0,
-  label: 'Domingo'
-}, {
-  value: 1,
-  label: 'Segunda'
-}, {
-  value: 2,
-  label: 'Terça'
-}, {
-  value: 3,
-  label: 'Quarta'
-}, {
-  value: 4,
-  label: 'Quinta'
-}, {
-  value: 5,
-  label: 'Sexta'
-}, {
-  value: 6,
-  label: 'Sábado'
-}];
+const daysOfWeek = [
+  { value: 0, label: 'Domingo' },
+  { value: 1, label: 'Segunda' },
+  { value: 2, label: 'Terça' },
+  { value: 3, label: 'Quarta' },
+  { value: 4, label: 'Quinta' },
+  { value: 5, label: 'Sexta' },
+  { value: 6, label: 'Sábado' }
+];
 
 export function NotificationManager() {
   const { 
@@ -51,7 +38,7 @@ export function NotificationManager() {
   
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newNotification, setNewNotification] = useState({
-    task_id: 'none',
+    task_id: null as string | null,
     type: 'time' as NotificationType,
     time: '',
     days_of_week: [] as number[],
@@ -70,24 +57,24 @@ export function NotificationManager() {
   const handleCreateNotification = () => {
     // Validate required fields
     if (!newNotification.message.trim()) {
-      showErrorToast('Erro!', 'A mensagem é obrigatória');
+      showErrorToast('A mensagem é obrigatória');
       return;
     }
     if (newNotification.type === 'time' && !newNotification.time) {
-      showErrorToast('Erro!', 'O horário é obrigatório para notificações por horário');
+      showErrorToast('O horário é obrigatório para notificações por horário');
       return;
     }
     if (newNotification.type === 'day' && newNotification.days_of_week.length === 0) {
-      showErrorToast('Erro!', 'Selecione pelo menos um dia da semana');
+      showErrorToast('Selecione pelo menos um dia da semana');
       return;
     }
     if (newNotification.type === 'date' && !newNotification.specific_date) {
-      showErrorToast('Erro!', 'A data é obrigatória para notificações por data específica');
+      showErrorToast('A data é obrigatória para notificações por data específica');
       return;
     }
 
     const notificationData = {
-      task_id: newNotification.task_id === 'none' ? null : newNotification.task_id,
+      task_id: newNotification.task_id,
       type: newNotification.type,
       time: newNotification.time || null,
       days_of_week: newNotification.days_of_week.length > 0 ? newNotification.days_of_week : null,
@@ -99,7 +86,7 @@ export function NotificationManager() {
     createNotification(notificationData);
     setShowCreateForm(false);
     setNewNotification({
-      task_id: 'none',
+      task_id: null,
       type: 'time',
       time: '',
       days_of_week: [],
@@ -224,8 +211,11 @@ export function NotificationManager() {
               <div className="space-y-2">
                 <Label htmlFor="task-select">Tarefa (Opcional)</Label>
                 <Select 
-                  value={newNotification.task_id} 
-                  onValueChange={(value) => setNewNotification(prev => ({...prev, task_id: value}))}
+                  value={newNotification.task_id || 'none'} 
+                  onValueChange={(value) => setNewNotification(prev => ({
+                    ...prev, 
+                    task_id: value === 'none' ? null : value
+                  }))}
                 >
                   <SelectTrigger className="glass-card border-white/20">
                     <SelectValue placeholder="Selecionar tarefa..." />

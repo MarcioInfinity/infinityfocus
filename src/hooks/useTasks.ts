@@ -1,65 +1,31 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Task } from '@/types';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
+import { Task } from '@/types';
 
-export function useTasks(projectId?: string) {
+export function useTasks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
 
   const tasksQuery = useQuery({
-    queryKey: ['tasks', projectId],
+    queryKey: ['tasks', user?.id],
     queryFn: async () => {
       if (!user) return [];
       
-      let query = supabase
+      const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          checklist_items (
-            id,
-            text,
-            completed,
-            created_at
-          ),
-          custom_notifications (
-            id,
-            type,
-            time,
-            days_of_week,
-            specific_date,
-            message,
-            is_active,
-            created_at,
-            updated_at
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
-
-      if (projectId) {
-        query = query.eq('project_id', projectId);
-      }
-
-      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching tasks:', error);
         throw error;
       }
 
-      return data.map(task => ({
-        ...task,
-        checklist: task.checklist_items || [],
-        notifications: task.custom_notifications?.map(notif => ({
-          ...notif,
-          type: 'reminder' as const,
-          scheduled_for: new Date().toISOString(),
-          sent: false
-        })) || [],
-      })) as Task[];
+      return data as Task[];
     },
     enabled: !!user,
   });

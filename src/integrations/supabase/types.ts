@@ -54,10 +54,11 @@ export type Database = {
           is_active: boolean
           message: string
           specific_date: string | null
-          task_id: string
+          task_id: string | null
           time: string | null
           type: Database["public"]["Enums"]["notification_type"]
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -66,10 +67,11 @@ export type Database = {
           is_active?: boolean
           message: string
           specific_date?: string | null
-          task_id: string
+          task_id?: string | null
           time?: string | null
           type: Database["public"]["Enums"]["notification_type"]
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -78,10 +80,11 @@ export type Database = {
           is_active?: boolean
           message?: string
           specific_date?: string | null
-          task_id?: string
+          task_id?: string | null
           time?: string | null
           type?: Database["public"]["Enums"]["notification_type"]
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {

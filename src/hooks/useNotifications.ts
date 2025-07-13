@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -17,6 +18,7 @@ export function useNotifications() {
       const { data, error } = await supabase
         .from('custom_notifications')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -36,12 +38,13 @@ export function useNotifications() {
       const { data, error } = await supabase
         .from('custom_notifications')
         .insert({
-          task_id: notificationData.task_id!,
+          user_id: user.id,
+          task_id: notificationData.task_id || null,
           type: notificationData.type!,
           message: notificationData.message!,
-          time: notificationData.time,
-          days_of_week: notificationData.days_of_week,
-          specific_date: notificationData.specific_date,
+          time: notificationData.time || null,
+          days_of_week: notificationData.days_of_week || null,
+          specific_date: notificationData.specific_date || null,
           is_active: notificationData.is_active ?? true,
         })
         .select()
@@ -66,6 +69,7 @@ export function useNotifications() {
         .from('custom_notifications')
         .update(updates)
         .eq('id', id)
+        .eq('user_id', user?.id)
         .select()
         .single();
 
@@ -87,7 +91,8 @@ export function useNotifications() {
       const { error } = await supabase
         .from('custom_notifications')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user?.id);
 
       if (error) throw error;
     },

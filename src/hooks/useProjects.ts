@@ -1,9 +1,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Project } from '@/types';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
+import { Project } from '@/types';
 
 export function useProjects() {
   const { user } = useAuth();
@@ -11,21 +11,13 @@ export function useProjects() {
   const { showSuccessToast, showErrorToast } = useToastNotifications();
 
   const projectsQuery = useQuery({
-    queryKey: ['projects'],
+    queryKey: ['projects', user?.id],
     queryFn: async () => {
       if (!user) return [];
       
       const { data, error } = await supabase
         .from('projects')
-        .select(`
-          *,
-          project_members (
-            id,
-            user_id,
-            role,
-            joined_at
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -33,42 +25,7 @@ export function useProjects() {
         throw error;
       }
 
-      // Fetch profiles separately for each project member
-      const projectsWithMembers = await Promise.all(
-        data.map(async (project) => {
-          const membersWithProfiles = await Promise.all(
-            project.project_members.map(async (member) => {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('name, email, avatar')
-                .eq('user_id', member.user_id)
-                .single();
-
-              return {
-                id: member.id,
-                user_id: member.user_id,
-                project_id: project.id,
-                role: member.role,
-                joined_at: member.joined_at,
-                user: {
-                  id: member.user_id,
-                  name: profile?.name || 'Unknown',
-                  email: profile?.email || '',
-                  avatar: profile?.avatar
-                }
-              };
-            })
-          );
-
-          return {
-            ...project,
-            members: membersWithProfiles,
-            tasks: [] // Will be populated separately when needed
-          };
-        })
-      );
-
-      return projectsWithMembers as Project[];
+      return data as Project[];
     },
     enabled: !!user,
   });
@@ -109,7 +66,7 @@ export function useProjects() {
     },
     onError: (error) => {
       console.error('Error creating project:', error);
-      showErrorToast('Erro ao criar projeto', 'Tente novamente mais tarde.');
+      showErrorToast('Erro ao criar projeto');
     },
   });
 
@@ -119,6 +76,7 @@ export function useProjects() {
         .from('projects')
         .update(updates)
         .eq('id', id)
+        .eq('owner_id', user?.id)
         .select()
         .single();
 
@@ -140,7 +98,8 @@ export function useProjects() {
       const { error } = await supabase
         .from('projects')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user?.id);
 
       if (error) throw error;
     },
