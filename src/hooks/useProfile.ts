@@ -1,17 +1,8 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
-
-export interface Profile {
-  id: string;
-  user_id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export function useProfile() {
   const { user } = useAuth();
@@ -31,16 +22,16 @@ export function useProfile() {
 
       if (error) {
         console.error('Error fetching profile:', error);
-        return null;
+        throw error;
       }
 
-      return data as Profile;
+      return data;
     },
     enabled: !!user,
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
+    mutationFn: async (updates: { name?: string; avatar?: string }) => {
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
@@ -67,23 +58,26 @@ export function useProfile() {
     mutationFn: async (file: File) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Create unique filename
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-      // First, upload the file to storage
-      const { error: uploadError } = await supabase.storage
+      // Upload file to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
-      // Get the public URL
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
-      // Update the profile with the avatar URL
+      // Update profile with new avatar URL
       const { data, error } = await supabase
         .from('profiles')
         .update({ avatar: publicUrl })
@@ -104,39 +98,13 @@ export function useProfile() {
     },
   });
 
-  const removeAvatarMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ avatar: null })
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      showSuccessToast('Avatar removido com sucesso!');
-    },
-    onError: (error) => {
-      console.error('Error removing avatar:', error);
-      showErrorToast('Erro ao remover avatar');
-    },
-  });
-
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
     error: profileQuery.error,
     updateProfile: updateProfileMutation.mutate,
     uploadAvatar: uploadAvatarMutation.mutate,
-    removeAvatar: removeAvatarMutation.mutate,
     isUpdating: updateProfileMutation.isPending,
     isUploading: uploadAvatarMutation.isPending,
-    isRemoving: removeAvatarMutation.isPending,
   };
 }
