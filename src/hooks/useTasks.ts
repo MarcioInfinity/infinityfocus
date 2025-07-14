@@ -25,7 +25,12 @@ export function useTasks() {
         throw error;
       }
 
-      return data as Task[];
+      // Transformar dados para corresponder à interface Task
+      return data.map(task => ({
+        ...task,
+        checklist: [], // Será carregado separadamente se necessário
+        notifications: [], // Será carregado separadamente se necessário
+      })) as Task[];
     },
     enabled: !!user,
   });
@@ -45,17 +50,17 @@ export function useTasks() {
         status: 'todo' as const,
         due_date: taskData.due_date,
         start_date: taskData.start_date,
-        start_time: taskData.time, // Mapear 'time' para 'start_time'
+        start_time: taskData.time,
         end_time: taskData.end_time,
         is_indefinite: taskData.is_indefinite || false,
         assigned_to: taskData.assigned_to,
         project_id: taskData.project_id,
         goal_id: taskData.goal_id,
         tags: taskData.tags || [],
-        notifications_enabled: taskData.notify_enabled || false, // Corrigir mapeamento
-        repeat_enabled: taskData.frequency_enabled || false, // Corrigir mapeamento
-        repeat_type: taskData.frequency_type, // Corrigir mapeamento
-        repeat_days: taskData.frequency_days ? taskData.frequency_days.map(String) : null, // Converter para string array
+        notifications_enabled: taskData.notify_enabled || false,
+        repeat_enabled: taskData.frequency_enabled || false,
+        repeat_type: taskData.frequency_type,
+        repeat_days: taskData.frequency_days ? taskData.frequency_days.map(String) : null,
         created_by: user.id,
       };
 

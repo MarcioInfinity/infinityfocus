@@ -11,6 +11,7 @@ import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 interface InviteData {
   id: string;
+  project_id: string;
   project: {
     name: string;
     description: string;
@@ -50,17 +51,10 @@ export function InvitePage() {
         .from('project_invites')
         .select(`
           id,
+          project_id,
           role,
           expires_at,
-          used_at,
-          projects!inner (
-            name,
-            description,
-            profiles!inner (
-              name,
-              email
-            )
-          )
+          used_at
         `)
         .eq('token', token)
         .single();
@@ -80,20 +74,39 @@ export function InvitePage() {
         return;
       }
 
-      setInvite({
-        id: data.id,
-        project: {
-          name: data.projects.name,
-          description: data.projects.description,
-          owner: {
-            name: data.projects.profiles.name,
-            email: data.projects.profiles.email,
+      // Buscar dados do projeto separadamente
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('name, description, owner_id')
+        .eq('id', data.project_id)
+        .single();
+
+      // Buscar dados do owner
+      const { data: ownerData } = await supabase
+        .from('profiles')
+        .select('name, email')
+        .eq('user_id', projectData?.owner_id)
+        .single();
+
+      if (projectData && ownerData) {
+        setInvite({
+          id: data.id,
+          project_id: data.project_id,
+          project: {
+            name: projectData.name,
+            description: projectData.description || '',
+            owner: {
+              name: ownerData.name,
+              email: ownerData.email,
+            },
           },
-        },
-        role: data.role,
-        expires_at: data.expires_at,
-        used_at: data.used_at,
-      });
+          role: data.role,
+          expires_at: data.expires_at,
+          used_at: data.used_at,
+        });
+      } else {
+        setError('Projeto não encontrado');
+      }
     } catch (err) {
       console.error('Error loading invite:', err);
       setError('Erro ao carregar convite');
@@ -119,7 +132,7 @@ export function InvitePage() {
       const { error: memberError } = await supabase
         .from('project_members')
         .insert({
-          project_id: invite.project.id,
+          project_id: invite.project_id,
           user_id: user.id,
           role: invite.role as any,
         });

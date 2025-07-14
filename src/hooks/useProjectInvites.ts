@@ -45,22 +45,25 @@ export function useProjectInvites() {
       if (email) {
         const inviteLink = `${window.location.origin}/invite/${token}`;
         
-        // Buscar dados do projeto e do usuário
+        // Buscar dados do projeto e do usuário criador
         const { data: projectData } = await supabase
           .from('projects')
-          .select(`
-            name,
-            profiles!inner (name)
-          `)
+          .select('name, owner_id')
           .eq('id', projectId)
           .single();
 
-        if (projectData) {
+        const { data: ownerData } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('user_id', projectData?.owner_id)
+          .single();
+
+        if (projectData && ownerData) {
           const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
             body: {
               email,
               projectName: projectData.name,
-              inviterName: projectData.profiles.name,
+              inviterName: ownerData.name,
               role,
               inviteLink,
             },

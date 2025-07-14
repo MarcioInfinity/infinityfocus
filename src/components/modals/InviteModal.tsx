@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Copy, UserPlus, Mail, Link } from 'lucide-react';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useProjectInvites } from '@/hooks/useProjectInvites';
-import { ProjectRole } from '@/types';
 
 interface InviteModalProps {
   projectId: string;
@@ -16,9 +15,11 @@ interface InviteModalProps {
   onClose: () => void;
 }
 
+type InviteRole = 'admin' | 'member' | 'viewer';
+
 export function InviteModal({ projectId, isOpen, onClose }: InviteModalProps) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<ProjectRole>('member');
+  const [role, setRole] = useState<InviteRole>('member');
   const [inviteLink, setInviteLink] = useState('');
   const { showSuccessToast, showErrorToast } = useToastNotifications();
   const { createInviteAsync, isCreatingInvite } = useProjectInvites();
@@ -99,7 +100,7 @@ export function InviteModal({ projectId, isOpen, onClose }: InviteModalProps) {
 
             <div className="space-y-2">
               <Label>Função</Label>
-              <Select value={role} onValueChange={(value: ProjectRole) => setRole(value)}>
+              <Select value={role} onValueChange={(value: InviteRole) => setRole(value)}>
                 <SelectTrigger className="glass-card border-white/20">
                   <SelectValue />
                 </SelectTrigger>
