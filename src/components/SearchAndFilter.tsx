@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Search, Filter, X, Calendar, Tag, User, Priority } from 'lucide-react';
+import { Search, Filter, X, Calendar, Tag, User, Star } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import type { DateRange } from 'react-day-picker';
 
 interface FilterOptions {
   searchTerm: string;
@@ -80,6 +81,12 @@ export function SearchAndFilter({
     updateFilters({ tags: filters.tags.filter(t => t !== tag) });
   };
 
+  // Convert our dateRange to the format expected by the calendar
+  const calendarDateRange: DateRange | undefined = filters.dateRange?.from ? {
+    from: filters.dateRange.from,
+    to: filters.dateRange.to
+  } : undefined;
+
   return (
     <div className="space-y-4">
       {/* Search Bar */}
@@ -101,7 +108,7 @@ export function SearchAndFilter({
             onValueChange={(value) => updateFilters({ priority: value || undefined })}
           >
             <SelectTrigger className="w-[120px] glass-card border-white/20">
-              <Priority className="h-4 w-4 mr-2" />
+              <Star className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Prioridade" />
             </SelectTrigger>
             <SelectContent className="glass-card border-white/20">
@@ -176,7 +183,7 @@ export function SearchAndFilter({
                 initialFocus
                 mode="range"
                 defaultMonth={filters.dateRange?.from}
-                selected={filters.dateRange}
+                selected={calendarDateRange}
                 onSelect={(range) => updateFilters({ dateRange: range })}
                 numberOfMonths={2}
                 className="pointer-events-auto"
