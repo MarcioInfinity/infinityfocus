@@ -104,15 +104,15 @@ export function SearchAndFilter({
       <div className="flex flex-wrap gap-2">
         {showPriorityFilter && (
           <Select 
-            value={filters.priority || ''} 
-            onValueChange={(value) => updateFilters({ priority: value || undefined })}
+            value={filters.priority || 'all'} 
+            onValueChange={(value) => updateFilters({ priority: value === 'all' ? undefined : value })}
           >
             <SelectTrigger className="w-[120px] glass-card border-white/20">
               <Star className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Prioridade" />
             </SelectTrigger>
             <SelectContent className="glass-card border-white/20">
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="high">Alta</SelectItem>
               <SelectItem value="medium">Média</SelectItem>
               <SelectItem value="low">Baixa</SelectItem>
@@ -122,15 +122,15 @@ export function SearchAndFilter({
 
         {showStatusFilter && (
           <Select 
-            value={filters.status || ''} 
-            onValueChange={(value) => updateFilters({ status: value || undefined })}
+            value={filters.status || 'all'} 
+            onValueChange={(value) => updateFilters({ status: value === 'all' ? undefined : value })}
           >
             <SelectTrigger className="w-[120px] glass-card border-white/20">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent className="glass-card border-white/20">
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="todo">A fazer</SelectItem>
               <SelectItem value="in-progress">Em progresso</SelectItem>
               <SelectItem value="review">Revisão</SelectItem>
@@ -141,15 +141,15 @@ export function SearchAndFilter({
 
         {showCategoryFilter && (
           <Select 
-            value={filters.category || ''} 
-            onValueChange={(value) => updateFilters({ category: value || undefined })}
+            value={filters.category || 'all'} 
+            onValueChange={(value) => updateFilters({ category: value === 'all' ? undefined : value })}
           >
             <SelectTrigger className="w-[120px] glass-card border-white/20">
               <Tag className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent className="glass-card border-white/20">
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="professional">Profissional</SelectItem>
               <SelectItem value="personal">Pessoal</SelectItem>
               <SelectItem value="health">Saúde</SelectItem>

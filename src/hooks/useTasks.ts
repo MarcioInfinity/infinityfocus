@@ -25,7 +25,11 @@ export function useTasks() {
         throw error;
       }
 
-      return data as Task[];
+      return data.map(task => ({
+        ...task,
+        checklist: [],
+        notifications: []
+      })) as Task[];
     },
     enabled: !!user,
   });
@@ -42,7 +46,7 @@ export function useTasks() {
         description: taskData.description,
         priority: taskData.priority || 'medium',
         category: taskData.category || 'professional',
-        status: 'todo',
+        status: 'todo' as const,
         due_date: taskData.due_date,
         start_date: taskData.start_date,
         start_time: taskData.time, // Mapear 'time' para 'start_time'

@@ -411,6 +411,7 @@ export type Database = {
           start_date: string | null
           start_time: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           category?: Database["public"]["Enums"]["category_type"]
@@ -433,6 +434,7 @@ export type Database = {
           start_date?: string | null
           start_time?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["category_type"]
@@ -455,6 +457,7 @@ export type Database = {
           start_date?: string | null
           start_time?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -471,6 +474,7 @@ export type Database = {
           id: string
           is_indefinite: boolean
           notifications_enabled: boolean
+          owner_id: string | null
           priority: Database["public"]["Enums"]["priority"]
           project_id: string | null
           repeat_days: string[] | null
@@ -482,6 +486,7 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -495,6 +500,7 @@ export type Database = {
           id?: string
           is_indefinite?: boolean
           notifications_enabled?: boolean
+          owner_id?: string | null
           priority?: Database["public"]["Enums"]["priority"]
           project_id?: string | null
           repeat_days?: string[] | null
@@ -506,6 +512,7 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -519,6 +526,7 @@ export type Database = {
           id?: string
           is_indefinite?: boolean
           notifications_enabled?: boolean
+          owner_id?: string | null
           priority?: Database["public"]["Enums"]["priority"]
           project_id?: string | null
           repeat_days?: string[] | null
@@ -530,6 +538,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {

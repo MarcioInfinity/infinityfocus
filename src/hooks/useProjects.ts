@@ -25,7 +25,11 @@ export function useProjects() {
         throw error;
       }
 
-      return data as Project[];
+      return data.map(project => ({
+        ...project,
+        members: [],
+        tasks: []
+      })) as Project[];
     },
     enabled: !!user,
   });
