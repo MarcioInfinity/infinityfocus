@@ -31,36 +31,65 @@ export function useTasks() {
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: async (taskData: Partial<Task>) => {
+    mutationFn: async (taskData: any) => {
       if (!user) throw new Error('User not authenticated');
+
+      console.log('Creating task with data:', taskData);
+
+      // Mapear os campos do formulário para os campos do banco
+      const taskPayload = {
+        title: taskData.title,
+        description: taskData.description,
+        priority: taskData.priority || 'medium',
+        category: taskData.category || 'professional',
+        status: 'todo',
+        due_date: taskData.due_date,
+        start_date: taskData.start_date,
+        start_time: taskData.time, // Mapear 'time' para 'start_time'
+        end_time: taskData.end_time,
+        is_indefinite: taskData.is_indefinite || false,
+        assigned_to: taskData.assigned_to,
+        project_id: taskData.project_id,
+        goal_id: taskData.goal_id,
+        tags: taskData.tags || [],
+        notifications_enabled: taskData.notify_enabled || false, // Corrigir mapeamento
+        repeat_enabled: taskData.frequency_enabled || false, // Corrigir mapeamento
+        repeat_type: taskData.frequency_type, // Corrigir mapeamento
+        repeat_days: taskData.frequency_days ? taskData.frequency_days.map(String) : null, // Converter para string array
+        created_by: user.id,
+      };
+
+      console.log('Task payload:', taskPayload);
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert({
-          title: taskData.title!,
-          description: taskData.description,
-          priority: taskData.priority || 'medium',
-          category: taskData.category || 'professional',
-          status: taskData.status || 'todo',
-          due_date: taskData.due_date,
-          start_date: taskData.start_date,
-          start_time: taskData.start_time,
-          end_time: taskData.end_time,
-          is_indefinite: taskData.is_indefinite || false,
-          assigned_to: taskData.assigned_to,
-          project_id: taskData.project_id,
-          goal_id: taskData.goal_id,
-          tags: taskData.tags || [],
-          notifications_enabled: taskData.notifications_enabled || false,
-          repeat_enabled: taskData.repeat_enabled || false,
-          repeat_type: taskData.repeat_type,
-          repeat_days: taskData.repeat_days,
-          created_by: user.id,
-        })
+        .insert(taskPayload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      // Se há checklist, criar os itens separadamente
+      if (taskData.checklist && taskData.checklist.length > 0) {
+        const checklistItems = taskData.checklist.map((item: any) => ({
+          task_id: data.id,
+          text: item.text,
+          completed: item.completed || false,
+        }));
+
+        const { error: checklistError } = await supabase
+          .from('checklist_items')
+          .insert(checklistItems);
+
+        if (checklistError) {
+          console.error('Error creating checklist items:', checklistError);
+          // Não falhar a criação da tarefa por causa do checklist
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -69,7 +98,7 @@ export function useTasks() {
     },
     onError: (error) => {
       console.error('Error creating task:', error);
-      showErrorToast('Erro ao criar tarefa');
+      showErrorToast('Erro ao criar tarefa: ' + error.message);
     },
   });
 
