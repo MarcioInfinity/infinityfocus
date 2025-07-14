@@ -98,13 +98,40 @@ export function useProfile() {
     },
   });
 
+  const removeAvatarMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('User not authenticated');
+
+      // Update profile to remove avatar URL
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ avatar: null })
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      showSuccessToast('Avatar removido com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Error removing avatar:', error);
+      showErrorToast('Erro ao remover avatar');
+    },
+  });
+
   return {
     profile: profileQuery.data,
     isLoading: profileQuery.isLoading,
     error: profileQuery.error,
     updateProfile: updateProfileMutation.mutate,
     uploadAvatar: uploadAvatarMutation.mutate,
+    removeAvatar: removeAvatarMutation.mutate,
     isUpdating: updateProfileMutation.isPending,
     isUploading: uploadAvatarMutation.isPending,
+    isRemoving: removeAvatarMutation.isPending,
   };
 }
