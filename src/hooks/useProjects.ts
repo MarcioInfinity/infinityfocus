@@ -25,11 +25,7 @@ export function useProjects() {
         throw error;
       }
 
-      return data.map(project => ({
-        ...project,
-        members: [],
-        tasks: []
-      })) as Project[];
+      return data as Project[];
     },
     enabled: !!user,
   });
@@ -47,16 +43,17 @@ export function useProjects() {
         category: projectData.category || 'professional',
         color: projectData.color || '#3B82F6',
         is_shared: projectData.is_shared || false,
-        start_date: projectData.start_date,
-        due_date: projectData.due_date,
+        start_date: projectData.start_date || null, // Converter string vazia para null
+        due_date: projectData.due_date || null, // Converter string vazia para null
         is_indefinite: projectData.is_indefinite || false,
-        start_time: projectData.time, // Mapear 'time' para 'start_time'
-        end_time: projectData.end_time,
+        start_time: projectData.time || null, // Mapear 'time' para 'start_time' e converter string vazia para null
+        end_time: projectData.end_time || null, // Converter string vazia para null
         notifications_enabled: projectData.notify_enabled || false, // Corrigir mapeamento
         repeat_enabled: projectData.frequency_enabled || false, // Corrigir mapeamento
-        repeat_type: projectData.frequency_type, // Corrigir mapeamento
+        repeat_type: projectData.frequency_type || null, // Corrigir mapeamento e converter string vazia para null
         repeat_days: projectData.frequency_days ? projectData.frequency_days.map(String) : null, // Converter para string array
-        owner_id: user.id,
+        user_id: user.id, // Usar user_id em vez de owner_id
+        owner_id: user.id, // Adicionar owner_id também para compatibilidade
       };
 
       console.log('Project payload:', projectPayload);
