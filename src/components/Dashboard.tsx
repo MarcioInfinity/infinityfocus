@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Calendar, CheckCircle2, Target, Users, TrendingUp, Plus, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,9 +9,6 @@ import { DashboardStats } from './DashboardStats';
 import { SearchAndFilter } from './SearchAndFilter';
 import { RealtimeNotifications } from './RealtimeNotifications';
 import { NotificationManager } from './NotificationManager_new';
-import { TaskForm } from './forms/TaskForm';
-import { ProjectForm } from './forms/ProjectForm_fixed';
-import { GoalForm } from './forms/GoalForm';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
@@ -34,10 +32,6 @@ export function Dashboard() {
   const { goals } = useGoals();
   
   const [activeTab, setActiveTab] = useState('overview');
-  const [showTaskForm, setShowTaskForm] = useState(false);
-  const [showProjectForm, setShowProjectForm] = useState(false);
-  const [showGoalForm, setShowGoalForm] = useState(false);
-  const [showQuickActionMenu, setShowQuickActionMenu] = useState(false);
   const [filters, setFilters] = useState<FilterOptions>({
     searchTerm: '',
     tags: []
@@ -77,25 +71,6 @@ export function Dashboard() {
     return days;
   };
 
-  const handleQuickAction = () => {
-    setShowQuickActionMenu(!showQuickActionMenu);
-  };
-
-  const handleNewTask = () => {
-    setShowTaskForm(true);
-    setShowQuickActionMenu(false);
-  };
-
-  const handleNewProject = () => {
-    setShowProjectForm(true);
-    setShowQuickActionMenu(false);
-  };
-
-  const handleNewGoal = () => {
-    setShowGoalForm(true);
-    setShowQuickActionMenu(false);
-  };
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header with Notifications */}
@@ -108,44 +83,12 @@ export function Dashboard() {
             Visão geral das suas atividades e progresso
           </p>
         </div>
-        <div className="flex items-center gap-4 relative">
+        <div className="flex items-center gap-4">
           <RealtimeNotifications />
-          <Button onClick={handleQuickAction} className="glow-button">
+          <Button className="glow-button">
             <Plus className="w-4 h-4 mr-2" />
             Ação Rápida
           </Button>
-          
-          {/* Quick Action Menu */}
-          {showQuickActionMenu && (
-            <div className="absolute top-full right-0 mt-2 w-48 bg-background border border-border rounded-lg shadow-lg z-50">
-              <div className="p-2 space-y-1">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={handleNewTask}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Nova Tarefa
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={handleNewProject}
-                >
-                  <Target className="w-4 h-4 mr-2" />
-                  Novo Projeto
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={handleNewGoal}
-                >
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Nova Meta
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -250,27 +193,15 @@ export function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex-col gap-2 neon-border"
-                  onClick={handleNewTask}
-                >
+                <Button variant="outline" className="h-20 flex-col gap-2 neon-border">
                   <CheckCircle2 className="h-6 w-6" />
                   <span className="text-sm">Nova Tarefa</span>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex-col gap-2 neon-border"
-                  onClick={handleNewProject}
-                >
+                <Button variant="outline" className="h-20 flex-col gap-2 neon-border">
                   <Target className="h-6 w-6" />
                   <span className="text-sm">Novo Projeto</span>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-20 flex-col gap-2 neon-border"
-                  onClick={handleNewGoal}
-                >
+                <Button variant="outline" className="h-20 flex-col gap-2 neon-border">
                   <TrendingUp className="h-6 w-6" />
                   <span className="text-sm">Nova Meta</span>
                 </Button>
@@ -396,32 +327,6 @@ export function Dashboard() {
           <NotificationManager />
         </TabsContent>
       </Tabs>
-
-      {/* Modal Forms */}
-      {showTaskForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <TaskForm onClose={() => setShowTaskForm(false)} />
-          </div>
-        </div>
-      )}
-
-      {showProjectForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background border border-border rounded-lg p-4 w-full max-w-md max-h-[85vh] overflow-y-auto">
-            <ProjectForm onClose={() => setShowProjectForm(false)} />
-          </div>
-        </div>
-      )}
-
-      {showGoalForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background border border-border rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <GoalForm onClose={() => setShowGoalForm(false)} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-
