@@ -31,33 +31,43 @@ export function useProjects() {
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: async (projectData: Partial<Project>) => {
+    mutationFn: async (projectData: any) => {
       if (!user) throw new Error('User not authenticated');
+
+      console.log('Creating project with data:', projectData);
+
+      const projectPayload = {
+        name: projectData.name,
+        description: projectData.description,
+        priority: projectData.priority || 'medium',
+        category: projectData.category || 'professional',
+        color: projectData.color || '#3B82F6',
+        is_shared: projectData.is_shared || false,
+        start_date: projectData.start_date,
+        due_date: projectData.due_date,
+        is_indefinite: projectData.is_indefinite || false,
+        start_time: projectData.time, // Mapear 'time' para 'start_time'
+        end_time: projectData.end_time,
+        notifications_enabled: projectData.notify_enabled || false, // Corrigir mapeamento
+        repeat_enabled: projectData.frequency_enabled || false, // Corrigir mapeamento
+        repeat_type: projectData.frequency_type, // Corrigir mapeamento
+        repeat_days: projectData.frequency_days ? projectData.frequency_days.map(String) : null, // Converter para string array
+        owner_id: user.id,
+      };
+
+      console.log('Project payload:', projectPayload);
 
       const { data, error } = await supabase
         .from('projects')
-        .insert({
-          name: projectData.name!,
-          description: projectData.description,
-          priority: projectData.priority || 'medium',
-          category: projectData.category || 'professional',
-          color: projectData.color || '#3B82F6',
-          is_shared: projectData.is_shared || false,
-          start_date: projectData.start_date,
-          due_date: projectData.due_date,
-          is_indefinite: projectData.is_indefinite || false,
-          start_time: projectData.start_time,
-          end_time: projectData.end_time,
-          notifications_enabled: projectData.notifications_enabled || false,
-          repeat_enabled: projectData.repeat_enabled || false,
-          repeat_type: projectData.repeat_type,
-          repeat_days: projectData.repeat_days,
-          owner_id: user.id,
-        })
+        .insert(projectPayload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -66,7 +76,7 @@ export function useProjects() {
     },
     onError: (error) => {
       console.error('Error creating project:', error);
-      showErrorToast('Erro ao criar projeto');
+      showErrorToast('Erro ao criar projeto: ' + error.message);
     },
   });
 
