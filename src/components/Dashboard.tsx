@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardStats } from './DashboardStats';
 import { SearchAndFilter } from './SearchAndFilter';
 import { RealtimeNotifications } from './RealtimeNotifications';
+import { NotificationManager } from './NotificationManager_new';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
@@ -96,11 +97,12 @@ export function Dashboard() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 glass-card">
+        <TabsList className="grid w-full grid-cols-5 glass-card">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
           <TabsTrigger value="projects">Projetos</TabsTrigger>
           <TabsTrigger value="goals">Metas</TabsTrigger>
+          <TabsTrigger value="notifications">Notificações</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -319,6 +321,10 @@ export function Dashboard() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-4">
+          <NotificationManager />
         </TabsContent>
       </Tabs>
     </div>
