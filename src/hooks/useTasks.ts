@@ -25,11 +25,7 @@ export function useTasks() {
         throw error;
       }
 
-      return data.map(task => ({
-        ...task,
-        checklist: [],
-        notifications: []
-      })) as Task[];
+      return data as Task[];
     },
     enabled: !!user,
   });
