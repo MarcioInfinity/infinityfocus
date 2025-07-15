@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
-import { Project } from '@/types';
+import { Project, ProjectMember } from '@/types';
 
 export function useProjects() {
   const { user } = useAuth();
@@ -25,7 +25,8 @@ export function useProjects() {
             id,
             user_id,
             role,
-            joined_at
+            joined_at,
+            project_id
           )
         `)
         .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
@@ -38,12 +39,30 @@ export function useProjects() {
 
       console.log('Projects fetched:', data?.length || 0);
 
-      // Transform data to match interface with member information
-      return (data || []).map(project => ({
-        ...project,
-        members: project.project_members || [],
-        tasks: [], // Will be loaded separately if needed
-      })) as Project[];
+      // Transform data to match Project interface
+      const transformedProjects: Project[] = (data || []).map(project => {
+        const members: ProjectMember[] = (project.project_members || []).map(member => ({
+          id: member.id,
+          user_id: member.user_id,
+          project_id: member.project_id,
+          role: member.role,
+          joined_at: member.joined_at,
+          user: {
+            id: member.user_id,
+            name: 'User', // This would need to be fetched from profiles if needed
+            email: '',
+            avatar: undefined
+          }
+        }));
+
+        return {
+          ...project,
+          members,
+          tasks: [], // Will be loaded separately if needed
+        };
+      });
+
+      return transformedProjects;
     },
     enabled: !!user,
     staleTime: 30 * 1000, // 30 seconds

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -81,9 +80,10 @@ interface TaskFormProps {
   onCancel: () => void;
   initialData?: any;
   projects?: Array<{ id: string; name: string; }>;
+  defaultProjectId?: string;
 }
 
-export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: TaskFormProps) {
+export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defaultProjectId }: TaskFormProps) {
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
@@ -97,7 +97,8 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
       is_indefinite: false,
       notify_enabled: false,
       frequency_enabled: false,
-      assign_to_project: false,
+      assign_to_project: !!defaultProjectId,
+      project_id: defaultProjectId || '',
       ...initialData,
     },
   });
@@ -144,7 +145,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Nome da Tarefa */}
             <FormField
               control={form.control}
               name="title"
@@ -159,7 +159,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             />
 
-            {/* Prioridade */}
             <FormField
               control={form.control}
               name="priority"
@@ -183,7 +182,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             />
 
-            {/* Categoria */}
             <div className="space-y-3">
               <FormField
                 control={form.control}
@@ -233,7 +231,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             </div>
 
-            {/* Checklist */}
             <div className="space-y-3">
               <Label>Checklist</Label>
               <div className="flex gap-2">
@@ -268,7 +265,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             </div>
 
-            {/* Datas */}
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <FormField
@@ -361,7 +357,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             </div>
 
-            {/* Horário */}
             <FormField
               control={form.control}
               name="time"
@@ -379,7 +374,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             />
 
-            {/* Notificações */}
             <FormField
               control={form.control}
               name="notify_enabled"
@@ -404,7 +398,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             />
 
-            {/* Frequência */}
             {watchNotifyEnabled && (
               <div className="space-y-4">
                 <FormField
@@ -495,7 +488,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               </div>
             )}
 
-            {/* Atribuir a Projeto */}
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -549,7 +541,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             </div>
 
-            {/* Descrição */}
             <FormField
               control={form.control}
               name="description"
@@ -564,7 +555,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [] }: Tas
               )}
             />
 
-            {/* Botões */}
             <div className="flex gap-3 pt-6">
               <Button 
                 type="button" 
