@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useProjects } from '@/hooks/useProjects';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { FrequencyType } from '@/types';
 
 interface EditProjectModalProps {
   project: any;
@@ -39,7 +40,7 @@ export function EditProjectModal({ project, isOpen, onClose }: EditProjectModalP
     end_time: '',
     notifications_enabled: false,
     repeat_enabled: false,
-    repeat_type: null as string | null,
+    repeat_type: null as FrequencyType | null,
     repeat_days: [] as string[],
   });
 
@@ -88,7 +89,7 @@ export function EditProjectModal({ project, isOpen, onClose }: EditProjectModalP
         end_time: formData.end_time || null,
         notifications_enabled: formData.notifications_enabled,
         repeat_enabled: formData.repeat_enabled,
-        repeat_type: formData.repeat_type,
+        repeat_type: formData.repeat_type as FrequencyType | null,
         repeat_days: formData.repeat_days,
       };
 
