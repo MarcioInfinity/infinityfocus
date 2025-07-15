@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Plus, FolderKanban, Users, Calendar, Settings, MoreHorizontal, Eye, Edit, Trash2, UserPlus } from 'lucide-react';
+import { Plus, FolderKanban, Users, Calendar, Settings, MoreHorizontal, Eye, Edit, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ProjectRole } from '@/types';
 import { ProjectForm } from './forms/ProjectForm';
+import { EditProjectModal } from './modals/EditProjectModal';
+import { ProjectSettingsModal } from './modals/ProjectSettingsModal';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
 import { KanbanBoard } from './KanbanBoard';
@@ -24,12 +26,14 @@ const roleColors = {
 
 export function ProjectManager() {
   const { user } = useAuth();
-  const { projects, createProject, updateProject, deleteProject, isLoading } = useProjects();
+  const { projects, createProject, isLoading } = useProjects();
   const [filter, setFilter] = useState<'all' | 'owned' | 'member'>('all');
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [isKanbanOpen, setIsKanbanOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [inviteProjectId, setInviteProjectId] = useState<string>('');
 
   const filteredProjects = projects.filter(project => {
@@ -63,12 +67,6 @@ export function ProjectManager() {
     setIsProjectFormOpen(false);
   };
 
-  const handleDeleteProject = (projectId: string) => {
-    if (confirm('Tem certeza que deseja excluir este projeto?')) {
-      deleteProject(projectId);
-    }
-  };
-
   const handleOpenKanban = (project: any) => {
     setSelectedProject(project);
     setIsKanbanOpen(true);
@@ -77,6 +75,16 @@ export function ProjectManager() {
   const handleOpenInvite = (projectId: string) => {
     setInviteProjectId(projectId);
     setIsInviteModalOpen(true);
+  };
+
+  const handleOpenEdit = (project: any) => {
+    setSelectedProject(project);
+    setIsEditModalOpen(true);
+  };
+
+  const handleOpenSettings = (project: any) => {
+    setSelectedProject(project);
+    setIsSettingsModalOpen(true);
   };
 
   if (isLoading) {
@@ -219,7 +227,7 @@ export function ProjectManager() {
                           </DropdownMenuItem>
                           {(userRole === 'owner' || userRole === 'admin') && (
                             <>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenEdit(project)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
@@ -227,20 +235,11 @@ export function ProjectManager() {
                                 <UserPlus className="w-4 h-4 mr-2" />
                                 Convidar Membros
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenSettings(project)}>
                                 <Settings className="w-4 h-4 mr-2" />
                                 Configurações
                               </DropdownMenuItem>
                             </>
-                          )}
-                          {userRole === 'owner' && (
-                            <DropdownMenuItem 
-                              className="text-red-400"
-                              onClick={() => handleDeleteProject(project.id)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -363,6 +362,20 @@ export function ProjectManager() {
         projectId={inviteProjectId}
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
+      />
+
+      {/* Edit Project Modal */}
+      <EditProjectModal
+        project={selectedProject}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
+
+      {/* Project Settings Modal */}
+      <ProjectSettingsModal
+        project={selectedProject}
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
     </div>
   );

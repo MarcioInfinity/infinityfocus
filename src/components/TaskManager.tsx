@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
+import { EditTaskModal } from './modals/EditTaskModal';
 
 const priorityColors = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
@@ -33,6 +34,7 @@ export function TaskManager() {
   
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -97,6 +99,11 @@ export function TaskManager() {
     if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
       deleteTask(id);
     }
+  };
+
+  const handleOpenEditModal = (task: any) => {
+    setEditingTask(task);
+    setIsEditModalOpen(true);
   };
 
   if (isLoading) {
@@ -301,7 +308,7 @@ export function TaskManager() {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingTask(task)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(task)}>
                         <Edit3 className="w-4 h-4" />
                       </Button>
                       <Button 
@@ -375,6 +382,13 @@ export function TaskManager() {
       >
         <Plus className="w-6 h-6" />
       </Button>
+
+      {/* Edit Task Modal */}
+      <EditTaskModal
+        task={editingTask}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
     </div>
   );
 }

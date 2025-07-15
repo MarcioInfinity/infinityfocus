@@ -23,11 +23,14 @@ export function useProjectInvites() {
 
   const createInviteMutation = useMutation({
     mutationFn: async ({ projectId, email, role }: CreateInviteData) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Usuário não autenticado');
+
+      console.log('Creating invite:', { projectId, email, role });
 
       const token = generateInviteToken();
       
-      const { data, error } = await supabase
+      // Criar o convite no banco de dados
+      const { data: inviteData, error: inviteError } = await supabase
         .from('project_invites')
         .insert({
           project_id: projectId,
@@ -39,27 +42,52 @@ export function useProjectInvites() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (inviteError) {
+        console.error('Error creating invite record:', inviteError);
+        throw new Error('Erro ao criar convite: ' + inviteError.message);
+      }
 
-      // Se foi fornecido email, enviar convite por email
+      console.log('Invite record created:', inviteData);
+
+      // Se foi fornecido email, tentar enviar convite por email
       if (email) {
-        const inviteLink = `${window.location.origin}/invite/${token}`;
-        
-        // Buscar dados do projeto e do usuário criador
-        const { data: projectData } = await supabase
-          .from('projects')
-          .select('name, owner_id')
-          .eq('id', projectId)
-          .single();
+        try {
+          const inviteLink = `${window.location.origin}/invite/${token}`;
+          
+          // Buscar dados do projeto e do usuário criador
+          const { data: projectData, error: projectError } = await supabase
+            .from('projects')
+            .select('name, owner_id')
+            .eq('id', projectId)
+            .single();
 
-        const { data: ownerData } = await supabase
-          .from('profiles')
-          .select('name')
-          .eq('user_id', projectData?.owner_id)
-          .single();
+          if (projectError) {
+            console.error('Error fetching project data:', projectError);
+            showErrorToast('Convite criado, mas erro ao buscar dados do projeto');
+            return inviteData;
+          }
 
-        if (projectData && ownerData) {
-          const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
+          const { data: ownerData, error: ownerError } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('user_id', projectData.owner_id)
+            .single();
+
+          if (ownerError) {
+            console.error('Error fetching owner data:', ownerError);
+            showErrorToast('Convite criado, mas erro ao buscar dados do proprietário');
+            return inviteData;
+          }
+
+          console.log('Sending email with data:', {
+            email,
+            projectName: projectData.name,
+            inviterName: ownerData.name,
+            role,
+            inviteLink
+          });
+
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('send-invite-email', {
             body: {
               email,
               projectName: projectData.name,
@@ -71,22 +99,27 @@ export function useProjectInvites() {
 
           if (emailError) {
             console.error('Error sending email:', emailError);
-            showErrorToast('Convite criado, mas erro ao enviar email');
+            showErrorToast('Convite criado, mas erro ao enviar email: ' + emailError.message);
+          } else {
+            console.log('Email sent successfully:', emailData);
+            showSuccessToast(`Convite enviado para ${email} com sucesso!`);
           }
+        } catch (emailSendError) {
+          console.error('Exception while sending email:', emailSendError);
+          showErrorToast('Convite criado, mas erro inesperado ao enviar email');
         }
+      } else {
+        showSuccessToast('Link de convite criado com sucesso!');
       }
 
-      return data;
+      return inviteData;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-invites'] });
-      const inviteLink = `${window.location.origin}/invite/${data.token}`;
-      showSuccessToast('Convite criado com sucesso!');
-      return inviteLink;
     },
-    onError: (error) => {
-      console.error('Error creating invite:', error);
-      showErrorToast('Erro ao criar convite');
+    onError: (error: Error) => {
+      console.error('Error in createInviteMutation:', error);
+      showErrorToast(error.message || 'Erro ao criar convite');
     },
   });
 
@@ -94,14 +127,23 @@ export function useProjectInvites() {
     return useQuery({
       queryKey: ['project-invites', projectId],
       queryFn: async () => {
+        if (!projectId || !user) return [];
+
+        console.log('Fetching invites for project:', projectId);
+
         const { data, error } = await supabase
           .from('project_invites')
           .select('*')
           .eq('project_id', projectId)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        return data;
+        if (error) {
+          console.error('Error fetching project invites:', error);
+          throw error;
+        }
+
+        console.log('Project invites fetched:', data);
+        return data || [];
       },
       enabled: !!projectId && !!user,
     });
