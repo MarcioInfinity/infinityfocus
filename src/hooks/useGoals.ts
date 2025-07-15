@@ -1,9 +1,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Goal } from '@/types';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
+import { Goal } from '@/types';
 
 export function useGoals() {
   const { user } = useAuth();
@@ -11,13 +11,16 @@ export function useGoals() {
   const { showSuccessToast, showErrorToast } = useToastNotifications();
 
   const goalsQuery = useQuery({
-    queryKey: ['goals'],
+    queryKey: ['goals', user?.id],
     queryFn: async () => {
       if (!user) return [];
+      
+      console.log('Fetching goals for user:', user.id);
       
       const { data, error } = await supabase
         .from('goals')
         .select('*')
+        .eq('created_by', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -25,38 +28,53 @@ export function useGoals() {
         throw error;
       }
 
-      return data as Goal[];
+      console.log('Goals fetched:', data?.length || 0);
+
+      // Return goals with proper typing
+      return (data || []) as Goal[];
     },
     enabled: !!user,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   const createGoalMutation = useMutation({
-    mutationFn: async (goalData: Partial<Goal>) => {
+    mutationFn: async (goalData: any) => {
       if (!user) throw new Error('User not authenticated');
+
+      console.log('Creating goal with data:', goalData);
+
+      const goalPayload = {
+        name: goalData.name,
+        description: goalData.description || null,
+        priority: goalData.priority || 'medium',
+        category: goalData.category || 'professional',
+        start_date: goalData.start_date || null,
+        due_date: goalData.due_date || null,
+        progress: goalData.progress || 0,
+        is_shared: goalData.is_shared || false,
+        notifications_enabled: goalData.notifications_enabled || false,
+        reward_enabled: goalData.reward_enabled || false,
+        reward_description: goalData.reward_description || null,
+        notes: goalData.notes || null,
+        assigned_tasks: goalData.assigned_tasks || [],
+        assigned_projects: goalData.assigned_projects || [],
+        created_by: user.id,
+      };
+
+      console.log('Goal payload:', goalPayload);
 
       const { data, error } = await supabase
         .from('goals')
-        .insert({
-          name: goalData.name!,
-          description: goalData.description,
-          priority: goalData.priority || 'medium',
-          category: goalData.category || 'professional',
-          progress: goalData.progress || 0,
-          start_date: goalData.start_date,
-          due_date: goalData.due_date,
-          is_shared: goalData.is_shared || false,
-          notifications_enabled: goalData.notifications_enabled || false,
-          reward_enabled: goalData.reward_enabled || false,
-          reward_description: goalData.reward_description,
-          assigned_projects: goalData.assigned_projects || [],
-          assigned_tasks: goalData.assigned_tasks || [],
-          notes: goalData.notes,
-          created_by: user.id,
-        })
+        .insert(goalPayload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -65,24 +83,42 @@ export function useGoals() {
     },
     onError: (error) => {
       console.error('Error creating goal:', error);
-      showErrorToast('Erro ao criar meta');
+      showErrorToast('Erro ao criar meta: ' + error.message);
     },
   });
 
   const updateGoalMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Goal> }) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      console.log('Updating goal:', id, updates);
+      
       const { data, error } = await supabase
         .from('goals')
         .update(updates)
         .eq('id', id)
+        .eq('created_by', user.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating goal:', error);
+        throw error;
+      }
+      
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['goals'] });
+      
+      // Optimistic update
+      queryClient.setQueryData(['goals', user?.id], (old: Goal[] | undefined) => {
+        if (!old) return old;
+        return old.map(goal => 
+          goal.id === variables.id ? { ...goal, ...variables.updates } : goal
+        );
+      });
+      
       showSuccessToast('Meta atualizada com sucesso!');
     },
     onError: (error) => {
@@ -93,10 +129,13 @@ export function useGoals() {
 
   const deleteGoalMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const { error } = await supabase
         .from('goals')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('created_by', user.id);
 
       if (error) throw error;
     },

@@ -15,9 +15,20 @@ export function useProjects() {
     queryFn: async () => {
       if (!user) return [];
       
+      console.log('Fetching projects for user:', user.id);
+      
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
+        .select(`
+          *,
+          project_members (
+            id,
+            user_id,
+            role,
+            joined_at
+          )
+        `)
+        .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -25,14 +36,18 @@ export function useProjects() {
         throw error;
       }
 
-      // Transformar dados para corresponder à interface Project
-      return data.map(project => ({
+      console.log('Projects fetched:', data?.length || 0);
+
+      // Transform data to match interface with member information
+      return (data || []).map(project => ({
         ...project,
-        members: [], // Será carregado separadamente se necessário
-        tasks: [], // Será carregado separadamente se necessário
+        members: project.project_members || [],
+        tasks: [], // Will be loaded separately if needed
       })) as Project[];
     },
     enabled: !!user,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 
   const createProjectMutation = useMutation({
@@ -43,7 +58,7 @@ export function useProjects() {
 
       const projectPayload = {
         name: projectData.name,
-        description: projectData.description,
+        description: projectData.description || null,
         priority: projectData.priority || 'medium',
         category: projectData.category || 'professional',
         color: projectData.color || '#3B82F6',
@@ -88,19 +103,36 @@ export function useProjects() {
 
   const updateProjectMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Project> }) => {
+      if (!user) throw new Error('User not authenticated');
+      
+      console.log('Updating project:', id, updates);
+      
       const { data, error } = await supabase
         .from('projects')
         .update(updates)
         .eq('id', id)
-        .eq('owner_id', user?.id)
+        .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating project:', error);
+        throw error;
+      }
+      
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      
+      // Optimistic update
+      queryClient.setQueryData(['projects', user?.id], (old: Project[] | undefined) => {
+        if (!old) return old;
+        return old.map(project => 
+          project.id === variables.id ? { ...project, ...variables.updates } : project
+        );
+      });
+      
       showSuccessToast('Projeto atualizado com sucesso!');
     },
     onError: (error) => {
@@ -111,11 +143,13 @@ export function useProjects() {
 
   const deleteProjectMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error('User not authenticated');
+      
       const { error } = await supabase
         .from('projects')
         .delete()
         .eq('id', id)
-        .eq('owner_id', user?.id);
+        .eq('owner_id', user.id);
 
       if (error) throw error;
     },

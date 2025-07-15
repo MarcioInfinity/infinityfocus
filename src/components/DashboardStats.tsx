@@ -1,181 +1,178 @@
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Clock, Target, Trophy, TrendingUp, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Clock, Target, TrendingUp, AlertTriangle, Calendar } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 
 export function DashboardStats() {
-  const { tasks } = useTasks();
-  const { projects } = useProjects();
-  const { goals } = useGoals();
+  const { tasks, isLoading: tasksLoading } = useTasks();
+  const { projects, isLoading: projectsLoading } = useProjects();
+  const { goals, isLoading: goalsLoading } = useGoals();
 
-  // Calculate task statistics
-  const taskStats = {
-    total: tasks.length,
-    completed: tasks.filter(t => t.status === 'done').length,
-    inProgress: tasks.filter(t => t.status === 'in-progress').length,
-    overdue: tasks.filter(t => 
-      t.due_date && 
-      new Date(t.due_date) < new Date() && 
-      t.status !== 'done'
-    ).length,
-    highPriority: tasks.filter(t => t.priority === 'high').length
-  };
+  const stats = useMemo(() => {
+    // Task statistics
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(task => task.status === 'done').length;
+    const pendingTasks = totalTasks - completedTasks;
+    const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    
+    // Overdue tasks
+    const overdueTasks = tasks.filter(task => 
+      task.due_date && 
+      new Date(task.due_date) < new Date() && 
+      task.status !== 'done'
+    ).length;
 
-  // Calculate project statistics
-  const projectStats = {
-    total: projects.length,
-    active: projects.filter(p => !p.due_date || new Date(p.due_date) >= new Date()).length,
-    shared: projects.filter(p => p.is_shared).length
-  };
+    // Upcoming deadlines (next 7 days)
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const upcomingDeadlines = tasks.filter(task => 
+      task.due_date && 
+      new Date(task.due_date) <= nextWeek && 
+      new Date(task.due_date) >= new Date() &&
+      task.status !== 'done'
+    ).length;
 
-  // Calculate goal statistics
-  const goalStats = {
-    total: goals.length,
-    completed: goals.filter(g => g.progress === 100).length,
-    nearCompletion: goals.filter(g => g.progress >= 80 && g.progress < 100).length,
-    averageProgress: goals.length > 0 
-      ? Math.round(goals.reduce((sum, g) => sum + g.progress, 0) / goals.length)
-      : 0
-  };
+    // Project statistics
+    const totalProjects = projects.length;
+    const activeProjects = projects.filter(project => 
+      !project.due_date || new Date(project.due_date) >= new Date()
+    ).length;
 
-  // Productivity metrics
-  const completionRate = taskStats.total > 0 
-    ? Math.round((taskStats.completed / taskStats.total) * 100)
-    : 0;
+    // Goal statistics
+    const totalGoals = goals.length;
+    const averageGoalProgress = goals.length > 0 
+      ? Math.round(goals.reduce((sum, goal) => sum + goal.progress, 0) / goals.length)
+      : 0;
+    const completedGoals = goals.filter(goal => goal.progress >= 100).length;
+
+    // High priority items
+    const highPriorityItems = [
+      ...tasks.filter(task => task.priority === 'high' && task.status !== 'done'),
+      ...projects.filter(project => project.priority === 'high'),
+      ...goals.filter(goal => goal.priority === 'high' && goal.progress < 100)
+    ].length;
+
+    return {
+      totalTasks,
+      completedTasks,
+      pendingTasks,
+      taskCompletionRate,
+      overdueTasks,
+      upcomingDeadlines,
+      totalProjects,
+      activeProjects,
+      totalGoals,
+      averageGoalProgress,
+      completedGoals,
+      highPriorityItems,
+    };
+  }, [tasks, projects, goals]);
+
+  if (tasksLoading || projectsLoading || goalsLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map(i => (
+          <Card key={i} className="glass-card animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+              <div className="h-8 bg-muted rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-muted rounded w-full"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Task Overview */}
-      <Card className="glass-card">
+      {/* Task Completion */}
+      <Card className="glass-card hover:scale-105 transition-all duration-200">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Tarefas</CardTitle>
-          <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Conclusão de Tarefas</CardTitle>
+          <CheckCircle2 className="h-4 w-4 text-green-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{taskStats.total}</div>
-          <div className="space-y-2 mt-4">
-            <div className="flex justify-between text-sm">
-              <span>Concluídas</span>
-              <Badge variant="secondary" className="bg-green-500/20 text-green-400">
-                {taskStats.completed}
+          <div className="text-2xl font-bold text-primary mb-2">
+            {stats.taskCompletionRate}%
+          </div>
+          <div className="space-y-2">
+            <Progress value={stats.taskCompletionRate} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {stats.completedTasks} de {stats.totalTasks} tarefas concluídas
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pending Tasks & Alerts */}
+      <Card className="glass-card hover:scale-105 transition-all duration-200">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Tarefas Pendentes</CardTitle>
+          <Clock className="h-4 w-4 text-blue-400" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-primary mb-2">
+            {stats.pendingTasks}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {stats.overdueTasks > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                {stats.overdueTasks} atrasadas
               </Badge>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Em progresso</span>
-              <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
-                {taskStats.inProgress}
+            )}
+            {stats.upcomingDeadlines > 0 && (
+              <Badge variant="outline" className="text-xs text-yellow-400 border-yellow-400">
+                <Calendar className="w-3 h-3 mr-1" />
+                {stats.upcomingDeadlines} próximas
               </Badge>
-            </div>
-            {taskStats.overdue > 0 && (
-              <div className="flex justify-between text-sm">
-                <span>Atrasadas</span>
-                <Badge variant="secondary" className="bg-red-500/20 text-red-400">
-                  {taskStats.overdue}
-                </Badge>
-              </div>
             )}
           </div>
-          <Progress value={completionRate} className="mt-3" />
-          <p className="text-xs text-muted-foreground mt-2">
-            {completionRate}% de conclusão
+        </CardContent>
+      </Card>
+
+      {/* Projects */}
+      <Card className="glass-card hover:scale-105 transition-all duration-200">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Projetos Ativos</CardTitle>
+          <Target className="h-4 w-4 text-purple-400" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-primary mb-2">
+            {stats.activeProjects}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {stats.totalProjects} projetos no total
           </p>
+          {stats.highPriorityItems > 0 && (
+            <Badge variant="outline" className="text-xs text-red-400 border-red-400 mt-2">
+              {stats.highPriorityItems} alta prioridade
+            </Badge>
+          )}
         </CardContent>
       </Card>
 
-      {/* Project Overview */}
-      <Card className="glass-card">
+      {/* Goals Progress */}
+      <Card className="glass-card hover:scale-105 transition-all duration-200">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Projetos</CardTitle>
-          <Target className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Progresso das Metas</CardTitle>
+          <TrendingUp className="h-4 w-4 text-green-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{projectStats.total}</div>
-          <div className="space-y-2 mt-4">
-            <div className="flex justify-between text-sm">
-              <span>Ativos</span>
-              <Badge variant="secondary">{projectStats.active}</Badge>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Compartilhados</span>
-              <Badge variant="secondary">{projectStats.shared}</Badge>
-            </div>
+          <div className="text-2xl font-bold text-primary mb-2">
+            {stats.averageGoalProgress}%
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Goals Overview */}
-      <Card className="glass-card">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Metas</CardTitle>
-          <Trophy className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{goalStats.total}</div>
-          <div className="space-y-2 mt-4">
-            <div className="flex justify-between text-sm">
-              <span>Concluídas</span>
-              <Badge variant="secondary" className="bg-green-500/20 text-green-400">
-                {goalStats.completed}
-              </Badge>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Quase prontas</span>
-              <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400">
-                {goalStats.nearCompletion}
-              </Badge>
-            </div>
-          </div>
-          <Progress value={goalStats.averageProgress} className="mt-3" />
-          <p className="text-xs text-muted-foreground mt-2">
-            {goalStats.averageProgress}% progresso médio
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Priority Alerts */}
-      <Card className="glass-card">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Alertas</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {taskStats.overdue > 0 && (
-              <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-red-400" />
-                  <span className="text-sm">Tarefas atrasadas</span>
-                </div>
-                <Badge variant="secondary" className="bg-red-500/20 text-red-400">
-                  {taskStats.overdue}
-                </Badge>
-              </div>
-            )}
-            
-            {taskStats.highPriority > 0 && (
-              <div className="flex items-center justify-between p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-yellow-400" />
-                  <span className="text-sm">Alta prioridade</span>
-                </div>
-                <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400">
-                  {taskStats.highPriority}
-                </Badge>
-              </div>
-            )}
-
-            {taskStats.overdue === 0 && taskStats.highPriority === 0 && (
-              <div className="flex items-center justify-center p-4 text-center">
-                <div className="text-sm text-muted-foreground">
-                  🎉 Tudo em dia!
-                </div>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Progress value={stats.averageGoalProgress} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {stats.completedGoals} de {stats.totalGoals} metas concluídas
+            </p>
           </div>
         </CardContent>
       </Card>

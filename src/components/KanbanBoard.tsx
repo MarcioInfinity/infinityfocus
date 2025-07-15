@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { 
   Plus, 
   MoreHorizontal, 
@@ -8,13 +9,18 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  UserPlus
+  UserPlus,
+  Edit2,
+  Check,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +32,8 @@ import { InviteModal } from './modals/InviteModal';
 import { EditColumnModal } from './modals/EditColumnModal';
 import { Task, KanbanColumn, Priority } from '@/types';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { useTasks } from '@/hooks/useTasks';
+import { supabase } from '@/integrations/supabase/client';
 
 const mockColumns: KanbanColumn[] = [
   {
@@ -81,14 +89,84 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
+  const { tasks, updateTask } = useTasks();
   const [columns, setColumns] = useState<KanbanColumn[]>(mockColumns);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [draggedColumn, setDraggedColumn] = useState<KanbanColumn | null>(null);
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<KanbanColumn | null>(null);
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
   const { showSuccessToast } = useToastNotifications();
+
+  // Load tasks from the project into columns
+  useEffect(() => {
+    const projectTasks = tasks.filter(task => task.project_id === projectId);
+    
+    setColumns(prev => prev.map(column => ({
+      ...column,
+      tasks: projectTasks.filter(task => task.status === column.status)
+    })));
+  }, [tasks, projectId]);
+
+  // Realtime updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('kanban-tasks')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'tasks',
+        filter: `project_id=eq.${projectId}`
+      }, () => {
+        // Refresh task data
+        window.location.reload();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [projectId]);
+
+  const handleTaskStatusChange = async (taskId: string, completed: boolean) => {
+    try {
+      await updateTask({ 
+        id: taskId, 
+        updates: { status: completed ? 'done' : 'todo' } 
+      });
+      showSuccessToast(completed ? 'Tarefa concluída!' : 'Tarefa reaberta!');
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    }
+  };
+
+  const handleStartEdit = (taskId: string, currentTitle: string) => {
+    setEditingTask(taskId);
+    setEditValue(currentTitle);
+  };
+
+  const handleSaveEdit = async (taskId: string) => {
+    if (!editValue.trim()) return;
+    
+    try {
+      await updateTask({ 
+        id: taskId, 
+        updates: { title: editValue.trim() } 
+      });
+      showSuccessToast('Título atualizado!');
+      handleCancelEdit();
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTask(null);
+    setEditValue('');
+  };
 
   const handleDragStart = (task: Task) => {
     setDraggedTask(task);
@@ -102,15 +180,18 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
     e.preventDefault();
   };
 
-  const handleDrop = (columnId: string, status: Task['status']) => {
+  const handleDrop = async (columnId: string, status: Task['status']) => {
     if (!draggedTask) return;
 
-    setColumns(prev => prev.map(column => ({
-      ...column,
-      tasks: column.id === columnId 
-        ? [...column.tasks.filter(t => t.id !== draggedTask.id), { ...draggedTask, status }]
-        : column.tasks.filter(t => t.id !== draggedTask.id)
-    })));
+    try {
+      await updateTask({ 
+        id: draggedTask.id, 
+        updates: { status } 
+      });
+      showSuccessToast('Tarefa movida com sucesso!');
+    } catch (error) {
+      console.error('Error moving task:', error);
+    }
 
     setDraggedTask(null);
   };
@@ -126,12 +207,9 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
       const draggedIndex = newColumns.findIndex(col => col.id === draggedColumn.id);
       const targetIndex = newColumns.findIndex(col => col.id === targetColumnId);
 
-      // Remove the dragged column
       const [removed] = newColumns.splice(draggedIndex, 1);
-      // Insert it at the target position
       newColumns.splice(targetIndex, 0, removed);
 
-      // Update positions
       return newColumns.map((col, index) => ({
         ...col,
         position: index
@@ -142,46 +220,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
   };
 
   const handleCreateTask = (taskData: any) => {
-    const newTask: Task = {
-      id: Date.now().toString(),
-      title: taskData.title,
-      description: taskData.description,
-      priority: taskData.priority,
-      status: selectedColumn ? columns.find(col => col.id === selectedColumn)?.status || 'todo' : 'todo',
-      category: taskData.category,
-      start_date: taskData.start_date?.toISOString(),
-      due_date: taskData.due_date?.toISOString(),
-      is_indefinite: taskData.is_indefinite,
-      start_time: taskData.time,
-      notifications_enabled: taskData.notify_enabled,
-      repeat_enabled: taskData.frequency_enabled,
-      repeat_type: taskData.frequency_type,
-      repeat_days: taskData.frequency_days?.map(String),
-      project_id: projectId,
-      assigned_to: taskData.assigned_to,
-      created_by: 'current-user-id',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      notifications: [],
-      tags: taskData.tags || [],
-      checklist: taskData.checklist || []
-    };
-
-    if (selectedColumn) {
-      setColumns(prev => prev.map(column => 
-        column.id === selectedColumn 
-          ? { ...column, tasks: [...column.tasks, newTask] }
-          : column
-      ));
-    } else {
-      // Add to first column if no specific column selected
-      setColumns(prev => prev.map((column, index) => 
-        index === 0 
-          ? { ...column, tasks: [...column.tasks, newTask] }
-          : column
-      ));
-    }
-
+    // Task creation will be handled by the form and hooks
     setIsTaskFormOpen(false);
     setSelectedColumn(null);
     showSuccessToast('Tarefa criada com sucesso!');
@@ -237,6 +276,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
                   setIsTaskFormOpen(false);
                   setSelectedColumn(null);
                 }}
+                defaultProjectId={projectId}
               />
             </DialogContent>
           </Dialog>
@@ -326,15 +366,22 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
                     return (
                       <Card
                         key={task.id}
-                        className={`task-card cursor-move ${isOverdue ? 'border-red-500/50' : ''}`}
+                        className={`task-card cursor-move hover:scale-105 transition-transform ${isOverdue ? 'border-red-500/50' : ''}`}
                         draggable
                         onDragStart={() => handleDragStart(task)}
                       >
                         <CardHeader className="pb-2">
                           <div className="flex items-start justify-between">
-                            <Badge variant="outline" className={priorityColors[task.priority]}>
-                              {getPriorityIcon(task.priority)} {task.priority.toUpperCase()}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={task.status === 'done'}
+                                onCheckedChange={(checked) => handleTaskStatusChange(task.id, checked as boolean)}
+                                className="shrink-0"
+                              />
+                              <Badge variant="outline" className={priorityColors[task.priority]}>
+                                {getPriorityIcon(task.priority)} {task.priority.toUpperCase()}
+                              </Badge>
+                            </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm">
@@ -342,14 +389,41 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent className="glass-card border-white/20">
-                                <DropdownMenuItem>Editar</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStartEdit(task.id, task.title)}>
+                                  <Edit2 className="w-4 h-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
                                 <DropdownMenuItem>Duplicar</DropdownMenuItem>
                                 <DropdownMenuItem>Mover para...</DropdownMenuItem>
                                 <DropdownMenuItem className="text-red-400">Excluir</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                          <CardTitle className="text-base">{task.title}</CardTitle>
+                          
+                          {editingTask === task.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="h-8 text-sm"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveEdit(task.id);
+                                  if (e.key === 'Escape') handleCancelEdit();
+                                }}
+                                autoFocus
+                              />
+                              <Button size="sm" variant="ghost" onClick={() => handleSaveEdit(task.id)}>
+                                <Check className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <CardTitle className={`text-base ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
+                              {task.title}
+                            </CardTitle>
+                          )}
                         </CardHeader>
                         
                         <CardContent className="space-y-3">
@@ -373,7 +447,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
                             </div>
                           )}
 
-                          {task.tags.length > 0 && (
+                          {task.tags && task.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {task.tags.slice(0, 3).map((tag, index) => (
                                 <Badge key={index} variant="secondary" className="text-xs">
@@ -401,7 +475,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
                                   Atribuída
                                 </span>
                               </div>
-                              {task.notifications.length > 0 && (
+                              {task.notifications && task.notifications.length > 0 && (
                                 <Badge variant="outline" className="text-xs">
                                   🔔 {task.notifications.length}
                                 </Badge>
@@ -433,6 +507,7 @@ export function KanbanBoard({ projectId, projectName }: KanbanBoardProps) {
               setIsTaskFormOpen(false);
               setSelectedColumn(null);
             }}
+            defaultProjectId={projectId}
           />
         </DialogContent>
       </Dialog>
