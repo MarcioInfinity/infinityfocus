@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, UserPlus, Mail, Link } from 'lucide-react';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { Textarea } from '@/components/ui/textarea';
+import { Copy, Mail, Share2, X } from 'lucide-react';
 import { useProjectInvites } from '@/hooks/useProjectInvites';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 interface InviteModalProps {
   projectId: string;
@@ -15,145 +16,193 @@ interface InviteModalProps {
   onClose: () => void;
 }
 
-type InviteRole = 'admin' | 'member' | 'viewer';
-
 export function InviteModal({ projectId, isOpen, onClose }: InviteModalProps) {
+  const { createInviteAsync, isCreatingInvite, getProjectInvites } = useProjectInvites();
+  const { showSuccessToast } = useToastNotifications();
+  const { data: invites = [] } = getProjectInvites(projectId);
+
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<InviteRole>('member');
-  const [inviteLink, setInviteLink] = useState('');
-  const { showSuccessToast, showErrorToast } = useToastNotifications();
-  const { createInviteAsync, isCreatingInvite } = useProjectInvites();
+  const [role, setRole] = useState<'admin' | 'member' | 'viewer'>('member');
+  const [generatedLink, setGeneratedLink] = useState<string>('');
+  const [showLinkOnly, setShowLinkOnly] = useState(false);
 
-  const generateInviteLink = async () => {
+  const handleCreateInvite = async () => {
     try {
-      const result = await createInviteAsync({ 
-        projectId, 
-        role 
+      const result = await createInviteAsync({
+        projectId,
+        email: showLinkOnly ? undefined : email,
+        role,
       });
-      
-      const link = `${window.location.origin}/invite/${result.token}`;
-      setInviteLink(link);
-      showSuccessToast('Link de convite gerado!');
+
+      if (result?.inviteLink) {
+        setGeneratedLink(result.inviteLink);
+      }
+
+      if (!showLinkOnly) {
+        setEmail('');
+      }
     } catch (error) {
-      showErrorToast('Erro ao gerar link de convite');
+      console.error('Error creating invite:', error);
     }
   };
 
-  const copyInviteLink = () => {
-    navigator.clipboard.writeText(inviteLink);
-    showSuccessToast('Link copiado para a área de transferência!');
+  const handleCopyLink = () => {
+    if (generatedLink) {
+      navigator.clipboard.writeText(generatedLink);
+      showSuccessToast('Link copiado para a área de transferência!');
+    }
   };
 
-  const sendEmailInvite = async () => {
-    if (!email) {
-      showErrorToast('Digite um email válido');
-      return;
-    }
-
-    try {
-      await createInviteAsync({ 
-        projectId, 
-        email, 
-        role 
-      });
-      
-      showSuccessToast(`Convite enviado para ${email}`);
-      setEmail('');
-    } catch (error) {
-      showErrorToast('Erro ao enviar convite');
-    }
+  const handleReset = () => {
+    setEmail('');
+    setRole('member');
+    setGeneratedLink('');
+    setShowLinkOnly(false);
   };
 
   const handleClose = () => {
-    setEmail('');
-    setInviteLink('');
-    setRole('member');
+    handleReset();
     onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="glass-card max-w-md">
+      <DialogContent className="glass-card max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
-            Convidar Membros
+            <Share2 className="w-5 h-5 text-primary" />
+            Convidar Membros para o Projeto
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
-          {/* Email Invite */}
+          {/* Formulário de Convite */}
           <div className="space-y-4">
-            <h3 className="font-medium">Convidar por Email</h3>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@exemplo.com"
-                className="neon-border"
-              />
+            <div className="flex items-center gap-4">
+              <Button
+                variant={showLinkOnly ? "outline" : "default"}
+                onClick={() => setShowLinkOnly(false)}
+                className="flex-1"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Enviar por Email
+              </Button>
+              <Button
+                variant={showLinkOnly ? "default" : "outline"}
+                onClick={() => setShowLinkOnly(true)}
+                className="flex-1"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Gerar Link apenas
+              </Button>
             </div>
 
+            {!showLinkOnly && (
+              <div className="space-y-2">
+                <Label htmlFor="email">Email do Convidado</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Digite o email da pessoa..."
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="glass-card border-white/20"
+                />
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label>Função</Label>
-              <Select value={role} onValueChange={(value: InviteRole) => setRole(value)}>
+              <Label htmlFor="role">Função no Projeto</Label>
+              <Select value={role} onValueChange={(value: any) => setRole(value)}>
                 <SelectTrigger className="glass-card border-white/20">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="glass-card border-white/20">
-                  <SelectItem value="viewer">👁️ Visualizador</SelectItem>
-                  <SelectItem value="member">👤 Membro</SelectItem>
-                  <SelectItem value="admin">🛡️ Admin</SelectItem>
+                  <SelectItem value="viewer">👁️ Visualizador - Pode apenas visualizar</SelectItem>
+                  <SelectItem value="member">👤 Membro - Pode editar tarefas</SelectItem>
+                  <SelectItem value="admin">🛡️ Admin - Pode gerenciar projeto</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <Button 
-              onClick={sendEmailInvite} 
-              disabled={isCreatingInvite}
+            <Button
+              onClick={handleCreateInvite}
+              disabled={isCreatingInvite || (!showLinkOnly && !email.trim())}
               className="w-full glow-button"
             >
-              <Mail className="w-4 h-4 mr-2" />
-              {isCreatingInvite ? 'Enviando...' : 'Enviar Convite'}
+              {isCreatingInvite ? 'Criando convite...' : showLinkOnly ? 'Gerar Link de Convite' : 'Enviar Convite'}
             </Button>
           </div>
 
-          <div className="border-t border-white/10 pt-6">
-            <h3 className="font-medium mb-4">Link de Convite</h3>
-            
-            {!inviteLink ? (
-              <Button 
-                onClick={generateInviteLink}
-                disabled={isCreatingInvite}
-                variant="outline" 
-                className="w-full neon-border"
-              >
-                <Link className="w-4 h-4 mr-2" />
-                {isCreatingInvite ? 'Gerando...' : 'Gerar Link de Convite'}
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    value={inviteLink}
-                    readOnly
-                    className="bg-muted/50 font-mono text-xs"
-                  />
-                  <Button onClick={copyInviteLink} variant="outline" size="sm">
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Este link permite que qualquer pessoa entre no projeto como {role}. 
-                  O convite expira em 7 dias.
-                </p>
+          {/* Link Gerado */}
+          {generatedLink && (
+            <div className="space-y-3 p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <Label>Link de Convite Gerado</Label>
+              <div className="flex gap-2">
+                <Textarea
+                  value={generatedLink}
+                  readOnly
+                  className="glass-card border-white/20 resize-none"
+                  rows={2}
+                />
+                <Button onClick={handleCopyLink} size="sm" className="shrink-0">
+                  <Copy className="w-4 h-4" />
+                </Button>
               </div>
-            )}
-          </div>
+              <p className="text-sm text-muted-foreground">
+                Este link expira em 7 dias. Compartilhe-o com as pessoas que você quer convidar.
+              </p>
+            </div>
+          )}
+
+          {/* Lista de Convites Pendentes */}
+          {invites.length > 0 && (
+            <div className="space-y-3">
+              <Label>Convites Pendentes</Label>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {invites
+                  .filter(invite => !invite.used_at && new Date(invite.expires_at) > new Date())
+                  .map(invite => (
+                    <div
+                      key={invite.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-white/10"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium">
+                          {invite.email || 'Link de convite'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Função: {invite.role === 'admin' ? '🛡️ Admin' : invite.role === 'member' ? '👤 Membro' : '👁️ Visualizador'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Expira em: {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const link = `${window.location.origin}/invite/${invite.token}`;
+                          navigator.clipboard.writeText(link);
+                          showSuccessToast('Link copiado!');
+                        }}
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 pt-4">
+          <Button variant="outline" onClick={handleClose} className="flex-1 neon-border">
+            Fechar
+          </Button>
+          <Button onClick={handleReset} variant="outline" className="neon-border">
+            Limpar
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
