@@ -10,10 +10,6 @@ interface CreateInviteData {
   role: 'admin' | 'member' | 'viewer';
 }
 
-interface AcceptInviteData {
-  token: string;
-}
-
 export function useProjectInvites() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -53,13 +49,12 @@ export function useProjectInvites() {
 
       console.log('Invite record created:', inviteData);
 
-      // Gerar link de convite
-      const inviteLink = `${window.location.origin}/invite/${token}`;
-
-      // Se foi fornecido email, enviar convite por email via Edge Function
+      // Se foi fornecido email, tentar enviar convite por email
       if (email) {
         try {
-          // Buscar dados do projeto
+          const inviteLink = `${window.location.origin}/invite/${token}`;
+          
+          // Buscar dados do projeto e do usuário criador
           const { data: projectData, error: projectError } = await supabase
             .from('projects')
             .select('name, owner_id')
@@ -69,22 +64,25 @@ export function useProjectInvites() {
           if (projectError) {
             console.error('Error fetching project data:', projectError);
             showErrorToast('Convite criado, mas erro ao buscar dados do projeto');
-            return { ...inviteData, inviteLink };
+            return inviteData;
           }
 
-          // Buscar dados do proprietário
           const { data: ownerData, error: ownerError } = await supabase
             .from('profiles')
             .select('name')
             .eq('user_id', projectData.owner_id)
             .single();
 
-          const ownerName = ownerData?.name || 'Usuário';
+          if (ownerError) {
+            console.error('Error fetching owner data:', ownerError);
+            showErrorToast('Convite criado, mas erro ao buscar dados do proprietário');
+            return inviteData;
+          }
 
           console.log('Sending email with data:', {
             email,
             projectName: projectData.name,
-            inviterName: ownerName,
+            inviterName: ownerData.name,
             role,
             inviteLink
           });
@@ -93,7 +91,7 @@ export function useProjectInvites() {
             body: {
               email,
               projectName: projectData.name,
-              inviterName: ownerName,
+              inviterName: ownerData.name,
               role,
               inviteLink,
             },
@@ -114,7 +112,7 @@ export function useProjectInvites() {
         showSuccessToast('Link de convite criado com sucesso!');
       }
 
-      return { ...inviteData, inviteLink };
+      return inviteData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-invites'] });
@@ -122,73 +120,6 @@ export function useProjectInvites() {
     onError: (error: Error) => {
       console.error('Error in createInviteMutation:', error);
       showErrorToast(error.message || 'Erro ao criar convite');
-    },
-  });
-
-  const acceptInviteMutation = useMutation({
-    mutationFn: async ({ token }: AcceptInviteData) => {
-      if (!user) throw new Error('Usuário não autenticado');
-
-      console.log('Accepting invite with token:', token);
-
-      // Buscar convite válido
-      const { data: inviteData, error: inviteError } = await supabase
-        .from('project_invites')
-        .select('*, projects(name)')
-        .eq('token', token)
-        .gt('expires_at', new Date().toISOString())
-        .is('used_at', null)
-        .single();
-
-      if (inviteError || !inviteData) {
-        throw new Error('Convite inválido, expirado ou já utilizado');
-      }
-
-      // Verificar se o usuário já é membro
-      const { data: existingMember } = await supabase
-        .from('project_members')
-        .select('id')
-        .eq('project_id', inviteData.project_id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (existingMember) {
-        throw new Error('Você já é membro deste projeto');
-      }
-
-      // Adicionar membro ao projeto
-      const { error: memberError } = await supabase
-        .from('project_members')
-        .insert({
-          project_id: inviteData.project_id,
-          user_id: user.id,
-          role: inviteData.role,
-        });
-
-      if (memberError) {
-        throw new Error('Erro ao adicionar membro ao projeto: ' + memberError.message);
-      }
-
-      // Marcar convite como usado
-      const { error: updateError } = await supabase
-        .from('project_invites')
-        .update({ used_at: new Date().toISOString() })
-        .eq('id', inviteData.id);
-
-      if (updateError) {
-        console.error('Error updating invite:', updateError);
-      }
-
-      return inviteData;
-    },
-    onSuccess: (inviteData) => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['project-invites'] });
-      showSuccessToast(`Bem-vindo ao projeto ${inviteData.projects?.name}!`);
-    },
-    onError: (error: Error) => {
-      console.error('Error accepting invite:', error);
-      showErrorToast(error.message || 'Erro ao aceitar convite');
     },
   });
 
@@ -218,50 +149,10 @@ export function useProjectInvites() {
     });
   };
 
-  const getInviteByToken = (token: string) => {
-    return useQuery({
-      queryKey: ['invite-by-token', token],
-      queryFn: async () => {
-        if (!token) return null;
-
-        console.log('Fetching invite by token:', token);
-
-        const { data, error } = await supabase
-          .from('project_invites')
-          .select(`
-            *,
-            projects (
-              id,
-              name,
-              description,
-              color
-            )
-          `)
-          .eq('token', token)
-          .gt('expires_at', new Date().toISOString())
-          .is('used_at', null)
-          .single();
-
-        if (error) {
-          console.error('Error fetching invite by token:', error);
-          return null;
-        }
-
-        console.log('Invite by token fetched:', data);
-        return data;
-      },
-      enabled: !!token,
-    });
-  };
-
   return {
     createInvite: createInviteMutation.mutate,
     createInviteAsync: createInviteMutation.mutateAsync,
-    acceptInvite: acceptInviteMutation.mutate,
-    acceptInviteAsync: acceptInviteMutation.mutateAsync,
     isCreatingInvite: createInviteMutation.isPending,
-    isAcceptingInvite: acceptInviteMutation.isPending,
     getProjectInvites,
-    getInviteByToken,
   };
 }

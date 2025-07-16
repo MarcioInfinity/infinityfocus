@@ -613,10 +613,6 @@ export type Database = {
         Args: { p_schema_name: string; p_table_name: string }
         Returns: undefined
       }
-      user_has_project_access: {
-        Args: { project_id: string; user_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       category_type:
