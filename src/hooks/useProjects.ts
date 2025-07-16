@@ -1,17 +1,14 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
-import { Project, ProjectMember, Task } from '@/types';
-import { useRealtime } from './useRealtime';
+import { Project, ProjectMember } from '@/types';
 
 export function useProjects() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
-
-  // Habilitar atualizações em tempo real
-  useRealtime();
 
   const projectsQuery = useQuery({
     queryKey: ['projects', user?.id],
@@ -30,32 +27,9 @@ export function useProjects() {
             role,
             joined_at,
             project_id
-          ),
-          tasks (
-            id,
-            title,
-            description,
-            priority,
-            category,
-            status,
-            due_date,
-            start_date,
-            start_time,
-            end_time,
-            is_indefinite,
-            assigned_to,
-            project_id,
-            goal_id,
-            tags,
-            notifications_enabled,
-            repeat_enabled,
-            repeat_type,
-            repeat_days,
-            created_by,
-            created_at,
-            updated_at
           )
         `)
+        .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -81,19 +55,11 @@ export function useProjects() {
           }
         }));
 
-        // Transform tasks to match Task interface
-        const tasks: Task[] = (project.tasks || []).map(task => ({
-          ...task,
-          checklist: [],
-          notifications: [],
-          tags: task.tags || []
-        }));
-
         return {
           ...project,
           members,
-          tasks,
-        } as Project;
+          tasks: [], // Will be loaded separately if needed
+        };
       });
 
       return transformedProjects;
@@ -164,6 +130,7 @@ export function useProjects() {
         .from('projects')
         .update(updates)
         .eq('id', id)
+        .or(`owner_id.eq.${user.id},user_id.eq.${user.id}`)
         .select()
         .single();
 
