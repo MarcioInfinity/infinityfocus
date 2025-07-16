@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
 import { Project, ProjectMember, Task } from '@/types';
 import { useRealtime } from './useRealtime';
+import { toISOStringWithoutTimeZone, formatTime, convertCategoryToEnglish } from '@/lib/utils';
 
 export function useProjects() {
   const { user } = useAuth();
@@ -16,10 +17,14 @@ export function useProjects() {
   const projectsQuery = useQuery({
     queryKey: ['projects', user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user) {
+        console.log('User not authenticated, returning empty projects array.');
+        return [];
+      }
       
-      console.log('Fetching projects for user:', user.id);
+      console.log('Attempting to fetch projects for user:', user.id);
       
+      // Corrigido: usar owner_id que é o campo correto na tabela projects
       const { data, error } = await supabase
         .from('projects')
         .select(`
@@ -56,14 +61,15 @@ export function useProjects() {
             updated_at
           )
         `)
+        .eq('owner_id', user.id) // Corrigido: usar owner_id em vez de user_id
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching projects:', error);
+        console.error('Error fetching projects from Supabase:', error);
         throw error;
       }
 
-      console.log('Projects fetched:', data?.length || 0);
+      console.log('Projects fetched successfully:', data?.length || 0, 'projects.');
 
       // Transform data to match Project interface
       const transformedProjects: Project[] = (data || []).map(project => {
@@ -113,20 +119,19 @@ export function useProjects() {
         name: projectData.name,
         description: projectData.description || null,
         priority: projectData.priority || 'medium',
-        category: projectData.category || 'professional',
+        category: convertCategoryToEnglish(projectData.category) || 'professional',
         color: projectData.color || '#3B82F6',
         is_shared: projectData.is_shared || false,
-        start_date: projectData.start_date || null,
-        due_date: projectData.due_date || null,
+        start_date: projectData.start_date ? toISOStringWithoutTimeZone(new Date(projectData.start_date)) : null,
+        due_date: projectData.due_date ? toISOStringWithoutTimeZone(new Date(projectData.due_date)) : null,
         is_indefinite: projectData.is_indefinite || false,
-        start_time: projectData.time || null,
-        end_time: projectData.end_time || null,
-        notifications_enabled: projectData.notify_enabled || false,
-        repeat_enabled: projectData.frequency_enabled || false,
-        repeat_type: projectData.frequency_type || null,
-        repeat_days: projectData.frequency_days ? projectData.frequency_days.map(String) : null,
-        user_id: user.id,
-        owner_id: user.id,
+        start_time: projectData.start_time ? formatTime(projectData.start_time) : null,
+        end_time: projectData.end_time ? formatTime(projectData.end_time) : null,
+        notifications_enabled: projectData.notifications_enabled || false,
+        repeat_enabled: projectData.repeat_enabled || false,
+        repeat_type: projectData.repeat_type || null,
+        repeat_days: projectData.repeat_days ? projectData.repeat_days.map(String) : null,
+        owner_id: user.id, // Corrigido: usar apenas owner_id
       };
 
       console.log('Project payload:', projectPayload);
@@ -145,7 +150,8 @@ export function useProjects() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      // Corrigido: invalidar com a queryKey específica do usuário
+      queryClient.invalidateQueries({ queryKey: ['projects', user?.id] });
       showSuccessToast('Projeto criado com sucesso!');
     },
     onError: (error) => {
@@ -159,11 +165,21 @@ export function useProjects() {
       if (!user) throw new Error('User not authenticated');
       
       console.log('Updating project:', id, updates);
+
+      const updatedPayload: any = {
+        ...updates,
+        category: updates.category ? convertCategoryToEnglish(updates.category) : updates.category,
+        start_date: updates.start_date ? toISOStringWithoutTimeZone(new Date(updates.start_date)) : updates.start_date,
+        due_date: updates.due_date ? toISOStringWithoutTimeZone(new Date(updates.due_date)) : updates.due_date,
+        start_time: updates.start_time ? formatTime(updates.start_time) : updates.start_time,
+        end_time: updates.end_time ? formatTime(updates.end_time) : updates.end_time,
+      };
       
       const { data, error } = await supabase
         .from('projects')
-        .update(updates)
+        .update(updatedPayload)
         .eq('id', id)
+        .eq('owner_id', user.id) // Corrigido: adicionar verificação de owner_id para segurança
         .select()
         .single();
 
@@ -175,7 +191,8 @@ export function useProjects() {
       return data;
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      // Corrigido: invalidar com a queryKey específica do usuário
+      queryClient.invalidateQueries({ queryKey: ['projects', user?.id] });
       
       // Optimistic update
       queryClient.setQueryData(['projects', user?.id], (old: Project[] | undefined) => {
@@ -189,7 +206,7 @@ export function useProjects() {
     },
     onError: (error) => {
       console.error('Error updating project:', error);
-      showErrorToast('Erro ao atualizar projeto');
+      showErrorToast('Erro ao atualizar projeto: ' + error.message);
     },
   });
 
@@ -206,7 +223,8 @@ export function useProjects() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      // Corrigido: invalidar com a queryKey específica do usuário
+      queryClient.invalidateQueries({ queryKey: ['projects', user?.id] });
       showSuccessToast('Projeto excluído com sucesso!');
     },
     onError: (error) => {
@@ -227,3 +245,4 @@ export function useProjects() {
     isDeleting: deleteProjectMutation.isPending,
   };
 }
+
