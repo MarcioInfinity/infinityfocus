@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +24,8 @@ export function useRealtime() {
         },
         (payload) => {
           console.log('Projects realtime update:', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
+          // Corrigido: invalidar com a queryKey específica do usuário
+          queryClient.invalidateQueries({ queryKey: ['projects', user.id] });
         }
       )
       .subscribe();
@@ -42,7 +42,26 @@ export function useRealtime() {
         },
         (payload) => {
           console.log('Tasks realtime update:', payload);
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          // Corrigido: invalidar com a queryKey específica do usuário
+          queryClient.invalidateQueries({ queryKey: ['tasks', user.id] });
+        }
+      )
+      .subscribe();
+
+    // Canal para metas
+    const goalsChannel = supabase
+      .channel('goals-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goals'
+        },
+        (payload) => {
+          console.log('Goals realtime update:', payload);
+          // Corrigido: invalidar com a queryKey específica do usuário
+          queryClient.invalidateQueries({ queryKey: ['goals', user.id] });
         }
       )
       .subscribe();
@@ -59,8 +78,9 @@ export function useRealtime() {
         },
         (payload) => {
           console.log('Project members realtime update:', payload);
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
-          queryClient.invalidateQueries({ queryKey: ['project-invites'] });
+          // Corrigido: invalidar com a queryKey específica do usuário
+          queryClient.invalidateQueries({ queryKey: ['projects', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['project-invites', user.id] });
         }
       )
       .subscribe();
@@ -77,7 +97,26 @@ export function useRealtime() {
         },
         (payload) => {
           console.log('Project invites realtime update:', payload);
-          queryClient.invalidateQueries({ queryKey: ['project-invites'] });
+          // Corrigido: invalidar com a queryKey específica do usuário
+          queryClient.invalidateQueries({ queryKey: ['project-invites', user.id] });
+        }
+      )
+      .subscribe();
+
+    // Canal para itens de checklist
+    const checklistChannel = supabase
+      .channel('checklist-items-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'checklist_items'
+        },
+        (payload) => {
+          console.log('Checklist items realtime update:', payload);
+          // Corrigido: invalidar com a queryKey específica do usuário
+          queryClient.invalidateQueries({ queryKey: ['tasks', user.id] });
         }
       )
       .subscribe();
@@ -86,8 +125,11 @@ export function useRealtime() {
       console.log('Cleaning up realtime subscriptions');
       supabase.removeChannel(projectsChannel);
       supabase.removeChannel(tasksChannel);
+      supabase.removeChannel(goalsChannel);
       supabase.removeChannel(membersChannel);
       supabase.removeChannel(invitesChannel);
+      supabase.removeChannel(checklistChannel);
     };
   }, [user, queryClient]);
 }
+
