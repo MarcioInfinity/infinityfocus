@@ -15,7 +15,7 @@ import { KanbanBoard } from "./components/KanbanBoard";
 import { Goals } from "./components/Goals";
 import { Settings } from "./components/Settings";
 import { Login } from "./pages/Login";
-import { InvitePage } from "./pages/InvitePage";
+import InvitePage from "./pages/InvitePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({

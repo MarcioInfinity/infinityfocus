@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
-import { Project, ProjectMember } from '@/types';
+import { Project, ProjectMember, Task } from '@/types';
 import { useRealtime } from './useRealtime';
 
 export function useProjects() {
@@ -34,8 +34,26 @@ export function useProjects() {
           tasks (
             id,
             title,
+            description,
+            priority,
+            category,
             status,
-            created_at
+            due_date,
+            start_date,
+            start_time,
+            end_time,
+            is_indefinite,
+            assigned_to,
+            project_id,
+            goal_id,
+            tags,
+            notifications_enabled,
+            repeat_enabled,
+            repeat_type,
+            repeat_days,
+            created_by,
+            created_at,
+            updated_at
           )
         `)
         .order('created_at', { ascending: false });
@@ -63,10 +81,18 @@ export function useProjects() {
           }
         }));
 
+        // Transform tasks to match Task interface
+        const tasks: Task[] = (project.tasks || []).map(task => ({
+          ...task,
+          checklist: [],
+          notifications: [],
+          tags: task.tags || []
+        }));
+
         return {
           ...project,
           members,
-          tasks: project.tasks || [],
+          tasks,
         } as Project;
       });
 
