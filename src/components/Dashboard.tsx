@@ -320,15 +320,15 @@ export function Dashboard() {
           </Card>
           
           {/* Goals Summary */}
-<Card className="glass-card">
-  <CardHeader>
-    <CardTitle className="flex items-center gap-2">
-      <Target className="w-5 h-5 text-secondary" />
-      Metas Atuais
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    {goals.length === 0 ? (
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-secondary" />
+                Metas Atuais
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {goals.length === 0 ? (
       <div className="text-center py-4">
         <Target className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
         <p className="text-sm text-muted-foreground">Nenhuma meta definida</p>
@@ -343,14 +343,14 @@ export function Dashboard() {
                 <Progress 
                   value={goal.progress || 0} 
                   className="h-1 flex-1"
-                />
+                  />
                 <span className="text-xs text-muted-foreground">
                   {Math.round(goal.progress || 0)}%
                 </span>
               </div>
             </div>
           </div>
-        ))}
+      ))}
         {goals.length > 3 && (
           <p className="text-xs text-muted-foreground text-center pt-2">
             +{goals.length - 3} meta{goals.length - 3 !== 1 ? 's' : ''} adicional{goals.length - 3 !== 1 ? 'is' : ''}
