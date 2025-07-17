@@ -1,9 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
 import { Goal } from '@/types';
-import { toISOStringWithoutTimeZone, convertCategoryToEnglish } from '@/lib/utils';
 
 export function useGoals() {
   const { user } = useAuth();
@@ -13,14 +13,10 @@ export function useGoals() {
   const goalsQuery = useQuery({
     queryKey: ['goals', user?.id],
     queryFn: async () => {
-      if (!user) {
-        console.log('User not authenticated, returning empty goals array.');
-        return [];
-      }
+      if (!user) return [];
       
-      console.log('Attempting to fetch goals for user:', user.id);
+      console.log('Fetching goals for user:', user.id);
       
-      // Corrigido: usar created_by que é o campo correto na tabela goals
       const { data, error } = await supabase
         .from('goals')
         .select('*')
@@ -28,11 +24,11 @@ export function useGoals() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching goals from Supabase:', error);
+        console.error('Error fetching goals:', error);
         throw error;
       }
 
-      console.log('Goals fetched successfully:', data?.length || 0, 'goals.');
+      console.log('Goals fetched:', data?.length || 0);
 
       // Return goals with proper typing
       return (data || []) as Goal[];
@@ -52,9 +48,9 @@ export function useGoals() {
         name: goalData.name,
         description: goalData.description || null,
         priority: goalData.priority || 'medium',
-        category: convertCategoryToEnglish(goalData.category) || 'professional',
-        start_date: goalData.start_date ? toISOStringWithoutTimeZone(new Date(goalData.start_date)) : null,
-        due_date: goalData.due_date ? toISOStringWithoutTimeZone(new Date(goalData.due_date)) : null,
+        category: goalData.category || 'professional',
+        start_date: goalData.start_date || null,
+        due_date: goalData.due_date || null,
         progress: goalData.progress || 0,
         is_shared: goalData.is_shared || false,
         notifications_enabled: goalData.notifications_enabled || false,
@@ -63,7 +59,7 @@ export function useGoals() {
         notes: goalData.notes || null,
         assigned_tasks: goalData.assigned_tasks || [],
         assigned_projects: goalData.assigned_projects || [],
-        created_by: user.id, // Corrigido: usar apenas created_by
+        created_by: user.id,
       };
 
       console.log('Goal payload:', goalPayload);
@@ -82,8 +78,7 @@ export function useGoals() {
       return data;
     },
     onSuccess: () => {
-      // Corrigido: invalidar com a queryKey específica do usuário
-      queryClient.invalidateQueries({ queryKey: ['goals', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
       showSuccessToast('Meta criada com sucesso!');
     },
     onError: (error) => {
@@ -97,17 +92,10 @@ export function useGoals() {
       if (!user) throw new Error('User not authenticated');
       
       console.log('Updating goal:', id, updates);
-
-      const updatedPayload: any = {
-        ...updates,
-        category: updates.category ? convertCategoryToEnglish(updates.category) : updates.category,
-        start_date: updates.start_date ? toISOStringWithoutTimeZone(new Date(updates.start_date)) : updates.start_date,
-        due_date: updates.due_date ? toISOStringWithoutTimeZone(new Date(updates.due_date)) : updates.due_date,
-      };
       
       const { data, error } = await supabase
         .from('goals')
-        .update(updatedPayload)
+        .update(updates)
         .eq('id', id)
         .eq('created_by', user.id)
         .select()
@@ -121,8 +109,7 @@ export function useGoals() {
       return data;
     },
     onSuccess: (data, variables) => {
-      // Corrigido: invalidar com a queryKey específica do usuário
-      queryClient.invalidateQueries({ queryKey: ['goals', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
       
       // Optimistic update
       queryClient.setQueryData(['goals', user?.id], (old: Goal[] | undefined) => {
@@ -136,7 +123,7 @@ export function useGoals() {
     },
     onError: (error) => {
       console.error('Error updating goal:', error);
-      showErrorToast('Erro ao atualizar meta: ' + error.message);
+      showErrorToast('Erro ao atualizar meta');
     },
   });
 
@@ -153,8 +140,7 @@ export function useGoals() {
       if (error) throw error;
     },
     onSuccess: () => {
-      // Corrigido: invalidar com a queryKey específica do usuário
-      queryClient.invalidateQueries({ queryKey: ['goals', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
       showSuccessToast('Meta excluída com sucesso!');
     },
     onError: (error) => {
@@ -175,4 +161,3 @@ export function useGoals() {
     isDeleting: deleteGoalMutation.isPending,
   };
 }
-

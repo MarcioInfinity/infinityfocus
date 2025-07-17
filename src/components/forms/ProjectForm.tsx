@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,6 @@ import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { CalendarIcon, Plus, X, Link, Mail, Clock } from 'lucide-react';
 import { Priority } from '@/types';
-import { toISOStringWithoutTimeZone, formatTime, convertCategoryToEnglish } from '@/lib/utils';
 
 interface ProjectFormProps {
   onSubmit: (projectData: any) => void;
@@ -63,11 +63,7 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
     e.preventDefault();
     const projectData = {
       ...formData,
-      category: convertCategoryToEnglish(showCustomCategory ? customCategory : formData.category),
-      start_date: toISOStringWithoutTimeZone(formData.start_date ? new Date(formData.start_date) : null),
-      due_date: toISOStringWithoutTimeZone(formData.due_date ? new Date(formData.due_date) : null),
-      start_time: formatTime(formData.start_time),
-      end_time: formatTime(formData.end_time),
+      category: showCustomCategory ? customCategory : formData.category,
       invite_emails: formData.is_shared ? inviteEmails.filter(email => email.trim()) : []
     };
     onSubmit(projectData);
@@ -427,5 +423,3 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
     </div>
   );
 }
-
-

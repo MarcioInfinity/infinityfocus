@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { Plus, Target, FolderKanban, CheckCircle2, Calendar, TrendingUp, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,14 +16,12 @@ import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useRealtime } from '@/hooks/useRealtime';
-import { useNotifications } from '@/hooks/useNotifications'; // Import useNotifications
 
 export function Dashboard() {
   const { user } = useAuth();
   const { tasks, createTask, updateTask } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
-  const { requestNotificationPermission, showBrowserNotification } = useNotifications(); // Use useNotifications
 
   // Habilitar atualizações em tempo real
   useRealtime();
@@ -30,35 +29,6 @@ export function Dashboard() {
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
-
-  // Request notification permission on component mount
-  useEffect(() => {
-    requestNotificationPermission().then(permissionGranted => {
-      if (permissionGranted) {
-        console.log('Notification permission granted.');
-      } else {
-        console.log('Notification permission denied or not supported.');
-      }
-    });
-  }, []);
-
-  // Logic to show notifications for upcoming tasks
-  useEffect(() => {
-    const now = new Date();
-    tasks.forEach(task => {
-      if (task.due_date && task.notifications_enabled) {
-        const dueDate = new Date(task.due_date);
-        // Check if due date is today and task is not done
-        if (dueDate.toDateString() === now.toDateString() && task.status !== 'done') {
-          // You can refine this logic to check for specific times if needed
-          showBrowserNotification(`Tarefa Próxima: ${task.title}`, {
-            body: `A tarefa '${task.title}' vence hoje!`, 
-            tag: task.id
-          });
-        }
-      }
-    });
-  }, [tasks, showBrowserNotification]);
 
   // Estatísticas rápidas
   const todayTasks = tasks.filter(task => {
@@ -97,7 +67,7 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Bem-vindo de volta, {user?.email?.split('@')[0]}!
+            Bem-vindo de volta, {user?.email?.split('@')[0]}! 👋
           </h1>
           <p className="text-muted-foreground mt-1">
             Acompanhe seu progresso e gerencie suas atividades
@@ -323,5 +293,3 @@ export function Dashboard() {
     </div>
   );
 }
-
-

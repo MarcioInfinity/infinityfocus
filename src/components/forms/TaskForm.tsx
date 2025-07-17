@@ -14,10 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Plus,
-  Trash2,
-  Calendar as CalendarIcon,
+import { 
+  Plus, 
+  Trash2, 
+  Calendar as CalendarIcon, 
   Clock,
   Bell,
   Repeat,
@@ -26,7 +26,6 @@ import {
 import { Priority, CategoryType, FrequencyType } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { toISOStringWithoutTimeZone, formatTime, convertCategoryToEnglish } from '@/lib/utils';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Nome da tarefa é obrigatório'),
@@ -130,10 +129,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
   const handleSubmit = (values: z.infer<typeof taskSchema>) => {
     const taskData = {
       ...values,
-      category: convertCategoryToEnglish(showCustomCategory ? values.custom_category || '' : values.category),
-      start_date: toISOStringWithoutTimeZone(values.start_date),
-      due_date: toISOStringWithoutTimeZone(values.due_date),
-      time: formatTime(values.time),
       checklist,
     };
     onSubmit(taskData);
@@ -579,5 +574,3 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
     </Card>
   );
 }
-
-

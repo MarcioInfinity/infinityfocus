@@ -1,9 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
 import { Task } from '@/types';
-import { toISOStringWithoutTimeZone, formatTime, convertCategoryToEnglish } from '@/lib/utils';
 
 export function useTasks() {
   const { user } = useAuth();
@@ -13,14 +13,10 @@ export function useTasks() {
   const tasksQuery = useQuery({
     queryKey: ['tasks', user?.id],
     queryFn: async () => {
-      if (!user) {
-        console.log('User not authenticated, returning empty tasks array.');
-        return [];
-      }
+      if (!user) return [];
       
-      console.log('Attempting to fetch tasks for user:', user.id);
+      console.log('Fetching tasks for user:', user.id);
       
-      // Corrigido: usar created_by que é o campo correto na tabela tasks
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -28,11 +24,11 @@ export function useTasks() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching tasks from Supabase:', error);
+        console.error('Error fetching tasks:', error);
         throw error;
       }
 
-      console.log('Tasks fetched successfully:', data?.length || 0, 'tasks.');
+      console.log('Tasks fetched:', data?.length || 0);
       
       // Transform data to match interface with default values
       return (data || []).map(task => ({
@@ -57,12 +53,12 @@ export function useTasks() {
         title: taskData.title,
         description: taskData.description || null,
         priority: taskData.priority || 'medium',
-        category: convertCategoryToEnglish(taskData.category) || 'professional',
+        category: taskData.category || 'professional',
         status: 'todo' as const,
-        due_date: taskData.due_date ? toISOStringWithoutTimeZone(new Date(taskData.due_date)) : null,
-        start_date: taskData.start_date ? toISOStringWithoutTimeZone(new Date(taskData.start_date)) : null,
-        start_time: taskData.time ? formatTime(taskData.time) : null,
-        end_time: taskData.end_time ? formatTime(taskData.end_time) : null,
+        due_date: taskData.due_date || null,
+        start_date: taskData.start_date || null,
+        start_time: taskData.time || null,
+        end_time: taskData.end_time || null,
         is_indefinite: taskData.is_indefinite || false,
         assigned_to: taskData.assigned_to || null,
         project_id: taskData.project_id || null,
@@ -72,7 +68,9 @@ export function useTasks() {
         repeat_enabled: taskData.frequency_enabled || false,
         repeat_type: taskData.frequency_type || null,
         repeat_days: taskData.frequency_days ? taskData.frequency_days.map(String) : null,
-        created_by: user.id, // Corrigido: usar apenas created_by
+        created_by: user.id,
+        user_id: user.id,
+        owner_id: user.id,
       };
 
       console.log('Task payload:', taskPayload);
@@ -108,8 +106,7 @@ export function useTasks() {
       return data;
     },
     onSuccess: () => {
-      // Corrigido: invalidar com a queryKey específica do usuário
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       showSuccessToast('Tarefa criada com sucesso!');
     },
     onError: (error) => {
@@ -123,19 +120,10 @@ export function useTasks() {
       if (!user) throw new Error('User not authenticated');
       
       console.log('Updating task:', id, updates);
-
-      const updatedPayload: any = {
-        ...updates,
-        category: updates.category ? convertCategoryToEnglish(updates.category) : updates.category,
-        start_date: updates.start_date ? toISOStringWithoutTimeZone(new Date(updates.start_date)) : updates.start_date,
-        due_date: updates.due_date ? toISOStringWithoutTimeZone(new Date(updates.due_date)) : updates.due_date,
-        start_time: updates.start_time ? formatTime(updates.start_time) : updates.start_time,
-        end_time: updates.end_time ? formatTime(updates.end_time) : updates.end_time,
-      };
       
       const { data, error } = await supabase
         .from('tasks')
-        .update(updatedPayload)
+        .update(updates)
         .eq('id', id)
         .eq('created_by', user.id)
         .select()
@@ -149,8 +137,7 @@ export function useTasks() {
       return data;
     },
     onSuccess: (data, variables) => {
-      // Corrigido: invalidar com a queryKey específica do usuário
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       
       // Optimistic update
       queryClient.setQueryData(['tasks', user?.id], (old: Task[] | undefined) => {
@@ -169,7 +156,7 @@ export function useTasks() {
     },
     onError: (error) => {
       console.error('Error updating task:', error);
-      showErrorToast('Erro ao atualizar tarefa: ' + error.message);
+      showErrorToast('Erro ao atualizar tarefa');
     },
   });
 
@@ -186,8 +173,7 @@ export function useTasks() {
       if (error) throw error;
     },
     onSuccess: () => {
-      // Corrigido: invalidar com a queryKey específica do usuário
-      queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       showSuccessToast('Tarefa excluída com sucesso!');
     },
     onError: (error) => {
@@ -208,4 +194,3 @@ export function useTasks() {
     isDeleting: deleteTaskMutation.isPending,
   };
 }
-
