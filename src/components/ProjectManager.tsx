@@ -14,7 +14,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { Project } from '@/types';
 
 export function ProjectManager() {
-  const { projects, createProject, updateProject, deleteProject } = useProjects();
+  const { projects, createProject, updateProject, deleteProject, isLoading } = useProjects();
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,6 +83,14 @@ export function ProjectManager() {
     return Math.round((completedTasks / project.tasks.length) * 100);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -92,7 +100,7 @@ export function ProjectManager() {
             Gerenciar Projetos
           </h1>
           <p className="text-muted-foreground mt-1">
-            Organize e acompanhe todos os seus projetos
+            Organize e acompanhe todos os seus projetos ({projects.length} projetos)
           </p>
         </div>
         <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
@@ -102,7 +110,7 @@ export function ProjectManager() {
               Novo Projeto
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <ProjectForm 
               onSubmit={handleCreateProject} 
               onCancel={() => setIsProjectFormOpen(false)} 

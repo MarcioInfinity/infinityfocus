@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TaskForm } from './forms/TaskForm';
 import { EditTaskModal } from './modals/EditTaskModal';
 import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
 import { Task } from '@/types';
 
 export function TaskManager() {
-  const { tasks, createTask, updateTask, deleteTask } = useTasks();
+  const { tasks, createTask, updateTask, deleteTask, isLoading } = useTasks();
+  const { projects } = useProjects();
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,6 +85,14 @@ export function TaskManager() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -92,7 +102,7 @@ export function TaskManager() {
             Gerenciar Tarefas
           </h1>
           <p className="text-muted-foreground mt-1">
-            Organize e acompanhe todas as suas tarefas
+            Organize e acompanhe todas as suas tarefas ({tasks.length} tarefas)
           </p>
         </div>
         <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
@@ -102,10 +112,11 @@ export function TaskManager() {
               Nova Tarefa
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <TaskForm 
               onSubmit={handleCreateTask} 
-              onCancel={() => setIsTaskFormOpen(false)} 
+              onCancel={() => setIsTaskFormOpen(false)}
+              projects={projects.map(p => ({ id: p.id, name: p.name }))}
             />
           </DialogContent>
         </Dialog>
