@@ -614,7 +614,7 @@ export type Database = {
         Returns: undefined
       }
       user_has_project_access: {
-        Args: { project_uuid: string; user_uuid: string }
+        Args: { project_id: string; user_id: string }
         Returns: boolean
       }
     }

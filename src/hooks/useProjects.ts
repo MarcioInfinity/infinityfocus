@@ -1,9 +1,8 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
-import { Project, ProjectMember, Task, CategoryType } from '@/types';
+import { Project, ProjectMember, Task } from '@/types';
 import { useRealtime } from './useRealtime';
 import { toISOStringWithoutTimeZone, formatTime, convertCategoryToEnglish } from '@/lib/utils';
 
@@ -116,14 +115,11 @@ export function useProjects() {
 
       console.log('Creating project with data:', projectData);
 
-      // Convert category to English and ensure it's a valid CategoryType
-      const validCategory: CategoryType = convertCategoryToEnglish(projectData.category);
-
       const projectPayload = {
         name: projectData.name,
         description: projectData.description || null,
         priority: projectData.priority || 'medium',
-        category: validCategory,
+        category: convertCategoryToEnglish(projectData.category) || 'professional',
         color: projectData.color || '#3B82F6',
         is_shared: projectData.is_shared || false,
         start_date: projectData.start_date ? toISOStringWithoutTimeZone(new Date(projectData.start_date)) : null,
@@ -170,12 +166,9 @@ export function useProjects() {
       
       console.log('Updating project:', id, updates);
 
-      // Convert category to English and ensure it's a valid CategoryType
-      const validCategory: CategoryType | undefined = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
-
       const updatedPayload: any = {
         ...updates,
-        category: validCategory,
+        category: updates.category ? convertCategoryToEnglish(updates.category) : updates.category,
         start_date: updates.start_date ? toISOStringWithoutTimeZone(new Date(updates.start_date)) : updates.start_date,
         due_date: updates.due_date ? toISOStringWithoutTimeZone(new Date(updates.due_date)) : updates.due_date,
         start_time: updates.start_time ? formatTime(updates.start_time) : updates.start_time,
@@ -252,3 +245,4 @@ export function useProjects() {
     isDeleting: deleteProjectMutation.isPending,
   };
 }
+

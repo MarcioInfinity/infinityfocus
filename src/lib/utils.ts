@@ -1,7 +1,5 @@
-
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { CategoryType } from "@/types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -22,8 +20,8 @@ export function formatTime(timeString: string | null | undefined): string | null
   return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
 }
 
-export function convertCategoryToEnglish(category: string): CategoryType {
-  const categoryMap: { [key: string]: CategoryType } = {
+export function convertCategoryToEnglish(category: string): string {
+  const categoryMap: { [key: string]: string } = {
     'Profissional': 'professional',
     'Intelectual': 'intellectual',
     'Finanças': 'finance',
@@ -55,3 +53,5 @@ export function convertCategoryToPortuguese(category: string): string {
   };
   return categoryMap[category] || 'Outros';
 }
+
+
