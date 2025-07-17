@@ -55,8 +55,7 @@ export function useTasks() {
       console.log('Creating task with data:', taskData);
 
       // Convert category to English and ensure it's a valid CategoryType
-      const convertedCategory = convertCategoryToEnglish(taskData.category);
-      const validCategory: CategoryType = convertedCategory || 'professional';
+      const validCategory: CategoryType = convertCategoryToEnglish(taskData.category);
 
       const taskPayload = {
         title: taskData.title,
@@ -130,8 +129,7 @@ export function useTasks() {
       console.log('Updating task:', id, updates);
 
       // Convert category to English and ensure it's a valid CategoryType
-      const convertedCategory = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
-      const validCategory: CategoryType | undefined = convertedCategory as CategoryType;
+      const validCategory: CategoryType | undefined = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
 
       const updatedPayload: any = {
         ...updates,

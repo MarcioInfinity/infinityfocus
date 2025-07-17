@@ -50,8 +50,7 @@ export function useGoals() {
       console.log('Creating goal with data:', goalData);
 
       // Convert category to English and ensure it's a valid CategoryType
-      const convertedCategory = convertCategoryToEnglish(goalData.category);
-      const validCategory: CategoryType = convertedCategory || 'professional';
+      const validCategory: CategoryType = convertCategoryToEnglish(goalData.category);
 
       const goalPayload = {
         name: goalData.name,
@@ -104,8 +103,7 @@ export function useGoals() {
       console.log('Updating goal:', id, updates);
 
       // Convert category to English and ensure it's a valid CategoryType
-      const convertedCategory = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
-      const validCategory: CategoryType | undefined = convertedCategory as CategoryType;
+      const validCategory: CategoryType | undefined = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
 
       const updatedPayload: any = {
         ...updates,

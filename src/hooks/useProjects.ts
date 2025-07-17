@@ -117,8 +117,7 @@ export function useProjects() {
       console.log('Creating project with data:', projectData);
 
       // Convert category to English and ensure it's a valid CategoryType
-      const convertedCategory = convertCategoryToEnglish(projectData.category);
-      const validCategory: CategoryType = convertedCategory || 'professional';
+      const validCategory: CategoryType = convertCategoryToEnglish(projectData.category);
 
       const projectPayload = {
         name: projectData.name,
@@ -172,8 +171,7 @@ export function useProjects() {
       console.log('Updating project:', id, updates);
 
       // Convert category to English and ensure it's a valid CategoryType
-      const convertedCategory = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
-      const validCategory: CategoryType | undefined = convertedCategory as CategoryType;
+      const validCategory: CategoryType | undefined = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
 
       const updatedPayload: any = {
         ...updates,
