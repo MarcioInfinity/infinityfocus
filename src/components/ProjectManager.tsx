@@ -266,7 +266,7 @@ export function ProjectManager() {
       {editingProject && (
         <EditProjectModal
           project={editingProject}
-          onSave={handleUpdateProject}
+          isOpen={true}
           onClose={() => setEditingProject(null)}
         />
       )}

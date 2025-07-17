@@ -253,7 +253,7 @@ export function TaskManager() {
       {editingTask && (
         <EditTaskModal
           task={editingTask}
-          onSave={handleUpdateTask}
+          isOpen={true}
           onClose={() => setEditingTask(null)}
         />
       )}

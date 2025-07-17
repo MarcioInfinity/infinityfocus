@@ -1,8 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
-import { Goal } from '@/types';
+import { Goal, CategoryType } from '@/types';
 import { toISOStringWithoutTimeZone, convertCategoryToEnglish } from '@/lib/utils';
 
 export function useGoals() {
@@ -48,11 +49,15 @@ export function useGoals() {
 
       console.log('Creating goal with data:', goalData);
 
+      // Convert category to English and ensure it's a valid CategoryType
+      const convertedCategory = convertCategoryToEnglish(goalData.category);
+      const validCategory: CategoryType = convertedCategory || 'professional';
+
       const goalPayload = {
         name: goalData.name,
         description: goalData.description || null,
         priority: goalData.priority || 'medium',
-        category: convertCategoryToEnglish(goalData.category) || 'professional',
+        category: validCategory,
         start_date: goalData.start_date ? toISOStringWithoutTimeZone(new Date(goalData.start_date)) : null,
         due_date: goalData.due_date ? toISOStringWithoutTimeZone(new Date(goalData.due_date)) : null,
         progress: goalData.progress || 0,
@@ -98,9 +103,13 @@ export function useGoals() {
       
       console.log('Updating goal:', id, updates);
 
+      // Convert category to English and ensure it's a valid CategoryType
+      const convertedCategory = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
+      const validCategory: CategoryType | undefined = convertedCategory as CategoryType;
+
       const updatedPayload: any = {
         ...updates,
-        category: updates.category ? convertCategoryToEnglish(updates.category) : updates.category,
+        category: validCategory,
         start_date: updates.start_date ? toISOStringWithoutTimeZone(new Date(updates.start_date)) : updates.start_date,
         due_date: updates.due_date ? toISOStringWithoutTimeZone(new Date(updates.due_date)) : updates.due_date,
       };
@@ -175,4 +184,3 @@ export function useGoals() {
     isDeleting: deleteGoalMutation.isPending,
   };
 }
-

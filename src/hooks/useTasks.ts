@@ -1,8 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
-import { Task } from '@/types';
+import { Task, CategoryType } from '@/types';
 import { toISOStringWithoutTimeZone, formatTime, convertCategoryToEnglish } from '@/lib/utils';
 
 export function useTasks() {
@@ -53,11 +54,15 @@ export function useTasks() {
 
       console.log('Creating task with data:', taskData);
 
+      // Convert category to English and ensure it's a valid CategoryType
+      const convertedCategory = convertCategoryToEnglish(taskData.category);
+      const validCategory: CategoryType = convertedCategory || 'professional';
+
       const taskPayload = {
         title: taskData.title,
         description: taskData.description || null,
         priority: taskData.priority || 'medium',
-        category: convertCategoryToEnglish(taskData.category) || 'professional',
+        category: validCategory,
         status: 'todo' as const,
         due_date: taskData.due_date ? toISOStringWithoutTimeZone(new Date(taskData.due_date)) : null,
         start_date: taskData.start_date ? toISOStringWithoutTimeZone(new Date(taskData.start_date)) : null,
@@ -124,9 +129,13 @@ export function useTasks() {
       
       console.log('Updating task:', id, updates);
 
+      // Convert category to English and ensure it's a valid CategoryType
+      const convertedCategory = updates.category ? convertCategoryToEnglish(updates.category) : updates.category;
+      const validCategory: CategoryType | undefined = convertedCategory as CategoryType;
+
       const updatedPayload: any = {
         ...updates,
-        category: updates.category ? convertCategoryToEnglish(updates.category) : updates.category,
+        category: validCategory,
         start_date: updates.start_date ? toISOStringWithoutTimeZone(new Date(updates.start_date)) : updates.start_date,
         due_date: updates.due_date ? toISOStringWithoutTimeZone(new Date(updates.due_date)) : updates.due_date,
         start_time: updates.start_time ? formatTime(updates.start_time) : updates.start_time,
@@ -208,4 +217,3 @@ export function useTasks() {
     isDeleting: deleteTaskMutation.isPending,
   };
 }
-
