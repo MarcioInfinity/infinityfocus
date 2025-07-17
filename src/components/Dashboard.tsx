@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Plus, Target, FolderKanban, CheckCircle2, Calendar, TrendingUp, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,14 +16,14 @@ import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useRealtime } from '@/hooks/useRealtime';
-import { useNotifications } from '@/hooks/useNotifications'; // Import useNotifications
+import { useNotifications } from '@/hooks/useNotifications';
 
 export function Dashboard() {
   const { user } = useAuth();
   const { tasks, createTask, updateTask } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
-  const { requestNotificationPermission, showBrowserNotification } = useNotifications(); // Use useNotifications
+  const { requestNotificationPermission, showBrowserNotification } = useNotifications();
 
   // Habilitar atualizações em tempo real
   useRealtime();
@@ -40,7 +41,7 @@ export function Dashboard() {
         console.log('Notification permission denied or not supported.');
       }
     });
-  }, []);
+  }, [requestNotificationPermission]);
 
   // Logic to show notifications for upcoming tasks
   useEffect(() => {
@@ -50,7 +51,6 @@ export function Dashboard() {
         const dueDate = new Date(task.due_date);
         // Check if due date is today and task is not done
         if (dueDate.toDateString() === now.toDateString() && task.status !== 'done') {
-          // You can refine this logic to check for specific times if needed
           showBrowserNotification(`Tarefa Próxima: ${task.title}`, {
             body: `A tarefa '${task.title}' vence hoje!`, 
             tag: task.id
@@ -178,9 +178,9 @@ export function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Tasks */}
-        <Card className="glass-card lg:col-span-2">
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
@@ -239,89 +239,141 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Quick Overview */}
-        <div className="space-y-6">
-          {/* Progress Card */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-accent" />
-                Progresso Hoje
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Tarefas Concluídas</span>
-                  <span>{completedToday.length}/{todayTasks.length}</span>
-                </div>
-                <Progress 
-                  value={todayTasks.length > 0 ? (completedToday.length / todayTasks.length) * 100 : 0} 
-                  className="h-2"
-                />
+        {/* Metas Recentes */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-secondary" />
+              Metas Recentes
+              <Badge variant="outline">{goals.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {goals.length === 0 ? (
+              <div className="text-center py-8">
+                <Target className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">Nenhuma meta definida</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Defina suas primeiras metas!
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{pendingTasks.length}</p>
-                  <p className="text-xs text-muted-foreground">Pendentes</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-red-400">{highPriorityTasks.length}</p>
-                  <p className="text-xs text-muted-foreground">Alta Prioridade</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Projects Summary */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-secondary" />
-                Projetos Ativos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {projects.length === 0 ? (
-                <div className="text-center py-4">
-                  <FolderKanban className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-                  <p className="text-sm text-muted-foreground">Nenhum projeto</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {projects.slice(0, 3).map(project => (
-                    <div key={project.id} className="flex items-center gap-3">
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{project.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Progress 
-                            value={project.tasks ? (project.tasks.filter(t => t.status === 'done').length / Math.max(project.tasks.length, 1)) * 100 : 0} 
-                            className="h-1 flex-1"
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            {project.members?.length || 0} membro{(project.members?.length || 0) !== 1 ? 's' : ''}
-                          </span>
-                        </div>
+            ) : (
+              <div className="space-y-3">
+                {goals.slice(0, 5).map(goal => (
+                  <div
+                    key={goal.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card border-border hover:border-secondary/50"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{goal.name}</p>
+                      {goal.description && (
+                        <p className="text-sm text-muted-foreground mt-1 truncate">{goal.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <Progress value={goal.progress} className="h-2 flex-1" />
+                        <span className="text-xs text-muted-foreground min-w-fit">
+                          {goal.progress}%
+                        </span>
                       </div>
                     </div>
-                  ))}
-                  {projects.length > 3 && (
-                    <p className="text-xs text-muted-foreground text-center pt-2">
-                      +{projects.length - 3} projeto{projects.length - 3 !== 1 ? 's' : ''} adicional{projects.length - 3 !== 1 ? 'is' : ''}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    <Badge 
+                      variant="outline" 
+                      className={
+                        goal.priority === 'high' ? 'border-red-500/50 text-red-400' :
+                        goal.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
+                        'border-green-500/50 text-green-400'
+                      }
+                    >
+                      {goal.priority === 'high' ? 'Alta' : goal.priority === 'medium' ? 'Média' : 'Baixa'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Progress Card */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-accent" />
+              Progresso Hoje
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Tarefas Concluídas</span>
+                <span>{completedToday.length}/{todayTasks.length}</span>
+              </div>
+              <Progress 
+                value={todayTasks.length > 0 ? (completedToday.length / todayTasks.length) * 100 : 0} 
+                className="h-2"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">{pendingTasks.length}</p>
+                <p className="text-xs text-muted-foreground">Pendentes</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-red-400">{highPriorityTasks.length}</p>
+                <p className="text-xs text-muted-foreground">Alta Prioridade</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Projects Summary */}
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-secondary" />
+              Projetos Ativos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {projects.length === 0 ? (
+              <div className="text-center py-4">
+                <FolderKanban className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">Nenhum projeto</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {projects.slice(0, 3).map(project => (
+                  <div key={project.id} className="flex items-center gap-3">
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: project.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{project.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Progress 
+                          value={project.tasks ? (project.tasks.filter(t => t.status === 'done').length / Math.max(project.tasks.length, 1)) * 100 : 0} 
+                          className="h-1 flex-1"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {project.members?.length || 0} membro{(project.members?.length || 0) !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {projects.length > 3 && (
+                  <p className="text-xs text-muted-foreground text-center pt-2">
+                    +{projects.length - 3} projeto{projects.length - 3 !== 1 ? 's' : ''} adicional{projects.length - 3 !== 1 ? 'is' : ''}
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
-
-
