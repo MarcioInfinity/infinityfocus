@@ -318,6 +318,48 @@ export function Dashboard() {
               )}
             </CardContent>
           </Card>
+          
+          {/* Goals Summary */}
+<Card className="glass-card">
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <Target className="w-5 h-5 text-secondary" />
+      Metas Atuais
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    {goals.length === 0 ? (
+      <div className="text-center py-4">
+        <Target className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+        <p className="text-sm text-muted-foreground">Nenhuma meta definida</p>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        {goals.slice(0, 3).map(goal => (
+          <div key={goal.id} className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{goal.title}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Progress 
+                  value={goal.progress || 0} 
+                  className="h-1 flex-1"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {Math.round(goal.progress || 0)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+        {goals.length > 3 && (
+          <p className="text-xs text-muted-foreground text-center pt-2">
+            +{goals.length - 3} meta{goals.length - 3 !== 1 ? 's' : ''} adicional{goals.length - 3 !== 1 ? 'is' : ''}
+          </p>
+        )}
+      </div>
+    )}
+  </CardContent>
+</Card>
         </div>
       </div>
     </div>
