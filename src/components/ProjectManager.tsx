@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Plus, FolderKanban, Users, Calendar, Settings, MoreHorizontal, Eye, Edit, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -351,7 +350,6 @@ export function ProjectManager() {
           {selectedProject && (
             <KanbanBoard 
               projectId={selectedProject.id}
-              projectName={selectedProject.name}
             />
           )}
         </DialogContent>
