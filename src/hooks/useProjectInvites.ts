@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -33,7 +32,10 @@ export function useProjectInvites() {
 
       const token = generateInviteToken();
       
-      // Criar o convite no banco de dados
+      // Generate invite link first
+      const inviteLink = `${window.location.origin}/invite/${token}`;
+      
+      // Create invite in database
       const { data: inviteData, error: inviteError } = await supabase
         .from('project_invites')
         .insert({
@@ -42,6 +44,7 @@ export function useProjectInvites() {
           email,
           role,
           created_by: user.id,
+          invite_link: inviteLink,
         })
         .select()
         .single();
@@ -53,13 +56,9 @@ export function useProjectInvites() {
 
       console.log('Invite record created:', inviteData);
 
-      // Gerar link de convite
-      const inviteLink = `${window.location.origin}/invite/${token}`;
-
-      // Se foi fornecido email, enviar convite por email via Edge Function
+      // Send email if provided
       if (email) {
         try {
-          // Buscar dados do projeto
           const { data: projectData, error: projectError } = await supabase
             .from('projects')
             .select('name, owner_id')
@@ -72,7 +71,6 @@ export function useProjectInvites() {
             return { ...inviteData, inviteLink };
           }
 
-          // Buscar dados do proprietário
           const { data: ownerData, error: ownerError } = await supabase
             .from('profiles')
             .select('name')

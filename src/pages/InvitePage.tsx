@@ -1,26 +1,29 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, X, Users, Calendar, AlertCircle } from 'lucide-react';
+import { Loader2, Users, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import { useProjectInvites } from '@/hooks/useProjectInvites';
 import { useAuth } from '@/hooks/useAuth';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getInviteByToken, acceptInviteAsync, isAcceptingInvite } = useProjectInvites();
-  const [acceptedSuccessfully, setAcceptedSuccessfully] = useState(false);
+  const { getInviteByToken, acceptInvite, isAcceptingInvite } = useProjectInvites();
+  const { showSuccessToast, showErrorToast } = useToastNotifications();
+  const [isAccepted, setIsAccepted] = useState(false);
 
-  const { data: invite, isLoading, error } = getInviteByToken(token || '');
+  const inviteQuery = getInviteByToken(token || '');
+  const invite = inviteQuery.data;
 
   useEffect(() => {
     if (!user) {
-      // Redirecionar para login se não estiver autenticado
-      navigate('/login?redirect=' + encodeURIComponent(window.location.pathname));
+      navigate('/login');
+      return;
     }
   }, [user, navigate]);
 
@@ -28,65 +31,61 @@ export default function InvitePage() {
     if (!token || !user) return;
 
     try {
-      await acceptInviteAsync({ token });
-      setAcceptedSuccessfully(true);
+      await acceptInvite({ token });
+      setIsAccepted(true);
+      showSuccessToast('Convite aceito com sucesso!');
       
-      // Redirecionar para a página de projetos após 2 segundos
+      // Redirect to projects after a short delay
       setTimeout(() => {
         navigate('/');
       }, 2000);
     } catch (error) {
       console.error('Error accepting invite:', error);
+      showErrorToast('Erro ao aceitar convite');
     }
-  };
-
-  const handleDeclineInvite = () => {
-    navigate('/');
   };
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <Card className="glass-card w-full max-w-md">
-          <CardContent className="text-center py-12">
-            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
-            <h2 className="text-xl font-semibold mb-2">Autenticação Necessária</h2>
-            <p className="text-muted-foreground mb-4">
-              Você precisa estar logado para aceitar este convite.
-            </p>
-            <Button onClick={() => navigate('/login')} className="glow-button">
-              Fazer Login
-            </Button>
+      <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
+        <Card className="glass-card max-w-md w-full">
+          <CardContent className="p-6 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p>Redirecionando para login...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (inviteQuery.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <Card className="glass-card w-full max-w-md">
-          <CardContent className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Verificando convite...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
+        <Card className="glass-card max-w-md w-full">
+          <CardContent className="p-6 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p>Carregando convite...</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (error || !invite) {
+  if (!invite) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <Card className="glass-card w-full max-w-md">
-          <CardContent className="text-center py-12">
-            <X className="w-16 h-16 mx-auto mb-4 text-red-400" />
-            <h2 className="text-xl font-semibold mb-2">Convite Inválido</h2>
-            <p className="text-muted-foreground mb-4">
-              Este convite pode ter expirado, já ter sido usado ou não existe.
+      <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
+        <Card className="glass-card max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5" />
+              Convite Inválido
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Este convite é inválido, já foi usado ou expirou.
             </p>
-            <Button onClick={() => navigate('/')} variant="outline" className="neon-border">
+            <Button onClick={() => navigate('/')} className="w-full">
               Voltar ao Início
             </Button>
           </CardContent>
@@ -95,111 +94,105 @@ export default function InvitePage() {
     );
   }
 
-  if (acceptedSuccessfully) {
+  if (isAccepted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <Card className="glass-card w-full max-w-md">
-          <CardContent className="text-center py-12">
-            <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-400" />
-            <h2 className="text-xl font-semibold mb-2">Convite Aceito!</h2>
-            <p className="text-muted-foreground mb-4">
-              Bem-vindo ao projeto {invite.projects?.name}! 
-              Você será redirecionado em instantes...
+      <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
+        <Card className="glass-card max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-400">
+              <CheckCircle className="w-5 h-5" />
+              Convite Aceito!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Você agora faz parte do projeto <strong>{invite.projects?.name}</strong>!
             </p>
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+            <p className="text-sm text-muted-foreground">
+              Redirecionando em alguns segundos...
+            </p>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div className="bg-gradient-to-r from-primary to-accent h-2 rounded-full animate-pulse" style={{ width: '100%' }} />
+            </div>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const roleLabels = {
-    admin: { label: '🛡️ Administrador', description: 'Pode gerenciar o projeto e membros' },
-    member: { label: '👤 Membro', description: 'Pode criar e editar tarefas' },
-    viewer: { label: '👁️ Visualizador', description: 'Pode apenas visualizar o projeto' }
-  };
-
-  const roleInfo = roleLabels[invite.role as keyof typeof roleLabels];
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <Card className="glass-card w-full max-w-lg">
+    <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
+      <Card className="glass-card max-w-md w-full">
         <CardHeader>
-          <CardTitle className="text-center text-xl">
-            Convite para Projeto
-          </CardTitle>
+          <CardTitle className="text-center">Convite de Projeto</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Informações do Projeto */}
-          <div className="text-center space-y-3">
+          <div className="text-center space-y-4">
             <div 
               className="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl font-bold text-white"
               style={{ backgroundColor: invite.projects?.color || '#3B82F6' }}
             >
-              {invite.projects?.name?.charAt(0).toUpperCase()}
+              {invite.projects?.name?.charAt(0)?.toUpperCase() || 'P'}
             </div>
+            
             <div>
-              <h3 className="text-lg font-semibold">{invite.projects?.name}</h3>
+              <h2 className="text-xl font-semibold">{invite.projects?.name}</h2>
               {invite.projects?.description && (
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-2">
                   {invite.projects.description}
                 </p>
               )}
             </div>
-          </div>
 
-          {/* Informações da Função */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-center gap-2">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Você será adicionado como:</span>
+            <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                <span>Papel:</span>
+                <Badge variant="secondary" className="ml-1">
+                  {invite.role === 'admin' ? 'Administrador' : 
+                   invite.role === 'member' ? 'Membro' : 'Visualizador'}
+                </Badge>
+              </div>
             </div>
-            <div className="text-center">
-              <Badge variant="outline" className="text-sm px-3 py-1">
-                {roleInfo.label}
-              </Badge>
-              <p className="text-xs text-muted-foreground mt-1">
-                {roleInfo.description}
-              </p>
-            </div>
-          </div>
 
-          {/* Informações do Convite */}
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="w-4 h-4" />
+            <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="w-3 h-3" />
               <span>
-                Convite expira em: {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
+                Expira em: {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
               </span>
             </div>
-            {invite.email && (
-              <p className="text-xs text-muted-foreground">
-                Convite enviado para: {invite.email}
-              </p>
-            )}
           </div>
 
-          {/* Ações */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={handleDeclineInvite}
-              className="flex-1 neon-border"
-            >
-              Recusar
-            </Button>
-            <Button
+          <div className="space-y-3">
+            <Button 
               onClick={handleAcceptInvite}
               disabled={isAcceptingInvite}
-              className="flex-1 glow-button"
+              className="w-full glow-button"
+              size="lg"
             >
-              {isAcceptingInvite ? 'Aceitando...' : 'Aceitar Convite'}
+              {isAcceptingInvite ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Aceitando...
+                </>
+              ) : (
+                'Aceitar Convite'
+              )}
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="w-full"
+            >
+              Cancelar
             </Button>
           </div>
 
-          <div className="text-xs text-center text-muted-foreground">
-            Ao aceitar este convite, você terá acesso ao projeto e suas tarefas.
-          </div>
+          <p className="text-xs text-center text-muted-foreground">
+            Ao aceitar este convite, você terá acesso ao projeto e suas funcionalidades 
+            de acordo com seu nível de permissão.
+          </p>
         </CardContent>
       </Card>
     </div>
