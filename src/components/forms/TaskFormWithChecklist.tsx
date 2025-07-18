@@ -35,7 +35,7 @@ export function TaskFormWithChecklist({ onClose }: TaskFormProps) {
     is_indefinite: false,
     notifications_enabled: false,
     repeat_enabled: false,
-    repeat_type: 'daily' as const,
+    repeat_type: 'daily' as 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom',
     repeat_interval: 1,
     repeat_days: [] as string[],
     tags: [] as string[],
