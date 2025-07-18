@@ -51,7 +51,8 @@ export function TaskFormWithChecklist({ onClose }: TaskFormProps) {
 
     const taskData = {
       ...formData,
-      repeat_days: formData.repeat_type === 'weekdays' ? ['1', '2', '3', '4', '5'] : formData.repeat_days,
+      repeat_days: formData.repeat_type === 'weekdays' ? ['1', '2', '3', '4', '5'] : 
+                   formData.repeat_type === 'custom' ? formData.repeat_days : [],
     };
 
     createTask(taskData);

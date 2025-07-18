@@ -93,6 +93,7 @@ export function useProjects() {
           ...project,
           members,
           tasks,
+          checklist: [], // Add empty checklist array
         } as Project;
       });
 

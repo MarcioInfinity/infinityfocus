@@ -54,7 +54,7 @@ const App = () => (
               <Route path="tasks" element={<TaskManager />} />
               <Route path="goals" element={<Goals />} />
               <Route path="projects" element={<ProjectManager />} />
-              <Route path="projects/:id/kanban" element={<KanbanBoard projectId="1" projectName="Projeto Exemplo" />} />
+              <Route path="projects/:id/kanban" element={<KanbanBoard projectId="1" />} />
               <Route path="notifications" element={<NotificationManager />} />
               <Route path="settings" element={<Settings />} />
             </Route>
