@@ -31,6 +31,7 @@ export interface Task {
   repeat_enabled: boolean;
   repeat_type?: 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
   repeat_days?: string[];
+  repeat_interval?: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -38,8 +39,32 @@ export interface Task {
 
 export interface ChecklistItem {
   id: string;
-  text: string;
+  parent_id: string;
+  parent_type: 'task' | 'project' | 'goal';
+  title: string;
   completed: boolean;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Observation {
+  id: string;
+  parent_id: string;
+  parent_type: 'task' | 'project' | 'goal';
+  content: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Activity {
+  id: string;
+  parent_id: string;
+  parent_type: 'task' | 'project' | 'goal';
+  action: string;
+  description: string;
+  created_by: string;
   created_at: string;
 }
 
@@ -91,6 +116,7 @@ export interface Project {
   owner_id: string;
   members: ProjectMember[];
   tasks: Task[];
+  checklist: ChecklistItem[];
   invite_link?: string;
   created_at: string;
   updated_at: string;
@@ -139,6 +165,7 @@ export interface Goal {
   assigned_projects: string[];
   assigned_tasks: string[];
   notes?: string;
+  checklist: ChecklistItem[];
   created_by: string;
   created_at: string;
   updated_at: string;

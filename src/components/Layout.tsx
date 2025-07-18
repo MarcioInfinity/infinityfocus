@@ -85,14 +85,24 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Mobile Top Navigation */}
         <div className="fixed top-0 left-0 right-0 z-50 h-14 glass-card border-b border-white/20 flex items-center justify-between px-4">
-          {/* Menu Dropdown */}
+          {/* Logo à esquerda */}
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
+              <Target className="h-4 w-4 text-white" />
+            </div>
+            <h1 className="text-sm font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              INFINITY FOCUS
+            </h1>
+          </div>
+
+          {/* Menu Dropdown à direita */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
                 <Menu className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => navigate('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 Configurações
@@ -107,16 +117,6 @@ export function Layout({ children }: LayoutProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
-              <Target className="h-4 w-4 text-white" />
-            </div>
-            <h1 className="text-sm font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              INFINITY FOCUS
-            </h1>
-          </div>
         </div>
 
         {/* Main Content */}

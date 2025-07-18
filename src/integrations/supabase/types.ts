@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          action: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          parent_id: string
+          parent_type: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          parent_id: string
+          parent_type: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          parent_id?: string
+          parent_type?: string
+        }
+        Relationships: []
+      }
       checklist_items: {
         Row: {
           completed: boolean
@@ -45,6 +75,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      checklists: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          parent_id: string
+          parent_type: string
+          position: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          parent_id: string
+          parent_type: string
+          position?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          parent_id?: string
+          parent_type?: string
+          position?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       custom_notifications: {
         Row: {
@@ -326,6 +389,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      observations: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          parent_id: string
+          parent_type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          parent_id: string
+          parent_type: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          parent_id?: string
+          parent_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

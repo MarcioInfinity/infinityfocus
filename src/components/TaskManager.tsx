@@ -1,18 +1,17 @@
 
 import { useState } from 'react';
-import { Plus, Calendar, Tag, User, Trash2, Edit3, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Calendar, Tag, User, Trash2, Edit3, CheckCircle2, Clock, AlertCircle, List, Grid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { EditTaskModal } from './modals/EditTaskModal';
+import { TaskFormWithChecklist } from './forms/TaskFormWithChecklist';
 
 const priorityColors = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
@@ -35,61 +34,15 @@ export function TaskManager() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [newTask, setNewTask] = useState({
-    title: '',
-    description: '',
-    priority: 'medium' as const,
-    category: 'professional' as const,
-    status: 'todo' as const,
-    project_id: null as string | null,
-    goal_id: null as string | null,
-    due_date: '',
-    start_date: '',
-    start_time: '',
-    end_time: '',
-    is_indefinite: false,
-    notifications_enabled: false,
-    tags: [] as string[],
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
+
+  const filteredTasks = tasks.filter(task => {
+    if (filterStatus !== 'all' && task.status !== filterStatus) return false;
+    if (filterPriority !== 'all' && task.priority !== filterPriority) return false;
+    return true;
   });
-
-  const handleCreateTask = () => {
-    if (!newTask.title.trim()) return;
-
-    createTask({
-      title: newTask.title,
-      description: newTask.description,
-      priority: newTask.priority,
-      category: newTask.category,
-      status: newTask.status,
-      project_id: newTask.project_id,
-      goal_id: newTask.goal_id,
-      due_date: newTask.due_date || null,
-      start_date: newTask.start_date || null,
-      start_time: newTask.start_time || null,
-      end_time: newTask.end_time || null,
-      is_indefinite: newTask.is_indefinite,
-      notifications_enabled: newTask.notifications_enabled,
-      tags: newTask.tags,
-    });
-
-    setNewTask({
-      title: '',
-      description: '',
-      priority: 'medium',
-      category: 'professional',
-      status: 'todo',
-      project_id: null,
-      goal_id: null,
-      due_date: '',
-      start_date: '',
-      start_time: '',
-      end_time: '',
-      is_indefinite: false,
-      notifications_enabled: false,
-      tags: [],
-    });
-    setShowCreateForm(false);
-  };
 
   const handleUpdateTask = (id: string, updates: any) => {
     updateTask({ id, updates });
@@ -141,140 +94,63 @@ export function TaskManager() {
         </Button>
       </div>
 
+      {/* Filtros e Visualização */}
+      <Card className="glass-card">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-40 glass-card border-white/20">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="todo">A fazer</SelectItem>
+                <SelectItem value="in-progress">Em progresso</SelectItem>
+                <SelectItem value="review">Revisão</SelectItem>
+                <SelectItem value="done">Concluída</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterPriority} onValueChange={setFilterPriority}>
+              <SelectTrigger className="w-40 glass-card border-white/20">
+                <SelectValue placeholder="Prioridade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="high">Alta</SelectItem>
+                <SelectItem value="medium">Média</SelectItem>
+                <SelectItem value="low">Baixa</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Create Task Form */}
       {showCreateForm && (
-        <Card className="glass-card animate-slide-up">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-primary" />
-              Criar Nova Tarefa
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="task-title">Título da Tarefa</Label>
-                <Input
-                  id="task-title"
-                  placeholder="Digite o título da tarefa..."
-                  value={newTask.title}
-                  onChange={(e) => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                  className="glass-card border-white/20"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-priority">Prioridade</Label>
-                <Select value={newTask.priority} onValueChange={(value: any) => setNewTask(prev => ({ ...prev, priority: value }))}>
-                  <SelectTrigger className="glass-card border-white/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card border-white/20">
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-category">Categoria</Label>
-                <Select value={newTask.category} onValueChange={(value: any) => setNewTask(prev => ({ ...prev, category: value }))}>
-                  <SelectTrigger className="glass-card border-white/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card border-white/20">
-                    <SelectItem value="professional">Profissional</SelectItem>
-                    <SelectItem value="personal">Pessoal</SelectItem>
-                    <SelectItem value="health">Saúde</SelectItem>
-                    <SelectItem value="finance">Finanças</SelectItem>
-                    <SelectItem value="social">Social</SelectItem>
-                    <SelectItem value="other">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-project">Projeto (Opcional)</Label>
-                <Select value={newTask.project_id || 'none'} onValueChange={(value) => setNewTask(prev => ({ ...prev, project_id: value === 'none' ? null : value }))}>
-                  <SelectTrigger className="glass-card border-white/20">
-                    <SelectValue placeholder="Selecionar projeto..." />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card border-white/20">
-                    <SelectItem value="none">Nenhum projeto</SelectItem>
-                    {projects?.map(project => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-goal">Meta (Opcional)</Label>
-                <Select value={newTask.goal_id || 'none'} onValueChange={(value) => setNewTask(prev => ({ ...prev, goal_id: value === 'none' ? null : value }))}>
-                  <SelectTrigger className="glass-card border-white/20">
-                    <SelectValue placeholder="Selecionar meta..." />
-                  </SelectTrigger>
-                  <SelectContent className="glass-card border-white/20">
-                    <SelectItem value="none">Nenhuma meta</SelectItem>
-                    {goals?.map(goal => (
-                      <SelectItem key={goal.id} value={goal.id}>
-                        {goal.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-due-date">Data de Vencimento</Label>
-                <Input
-                  id="task-due-date"
-                  type="date"
-                  value={newTask.due_date}
-                  onChange={(e) => setNewTask(prev => ({ ...prev, due_date: e.target.value }))}
-                  className="glass-card border-white/20"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="task-description">Descrição</Label>
-              <Textarea
-                id="task-description"
-                placeholder="Digite a descrição da tarefa..."
-                value={newTask.description}
-                onChange={(e) => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                className="glass-card border-white/20"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={newTask.notifications_enabled}
-                  onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, notifications_enabled: checked }))}
-                />
-                <Label>Ativar notificações</Label>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowCreateForm(false)} className="neon-border">
-                  Cancelar
-                </Button>
-                <Button className="glow-button" onClick={handleCreateTask}>
-                  Criar Tarefa
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <TaskFormWithChecklist onClose={() => setShowCreateForm(false)} />
       )}
 
-      {/* Tasks List */}
+      {/* Tasks List/Grid */}
       <div className="space-y-4">
-        {!tasks || tasks.length === 0 ? (
+        {!filteredTasks || filteredTasks.length === 0 ? (
           <Card className="glass-card">
             <CardContent className="text-center py-12">
               <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -288,9 +164,73 @@ export function TaskManager() {
               </Button>
             </CardContent>
           </Card>
+        ) : viewMode === 'list' ? (
+          // Lista com checkboxes
+          <Card className="glass-card">
+            <CardContent className="p-0">
+              <div className="space-y-0">
+                {filteredTasks.map((task, index) => (
+                  <div key={task.id} className={`flex items-center gap-4 p-4 ${index !== filteredTasks.length - 1 ? 'border-b border-white/10' : ''}`}>
+                    <Checkbox
+                      checked={task.status === 'done'}
+                      onCheckedChange={(checked) => 
+                        handleUpdateTask(task.id, { status: checked ? 'done' : 'todo' })
+                      }
+                    />
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className={`font-medium ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
+                            {task.title}
+                          </h3>
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {task.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge className={priorityColors[task.priority]}>
+                              {task.priority === 'low' ? 'Baixa' : task.priority === 'medium' ? 'Média' : 'Alta'}
+                            </Badge>
+                            <Badge className={statusColors[task.status]}>
+                              {task.status === 'todo' ? 'A fazer' : 
+                               task.status === 'in-progress' ? 'Em progresso' : 
+                               task.status === 'review' ? 'Revisão' : 'Concluída'}
+                            </Badge>
+                            {task.due_date && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-1 flex-shrink-0">
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(task)}>
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteTask(task.id)} 
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         ) : (
+          // Grid view mantido
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tasks.map(task => (
+            {filteredTasks.map(task => (
               <Card key={task.id} className="glass-card">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
