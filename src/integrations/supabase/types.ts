@@ -417,7 +417,7 @@ export type Database = {
           joined_at?: string
           project_id: string
           role?: Database["public"]["Enums"]["project_role"]
-          user_id: string
+          user_id?: string
         }
         Update: {
           id?: string
@@ -609,12 +609,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_project_safe: {
+        Args: { p_name: string; p_owner_id: string }
+        Returns: string
+      }
       drop_all_policies_on_table: {
         Args: { p_schema_name: string; p_table_name: string }
         Returns: undefined
       }
+      is_project_member: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      is_project_owner: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
       user_has_project_access: {
-        Args: { project_id: string; user_id: string }
+        Args: { project_uuid: string; user_uuid: string }
         Returns: boolean
       }
     }
