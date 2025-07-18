@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Plus, Target, FolderKanban, CheckCircle2, Calendar, TrendingUp, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,14 +16,14 @@ import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useRealtime } from '@/hooks/useRealtime';
-import { useNotifications } from '@/hooks/useNotifications'; // Import useNotifications
+import { useNotifications } from '@/hooks/useNotifications';
 
 export function Dashboard() {
   const { user } = useAuth();
   const { tasks, createTask, updateTask } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
-  const { requestNotificationPermission, showBrowserNotification } = useNotifications(); // Use useNotifications
+  const { requestNotificationPermission, showBrowserNotification } = useNotifications();
 
   // Habilitar atualizações em tempo real
   useRealtime();
@@ -329,41 +330,39 @@ export function Dashboard() {
             </CardHeader>
             <CardContent>
               {goals.length === 0 ? (
-      <div className="text-center py-4">
-        <Target className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-        <p className="text-sm text-muted-foreground">Nenhuma meta definida</p>
-      </div>
-    ) : (
-      <div className="space-y-3">
-        {goals.slice(0, 3).map(goal => (
-          <div key={goal.id} className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{goal.title}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Progress 
-                  value={goal.progress || 0} 
-                  className="h-1 flex-1"
-                  />
-                <span className="text-xs text-muted-foreground">
-                  {Math.round(goal.progress || 0)}%
-                </span>
-              </div>
-            </div>
-          </div>
-      ))}
-        {goals.length > 3 && (
-          <p className="text-xs text-muted-foreground text-center pt-2">
-            +{goals.length - 3} meta{goals.length - 3 !== 1 ? 's' : ''} adicional{goals.length - 3 !== 1 ? 'is' : ''}
-          </p>
-        )}
-      </div>
-    )}
-  </CardContent>
-</Card>
+                <div className="text-center py-4">
+                  <Target className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground">Nenhuma meta definida</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {goals.slice(0, 3).map(goal => (
+                    <div key={goal.id} className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{goal.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Progress 
+                            value={goal.progress || 0} 
+                            className="h-1 flex-1"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {Math.round(goal.progress || 0)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {goals.length > 3 && (
+                    <p className="text-xs text-muted-foreground text-center pt-2">
+                      +{goals.length - 3} meta{goals.length - 3 !== 1 ? 's' : ''} adicional{goals.length - 3 !== 1 ? 'is' : ''}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
 }
-
-
