@@ -349,12 +349,43 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                             />
                           </PopoverContent>
                         </Popover>
-                        <FormMessage />
-                      </FormItem>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {(watchFrequencyType === 'weekdays' || watchFrequencyType === 'custom') && (
+                      <FormField
+                        control={form.control}
+                        name="frequency_days"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Dias da Semana</FormLabel>
+                            <div className="flex flex-wrap gap-2">
+                              {weekDays.map((day) => (
+                                <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                                  <Checkbox
+                                    checked={field.value?.includes(day.value) || false}
+                                    onCheckedChange={(checked) => {
+                                      const currentDays = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...currentDays, day.value]);
+                                      } else {
+                                        field.onChange(currentDays.filter(d => d !== day.value));
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm">{day.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
-                </div>
-              )}
+                  </div>
+                )}
             </div>
 
             <FormField

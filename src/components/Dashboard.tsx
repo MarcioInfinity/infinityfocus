@@ -61,11 +61,49 @@ export function Dashboard() {
     });
   }, [tasks, showBrowserNotification]);
 
-  // Estatísticas rápidas
+  // Estatísticas rápidas - ordenadas por prioridade
+  const today = new Date();
+  const todayString = today.toDateString();
+  const currentWeekday = today.getDay();
+  
   const todayTasks = tasks.filter(task => {
-    const today = new Date().toDateString();
-    const taskDate = task.due_date ? new Date(task.due_date).toDateString() : null;
-    return taskDate === today;
+    // Tarefas com data específica para hoje
+    if (task.due_date && new Date(task.due_date).toDateString() === todayString) {
+      return true;
+    }
+    
+    // Tarefas com repetição diária
+    if (task.repeat_enabled && task.repeat_type === 'daily') {
+      return true;
+    }
+    
+    // Tarefas com repetição semanal (dias específicos)
+    if (task.repeat_enabled && task.repeat_type === 'weekly' && task.repeat_days?.includes(currentWeekday.toString())) {
+      return true;
+    }
+    
+    // Tarefas com repetição em dias da semana (segunda a sexta)
+    if (task.repeat_enabled && task.repeat_type === 'weekdays' && currentWeekday >= 1 && currentWeekday <= 5) {
+      return true;
+    }
+    
+    return false;
+  }).sort((a, b) => {
+    // Primeiro: tarefas atrasadas
+    const aOverdue = a.due_date && new Date(a.due_date) < today && a.status !== 'done';
+    const bOverdue = b.due_date && new Date(b.due_date) < today && b.status !== 'done';
+    
+    if (aOverdue && !bOverdue) return -1;
+    if (!aOverdue && bOverdue) return 1;
+    
+    // Segundo: ordenar por horário
+    if (a.start_time && b.start_time) {
+      return a.start_time.localeCompare(b.start_time);
+    }
+    if (a.start_time && !b.start_time) return -1;
+    if (!a.start_time && b.start_time) return 1;
+    
+    return 0;
   });
 
   const completedToday = todayTasks.filter(task => task.status === 'done');
@@ -129,7 +167,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
             <TaskForm 
               onSubmit={handleCreateTask} 
               onCancel={() => setIsTaskFormOpen(false)} 
@@ -149,7 +187,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
             <ProjectForm 
               onSubmit={handleCreateProject} 
               onCancel={() => setIsProjectFormOpen(false)} 
@@ -169,7 +207,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
             <GoalForm 
               onSubmit={handleCreateGoal} 
               onCancel={() => setIsGoalFormOpen(false)} 
@@ -277,9 +315,19 @@ export function Dashboard() {
           {/* Projects Summary */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-secondary" />
-                Projetos Ativos
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-secondary" />
+                  Projetos Ativos
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => window.location.href = '/projects'}
+                  className="text-xs hover:text-primary"
+                >
+                  Ir para Projetos
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -323,9 +371,19 @@ export function Dashboard() {
           {/* Goals Summary */}
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-secondary" />
-                Metas Atuais
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-secondary" />
+                  Metas Atuais
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => window.location.href = '/goals'}
+                  className="text-xs hover:text-primary"
+                >
+                  Ir para Metas
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>

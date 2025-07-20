@@ -109,6 +109,36 @@ export type Database = {
         }
         Relationships: []
       }
+      completed_goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          goal_id: string
+          id: string
+          reward_claimed: boolean | null
+          reward_claimed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          goal_id: string
+          id?: string
+          reward_claimed?: boolean | null
+          reward_claimed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          goal_id?: string
+          id?: string
+          reward_claimed?: boolean | null
+          reward_claimed_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       custom_notifications: {
         Row: {
           created_at: string

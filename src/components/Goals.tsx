@@ -1,253 +1,404 @@
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Target, Calendar, TrendingUp, Edit, Trash2, Eye, MoreHorizontal, CheckCircle, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
-import { useGoals } from '@/hooks/useGoals';
-import { Goal, Priority, CategoryType } from '@/types';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GoalForm } from './forms/GoalForm';
+import { EditGoalModal } from './modals/EditGoalModal';
+import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { GoalChecklist } from './GoalChecklist';
-
-interface GoalFormProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: any) => void;
-  defaultValues?: Partial<Goal>;
-}
-
-const priorities = [
-  { value: 'low', label: 'Baixa' },
-  { value: 'medium', label: 'Média' },
-  { value: 'high', label: 'Alta' },
-];
-
-const categories = [
-  { value: 'professional', label: 'Profissional' },
-  { value: 'intellectual', label: 'Intelectual' },
-  { value: 'finance', label: 'Financeiro' },
-  { value: 'social', label: 'Social' },
-  { value: 'relationship', label: 'Relacionamento' },
-  { value: 'family', label: 'Família' },
-  { value: 'leisure', label: 'Lazer' },
-  { value: 'health', label: 'Saúde' },
-  { value: 'spiritual', label: 'Espiritual' },
-  { value: 'emotional', label: 'Emocional' },
-  { value: 'other', label: 'Outro' },
-];
-
-function GoalForm({ open, onClose, onSubmit, defaultValues }: GoalFormProps) {
-  const [name, setName] = useState(defaultValues?.name || '');
-  const [description, setDescription] = useState(defaultValues?.description || '');
-  const [priority, setPriority] = useState<Priority>(defaultValues?.priority || 'medium');
-  const [category, setCategory] = useState<CategoryType>(defaultValues?.category || 'professional');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({ name, description, priority, category });
-    onClose();
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{defaultValues ? 'Editar Meta' : 'Nova Meta'}</DialogTitle>
-          <DialogDescription>
-            Crie e gerencie suas metas de forma eficiente.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Nome
-            </Label>
-            <Input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
-              Descrição
-            </Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="priority" className="text-right">
-              Prioridade
-            </Label>
-            <Select value={priority} onValueChange={(value) => setPriority(value as Priority)}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecione a prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                {priorities.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category" className="text-right">
-              Categoria
-            </Label>
-            <Select value={category} onValueChange={(value) => setCategory(value as CategoryType)}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button type="submit" onClick={handleSubmit}>Salvar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import { useGoals } from '@/hooks/useGoals';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 export function Goals() {
   const { goals, createGoal, updateGoal, deleteGoal, isLoading } = useGoals();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [currentTab, setCurrentTab] = useState('ativas');
+  const [filterYear, setFilterYear] = useState<string>('2025');
+  const [filterPeriod, setFilterPeriod] = useState<string>('all');
 
-  const handleCreateGoal = async (goalData: any) => {
-    try {
-      await createGoal(goalData);
-      showSuccessToast('Meta criada com sucesso!');
-    } catch (error: any) {
-      showErrorToast('Erro ao criar meta: ' + error.message);
+  const handleCreateGoal = (goalData: any) => {
+    createGoal(goalData);
+    setIsGoalFormOpen(false);
+    showSuccessToast('Meta criada com sucesso!');
+  };
+
+  const handleEditGoal = (goalData: any) => {
+    updateGoal({ id: goalData.id, updates: goalData });
+    showSuccessToast('Meta atualizada com sucesso!');
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
+      try {
+        await deleteGoal(goalId);
+        showSuccessToast('Meta excluída com sucesso!');
+      } catch (error) {
+        showErrorToast('Erro ao excluir meta');
+      }
     }
   };
 
-  const handleUpdateGoal = async (goalData: any) => {
-    if (!editingGoal) return;
-    try {
-      await updateGoal({ id: editingGoal.id, updates: goalData });
-      showSuccessToast('Meta atualizada com sucesso!');
-      setEditingGoal(null);
-    } catch (error: any) {
-      showErrorToast('Erro ao atualizar meta: ' + error.message);
+  const openEditModal = (goal: any) => {
+    setSelectedGoal(goal);
+    setIsEditModalOpen(true);
+  };
+
+  const openDetailsModal = (goal: any) => {
+    setSelectedGoal(goal);
+    setIsDetailsModalOpen(true);
+  };
+
+  const filterGoals = (status: string) => {
+    const now = new Date();
+    
+    switch (status) {
+      case 'ativas':
+        return goals.filter(goal => goal.progress < 100 && new Date(goal.due_date) >= now);
+      case 'concluidas':
+        return goals.filter(goal => goal.progress >= 100);
+      case 'recompensas':
+        // Metas concluídas nos últimos 30 dias
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        return goals.filter(goal => 
+          goal.progress >= 100 && 
+          goal.reward_enabled && 
+          new Date(goal.updated_at) >= thirtyDaysAgo
+        );
+      default:
+        return goals;
     }
   };
 
-  const handleDeleteGoal = async (id: string) => {
-    try {
-      await deleteGoal(id);
-      showSuccessToast('Meta excluída com sucesso!');
-    } catch (error: any) {
-      showErrorToast('Erro ao excluir meta: ' + error.message);
+  const filteredGoals = filterGoals(currentTab);
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'medium': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'low': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'professional': return '💼';
+      case 'health': return '🏥';
+      case 'finance': return '💰';
+      case 'relationship': return '❤️';
+      case 'intellectual': return '🧠';
+      case 'spiritual': return '🙏';
+      default: return '🎯';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Metas
+            </h1>
+            <p className="text-muted-foreground mt-1">Carregando metas...</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="glass-card animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                <div className="h-3 bg-muted rounded w-full mb-2"></div>
+                <div className="h-3 bg-muted rounded w-2/3"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Metas</h2>
-        <Button onClick={() => setIsGoalFormOpen(true)} className="glow-button">
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Meta
-        </Button>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Metas
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Defina e acompanhe suas metas pessoais e profissionais
+          </p>
+        </div>
+        <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
+          <DialogTrigger asChild>
+            <Button className="glow-button">
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Meta
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+            <GoalForm 
+              onSubmit={handleCreateGoal} 
+              onCancel={() => setIsGoalFormOpen(false)} 
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Goals Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {goals.map((goal) => (
-          <Card key={goal.id} className="goal-card group">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <CardTitle className="text-lg font-semibold">{goal.name}</CardTitle>
-                <div className="flex items-center space-x-2">
-                  {goal.priority === 'high' && (
-                    <AlertTriangle className="text-red-500 w-4 h-4" />
-                  )}
-                  <Badge variant="secondary">{goal.category}</Badge>
-                </div>
-              </div>
-              <CardDescription className="text-sm text-muted-foreground line-clamp-2">
-                {goal.description}
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Progresso</Label>
-                <progress className="w-full h-2 bg-gray-200 rounded" value={goal.progress} max="100"></progress>
-                <p className="text-sm text-muted-foreground">
-                  {goal.progress}% concluído
+      {/* Tabs */}
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 glass-card">
+          <TabsTrigger value="ativas">Ativas</TabsTrigger>
+          <TabsTrigger value="concluidas">Concluídas</TabsTrigger>
+          <TabsTrigger value="recompensas">Recompensas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ativas" className="space-y-4">
+          {filteredGoals.length === 0 ? (
+            <Card className="glass-card">
+              <CardContent className="text-center py-12">
+                <Target className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma meta ativa</h3>
+                <p className="text-muted-foreground mb-4">
+                  Crie sua primeira meta para começar a acompanhar seu progresso
                 </p>
-              </div>
+                <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="glow-button">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Criar Primeira Meta
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+                    <GoalForm 
+                      onSubmit={handleCreateGoal} 
+                      onCancel={() => setIsGoalFormOpen(false)} 
+                    />
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => (
+                <Card key={goal.id} className="glass-card hover:scale-105 transition-transform">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{getCategoryIcon(goal.category)}</span>
+                        <div>
+                          <CardTitle className="text-lg">{goal.name}</CardTitle>
+                          {goal.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {goal.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="glass-card border-white/20">
+                          <DropdownMenuItem onClick={() => openDetailsModal(goal)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Ver Detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEditModal(goal)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteGoal(goal.id)}
+                            className="text-red-400"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-4">
+                    {/* Priority Badge */}
+                    <Badge variant="outline" className={getPriorityColor(goal.priority)}>
+                      {goal.priority === 'high' && '🔴 Alta'}
+                      {goal.priority === 'medium' && '🟡 Média'}
+                      {goal.priority === 'low' && '🟢 Baixa'}
+                    </Badge>
 
-              {/* Add Checklist Component */}
-              <GoalChecklist goalId={goal.id} />
+                    {/* Progress */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Progresso</span>
+                        <span className="font-medium">{Math.round(goal.progress || 0)}%</span>
+                      </div>
+                      <Progress value={goal.progress || 0} className="h-2" />
+                    </div>
 
-              <div className="flex items-center justify-between">
-                <Button variant="link">Ver detalhes</Button>
-                <div className="space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingGoal(goal)}
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Editar
+                    {/* Dates */}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {new Date(goal.due_date).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      {goal.reward_enabled && (
+                        <div className="flex items-center gap-1">
+                          <Award className="w-4 h-4 text-yellow-400" />
+                          <span>Recompensa</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Checklist Preview */}
+                    <GoalChecklist goalId={goal.id} />
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        className="flex-1 glow-button" 
+                        size="sm"
+                        onClick={() => openDetailsModal(goal)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Ver Detalhes
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="neon-border"
+                        onClick={() => openEditModal(goal)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="concluidas" className="space-y-4">
+          <div className="flex gap-4 mb-4">
+            <Select value={filterYear} onValueChange={setFilterYear}>
+              <SelectTrigger className="w-32 glass-card border-white/20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="glass-card border-white/20">
+                <SelectItem value="2025">2025</SelectItem>
+                <SelectItem value="2024">2024</SelectItem>
+                <SelectItem value="2023">2023</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+              <SelectTrigger className="w-40 glass-card border-white/20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="glass-card border-white/20">
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+                <SelectItem value="semester">Semestral</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredGoals.map(goal => (
+              <Card key={goal.id} className="glass-card opacity-75">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <CardTitle className="text-lg">{goal.name}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="recompensas" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredGoals.map(goal => (
+              <Card key={goal.id} className="glass-card border-yellow-500/30">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-yellow-400" />
+                    <CardTitle className="text-lg">{goal.name}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {goal.reward_description && (
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Recompensa:</strong> {goal.reward_description}
+                    </p>
+                  )}
+                  <div className="text-sm text-muted-foreground">
+                    Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
+                  </div>
+                  <Button size="sm" className="w-full glow-button">
+                    <Award className="w-4 h-4 mr-2" />
+                    Resgatar Recompensa
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-500 hover:bg-red-500/10"
-                    onClick={() => handleDeleteGoal(goal.id)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
 
-      {/* Modals and Dialogs */}
-      <GoalForm
-        open={isGoalFormOpen}
-        onClose={() => setIsGoalFormOpen(false)}
-        onSubmit={handleCreateGoal}
+      {/* Floating Action Button */}
+      <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
+        <DialogTrigger asChild>
+          <Button className="floating-action animate-glow">
+            <Plus className="w-6 h-6" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+          <GoalForm 
+            onSubmit={handleCreateGoal} 
+            onCancel={() => setIsGoalFormOpen(false)} 
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Goal Modal */}
+      <EditGoalModal
+        goal={selectedGoal}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleEditGoal}
       />
 
-      {editingGoal && (
-        <GoalForm
-          open={!!editingGoal}
-          onClose={() => setEditingGoal(null)}
-          onSubmit={handleUpdateGoal}
-          defaultValues={editingGoal}
+      {/* Goal Details Modal */}
+      {selectedGoal && (
+        <GoalDetailsModal
+          goal={selectedGoal}
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          onDelete={handleDeleteGoal}
+          onUpdate={handleEditGoal}
         />
       )}
     </div>
