@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Plus, Target, Calendar, TrendingUp, Edit, Trash2, Eye, MoreHorizontal, CheckCircle, Award, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,10 +15,18 @@ import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { GoalChecklist } from './GoalChecklist';
 import { useGoals } from '@/hooks/useGoals';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
-
 export function Goals() {
-  const { goals, createGoal, updateGoal, deleteGoal, isLoading } = useGoals();
-  const { showSuccessToast, showErrorToast } = useToastNotifications();
+  const {
+    goals,
+    createGoal,
+    updateGoal,
+    deleteGoal,
+    isLoading
+  } = useGoals();
+  const {
+    showSuccessToast,
+    showErrorToast
+  } = useToastNotifications();
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [isRewardFormOpen, setIsRewardFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<any>(null);
@@ -28,25 +35,24 @@ export function Goals() {
   const [currentTab, setCurrentTab] = useState('ativas');
   const [filterYear, setFilterYear] = useState<string>('2025');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
-
   const handleCreateGoal = (goalData: any) => {
     createGoal(goalData);
     setIsGoalFormOpen(false);
     showSuccessToast('Meta criada com sucesso!');
   };
-
   const handleCreateReward = (rewardData: any) => {
     // This will be connected to Supabase later
     console.log('Reward data:', rewardData);
     setIsRewardFormOpen(false);
     showSuccessToast('Recompensa criada com sucesso!');
   };
-
   const handleEditGoal = (goalData: any) => {
-    updateGoal({ id: goalData.id, updates: goalData });
+    updateGoal({
+      id: goalData.id,
+      updates: goalData
+    });
     showSuccessToast('Meta atualizada com sucesso!');
   };
-
   const handleDeleteGoal = async (goalId: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
       try {
@@ -57,41 +63,41 @@ export function Goals() {
       }
     }
   };
-
   const handleClaimReward = (goalId: string) => {
     // Mark reward as claimed
-    updateGoal({ id: goalId, updates: { reward_claimed: true, reward_claimed_at: new Date().toISOString() } });
+    updateGoal({
+      id: goalId,
+      updates: {
+        reward_claimed: true,
+        reward_claimed_at: new Date().toISOString()
+      }
+    });
     showSuccessToast('Recompensa resgatada!');
   };
-
   const openEditModal = (goal: any) => {
     setSelectedGoal(goal);
     setIsEditModalOpen(true);
   };
-
   const openDetailsModal = (goal: any) => {
     setSelectedGoal(goal);
     setIsDetailsModalOpen(true);
   };
-
   const filterGoals = (status: string) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
     switch (status) {
       case 'ativas':
         return goals.filter(goal => goal.progress < 100);
       case 'concluidas':
         // Filter by year if specified
         let completedGoals = goals.filter(goal => goal.progress >= 100);
-        
         if (filterYear !== 'all') {
           completedGoals = completedGoals.filter(goal => {
             const completedDate = new Date(goal.updated_at);
             return completedDate.getFullYear().toString() === filterYear;
           });
         }
-        
+
         // Filter by period
         if (filterPeriod === 'monthly') {
           const currentMonth = now.getMonth();
@@ -110,45 +116,46 @@ export function Goals() {
             return completedSemester === currentSemester && completedDate.getFullYear() === now.getFullYear();
           });
         }
-        
         return completedGoals;
       case 'recompensas':
-        return goals.filter(goal => 
-          goal.progress >= 100 && 
-          goal.reward_enabled && 
-          new Date(goal.updated_at) >= thirtyDaysAgo
-        );
+        return goals.filter(goal => goal.progress >= 100 && goal.reward_enabled && new Date(goal.updated_at) >= thirtyDaysAgo);
       default:
         return goals;
     }
   };
-
   const filteredGoals = filterGoals(currentTab);
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'medium': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'low': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      case 'high':
+        return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'medium':
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'low':
+        return 'bg-green-500/20 text-green-400 border-green-500/30';
+      default:
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
-
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'professional': return '💼';
-      case 'health': return '🏥';
-      case 'finance': return '💰';
-      case 'relationship': return '❤️';
-      case 'intellectual': return '🧠';
-      case 'spiritual': return '🙏';
-      default: return '🎯';
+      case 'professional':
+        return '💼';
+      case 'health':
+        return '🏥';
+      case 'finance':
+        return '💰';
+      case 'relationship':
+        return '❤️';
+      case 'intellectual':
+        return '🧠';
+      case 'spiritual':
+        return '🙏';
+      default:
+        return '🎯';
     }
   };
-
   if (isLoading) {
-    return (
-      <div className="space-y-6 animate-fade-in">
+    return <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -158,31 +165,24 @@ export function Goals() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => (
-            <Card key={i} className="glass-card animate-pulse">
+          {[1, 2, 3].map(i => <Card key={i} className="glass-card animate-pulse">
               <CardContent className="p-6">
                 <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
                 <div className="h-3 bg-muted rounded w-full mb-2"></div>
                 <div className="h-3 bg-muted rounded w-2/3"></div>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-6 animate-fade-in">
+  return <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Metas
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Defina e acompanhe suas metas pessoais e profissionais
-          </p>
+          <p className="text-muted-foreground mt-1">Defina e acompanhe suas metas pessoais e profissionais</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
@@ -193,10 +193,7 @@ export function Goals() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <GoalForm 
-                onSubmit={handleCreateGoal} 
-                onCancel={() => setIsGoalFormOpen(false)} 
-              />
+              <GoalForm onSubmit={handleCreateGoal} onCancel={() => setIsGoalFormOpen(false)} />
             </DialogContent>
           </Dialog>
           <Dialog open={isRewardFormOpen} onOpenChange={setIsRewardFormOpen}>
@@ -207,10 +204,7 @@ export function Goals() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <RewardForm 
-                onSubmit={handleCreateReward} 
-                onCancel={() => setIsRewardFormOpen(false)} 
-              />
+              <RewardForm onSubmit={handleCreateReward} onCancel={() => setIsRewardFormOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>
@@ -225,8 +219,7 @@ export function Goals() {
         </TabsList>
 
         <TabsContent value="ativas" className="space-y-4">
-          {filteredGoals.length === 0 ? (
-            <Card className="glass-card">
+          {filteredGoals.length === 0 ? <Card className="glass-card">
               <CardContent className="text-center py-12">
                 <Target className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma meta ativa</h3>
@@ -241,29 +234,21 @@ export function Goals() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                    <GoalForm 
-                      onSubmit={handleCreateGoal} 
-                      onCancel={() => setIsGoalFormOpen(false)} 
-                    />
+                    <GoalForm onSubmit={handleCreateGoal} onCancel={() => setIsGoalFormOpen(false)} />
                   </DialogContent>
                 </Dialog>
               </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredGoals.map(goal => (
-                <Card key={goal.id} className="glass-card hover:scale-105 transition-transform">
+            </Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => <Card key={goal.id} className="glass-card hover:scale-105 transition-transform">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">{getCategoryIcon(goal.category)}</span>
                         <div>
                           <CardTitle className="text-lg">{goal.name}</CardTitle>
-                          {goal.description && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                          {goal.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                               {goal.description}
-                            </p>
-                          )}
+                            </p>}
                         </div>
                       </div>
                       <DropdownMenu>
@@ -281,10 +266,7 @@ export function Goals() {
                             <Edit className="w-4 h-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteGoal(goal.id)}
-                            className="text-red-400"
-                          >
+                          <DropdownMenuItem onClick={() => handleDeleteGoal(goal.id)} className="text-red-400">
                             <Trash2 className="w-4 h-4 mr-2" />
                             Excluir
                           </DropdownMenuItem>
@@ -315,39 +297,26 @@ export function Goals() {
                           {new Date(goal.due_date).toLocaleDateString('pt-BR')}
                         </span>
                       </div>
-                      {goal.reward_enabled && (
-                        <div className="flex items-center gap-1">
+                      {goal.reward_enabled && <div className="flex items-center gap-1">
                           <Award className="w-4 h-4 text-yellow-400" />
                           <span>Recompensa</span>
-                        </div>
-                      )}
+                        </div>}
                     </div>
 
                     <GoalChecklist goalId={goal.id} />
 
                     <div className="flex gap-2 pt-2">
-                      <Button 
-                        className="flex-1 glow-button" 
-                        size="sm"
-                        onClick={() => openDetailsModal(goal)}
-                      >
+                      <Button className="flex-1 glow-button" size="sm" onClick={() => openDetailsModal(goal)}>
                         <Eye className="w-4 h-4 mr-2" />
                         Ver Detalhes
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="neon-border"
-                        onClick={() => openEditModal(goal)}
-                      >
+                      <Button variant="outline" size="sm" className="neon-border" onClick={() => openEditModal(goal)}>
                         <Edit className="w-4 h-4" />
                       </Button>
                     </div>
                   </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                </Card>)}
+            </div>}
         </TabsContent>
 
         <TabsContent value="concluidas" className="space-y-4">
@@ -375,8 +344,7 @@ export function Goals() {
             </Select>
           </div>
           
-          {filteredGoals.length === 0 ? (
-            <Card className="glass-card">
+          {filteredGoals.length === 0 ? <Card className="glass-card">
               <CardContent className="text-center py-12">
                 <CheckCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma meta concluída</h3>
@@ -384,11 +352,8 @@ export function Goals() {
                   Suas metas concluídas aparecerão aqui
                 </p>
               </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredGoals.map(goal => (
-                <Card key={goal.id} className="glass-card opacity-90">
+            </Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => <Card key={goal.id} className="glass-card opacity-90">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="w-5 h-5 text-green-400" />
@@ -400,22 +365,17 @@ export function Goals() {
                       Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
                     </div>
                     <Progress value={100} className="h-2" />
-                    {goal.reward_enabled && (
-                      <div className="flex items-center gap-1 text-sm text-yellow-400">
+                    {goal.reward_enabled && <div className="flex items-center gap-1 text-sm text-yellow-400">
                         <Award className="w-4 h-4" />
                         <span>Recompensa disponível</span>
-                      </div>
-                    )}
+                      </div>}
                   </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                </Card>)}
+            </div>}
         </TabsContent>
 
         <TabsContent value="recompensas" className="space-y-4">
-          {filteredGoals.length === 0 ? (
-            <Card className="glass-card">
+          {filteredGoals.length === 0 ? <Card className="glass-card">
               <CardContent className="text-center py-12">
                 <Award className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma recompensa disponível</h3>
@@ -423,11 +383,8 @@ export function Goals() {
                   Complete metas com recompensas para vê-las aqui
                 </p>
               </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredGoals.map(goal => (
-                <Card key={goal.id} className="glass-card border-yellow-500/30">
+            </Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => <Card key={goal.id} className="glass-card border-yellow-500/30">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <Award className="w-5 h-5 text-yellow-400" />
@@ -435,28 +392,19 @@ export function Goals() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {goal.reward_description && (
-                      <p className="text-sm text-muted-foreground">
+                    {goal.reward_description && <p className="text-sm text-muted-foreground">
                         <strong>Recompensa:</strong> {goal.reward_description}
-                      </p>
-                    )}
+                      </p>}
                     <div className="text-sm text-muted-foreground">
                       Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
                     </div>
-                    <Button 
-                      size="sm" 
-                      className="w-full glow-button"
-                      onClick={() => handleClaimReward(goal.id)}
-                      disabled={goal.reward_claimed}
-                    >
+                    <Button size="sm" className="w-full glow-button" onClick={() => handleClaimReward(goal.id)} disabled={goal.reward_claimed}>
                       <Award className="w-4 h-4 mr-2" />
                       {goal.reward_claimed ? 'Recompensa Resgatada' : 'Resgatar Recompensa'}
                     </Button>
                   </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                </Card>)}
+            </div>}
         </TabsContent>
       </Tabs>
 
@@ -468,31 +416,14 @@ export function Goals() {
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-          <GoalForm 
-            onSubmit={handleCreateGoal} 
-            onCancel={() => setIsGoalFormOpen(false)} 
-          />
+          <GoalForm onSubmit={handleCreateGoal} onCancel={() => setIsGoalFormOpen(false)} />
         </DialogContent>
       </Dialog>
 
       {/* Edit Goal Modal */}
-      <EditGoalModal
-        goal={selectedGoal}
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleEditGoal}
-      />
+      <EditGoalModal goal={selectedGoal} isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSave={handleEditGoal} />
 
       {/* Goal Details Modal */}
-      {selectedGoal && (
-        <GoalDetailsModal
-          goal={selectedGoal}
-          isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
-          onDelete={handleDeleteGoal}
-          onUpdate={handleEditGoal}
-        />
-      )}
-    </div>
-  );
+      {selectedGoal && <GoalDetailsModal goal={selectedGoal} isOpen={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} onDelete={handleDeleteGoal} onUpdate={handleEditGoal} />}
+    </div>;
 }
