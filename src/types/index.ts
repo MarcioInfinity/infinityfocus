@@ -162,6 +162,8 @@ export interface Goal {
   notifications_enabled: boolean;
   reward_enabled: boolean;
   reward_description?: string;
+  reward_claimed?: boolean;
+  reward_claimed_at?: string;
   assigned_projects: string[];
   assigned_tasks: string[];
   notes?: string;
