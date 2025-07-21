@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Plus, Target, Calendar, TrendingUp, Edit, Trash2, Eye, MoreHorizontal, CheckCircle, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,12 @@ export function Goals() {
     }
   };
 
+  const handleClaimReward = (goalId: string) => {
+    // Mark reward as claimed
+    updateGoal({ id: goalId, updates: { reward_claimed: true, reward_claimed_at: new Date().toISOString() } });
+    showSuccessToast('Recompensa resgatada!');
+  };
+
   const openEditModal = (goal: any) => {
     setSelectedGoal(goal);
     setIsEditModalOpen(true);
@@ -60,15 +67,43 @@ export function Goals() {
 
   const filterGoals = (status: string) => {
     const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
     switch (status) {
       case 'ativas':
-        return goals.filter(goal => goal.progress < 100 && new Date(goal.due_date) >= now);
+        return goals.filter(goal => goal.progress < 100);
       case 'concluidas':
-        return goals.filter(goal => goal.progress >= 100);
+        // Filter by year if specified
+        let completedGoals = goals.filter(goal => goal.progress >= 100);
+        
+        if (filterYear !== 'all') {
+          completedGoals = completedGoals.filter(goal => {
+            const completedDate = new Date(goal.updated_at);
+            return completedDate.getFullYear().toString() === filterYear;
+          });
+        }
+        
+        // Filter by period
+        if (filterPeriod === 'monthly') {
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+          completedGoals = completedGoals.filter(goal => {
+            const completedDate = new Date(goal.updated_at);
+            return completedDate.getMonth() === currentMonth && completedDate.getFullYear() === currentYear;
+          });
+        } else if (filterPeriod === 'semester') {
+          const currentMonth = now.getMonth();
+          const currentSemester = currentMonth < 6 ? 1 : 2;
+          completedGoals = completedGoals.filter(goal => {
+            const completedDate = new Date(goal.updated_at);
+            const completedMonth = completedDate.getMonth();
+            const completedSemester = completedMonth < 6 ? 1 : 2;
+            return completedSemester === currentSemester && completedDate.getFullYear() === now.getFullYear();
+          });
+        }
+        
+        return completedGoals;
       case 'recompensas':
-        // Metas concluídas nos últimos 30 dias
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         return goals.filter(goal => 
           goal.progress >= 100 && 
           goal.reward_enabled && 
@@ -147,7 +182,7 @@ export function Goals() {
               Nova Meta
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <GoalForm 
               onSubmit={handleCreateGoal} 
               onCancel={() => setIsGoalFormOpen(false)} 
@@ -180,7 +215,7 @@ export function Goals() {
                       Criar Primeira Meta
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+                  <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
                     <GoalForm 
                       onSubmit={handleCreateGoal} 
                       onCancel={() => setIsGoalFormOpen(false)} 
@@ -234,14 +269,12 @@ export function Goals() {
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
-                    {/* Priority Badge */}
                     <Badge variant="outline" className={getPriorityColor(goal.priority)}>
                       {goal.priority === 'high' && '🔴 Alta'}
                       {goal.priority === 'medium' && '🟡 Média'}
                       {goal.priority === 'low' && '🟢 Baixa'}
                     </Badge>
 
-                    {/* Progress */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Progresso</span>
@@ -250,7 +283,6 @@ export function Goals() {
                       <Progress value={goal.progress || 0} className="h-2" />
                     </div>
 
-                    {/* Dates */}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
@@ -266,10 +298,8 @@ export function Goals() {
                       )}
                     </div>
 
-                    {/* Checklist Preview */}
                     <GoalChecklist goalId={goal.id} />
 
-                    {/* Actions */}
                     <div className="flex gap-2 pt-2">
                       <Button 
                         className="flex-1 glow-button" 
@@ -305,6 +335,7 @@ export function Goals() {
                 <SelectItem value="2025">2025</SelectItem>
                 <SelectItem value="2024">2024</SelectItem>
                 <SelectItem value="2023">2023</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPeriod} onValueChange={setFilterPeriod}>
@@ -319,52 +350,88 @@ export function Goals() {
             </Select>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGoals.map(goal => (
-              <Card key={goal.id} className="glass-card opacity-75">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                    <CardTitle className="text-lg">{goal.name}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-muted-foreground">
-                    Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {filteredGoals.length === 0 ? (
+            <Card className="glass-card">
+              <CardContent className="text-center py-12">
+                <CheckCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma meta concluída</h3>
+                <p className="text-muted-foreground">
+                  Suas metas concluídas aparecerão aqui
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => (
+                <Card key={goal.id} className="glass-card opacity-90">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <CardTitle className="text-lg">{goal.name}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
+                    </div>
+                    <Progress value={100} className="h-2" />
+                    {goal.reward_enabled && (
+                      <div className="flex items-center gap-1 text-sm text-yellow-400">
+                        <Award className="w-4 h-4" />
+                        <span>Recompensa disponível</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="recompensas" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGoals.map(goal => (
-              <Card key={goal.id} className="glass-card border-yellow-500/30">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-yellow-400" />
-                    <CardTitle className="text-lg">{goal.name}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {goal.reward_description && (
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Recompensa:</strong> {goal.reward_description}
-                    </p>
-                  )}
-                  <div className="text-sm text-muted-foreground">
-                    Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
-                  </div>
-                  <Button size="sm" className="w-full glow-button">
-                    <Award className="w-4 h-4 mr-2" />
-                    Resgatar Recompensa
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {filteredGoals.length === 0 ? (
+            <Card className="glass-card">
+              <CardContent className="text-center py-12">
+                <Award className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma recompensa disponível</h3>
+                <p className="text-muted-foreground">
+                  Complete metas com recompensas para vê-las aqui
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => (
+                <Card key={goal.id} className="glass-card border-yellow-500/30">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <Award className="w-5 h-5 text-yellow-400" />
+                      <CardTitle className="text-lg">{goal.name}</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {goal.reward_description && (
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Recompensa:</strong> {goal.reward_description}
+                      </p>
+                    )}
+                    <div className="text-sm text-muted-foreground">
+                      Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
+                    </div>
+                    <Button 
+                      size="sm" 
+                      className="w-full glow-button"
+                      onClick={() => handleClaimReward(goal.id)}
+                      disabled={goal.reward_claimed}
+                    >
+                      <Award className="w-4 h-4 mr-2" />
+                      {goal.reward_claimed ? 'Recompensa Resgatada' : 'Resgatar Recompensa'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -375,7 +442,7 @@ export function Goals() {
             <Plus className="w-6 h-6" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <GoalForm 
             onSubmit={handleCreateGoal} 
             onCancel={() => setIsGoalFormOpen(false)} 

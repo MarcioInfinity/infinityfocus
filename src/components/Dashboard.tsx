@@ -17,12 +17,15 @@ import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useRealtime } from '@/hooks/useRealtime';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { getCurrentDateAndDay } from '@/utils/dateTime';
 
 export function Dashboard() {
   const { user } = useAuth();
   const { tasks, createTask, updateTask } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
+  const { settings } = useUserSettings();
   const { requestNotificationPermission, showBrowserNotification } = useNotifications();
 
   // Habilitar atualizações em tempo real
@@ -31,6 +34,20 @@ export function Dashboard() {
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
+  const [currentDateTime, setCurrentDateTime] = useState('');
+
+  // Update current date and time every minute
+  useEffect(() => {
+    const updateDateTime = () => {
+      const timezone = settings?.timezone || 'America/Sao_Paulo';
+      setCurrentDateTime(getCurrentDateAndDay(timezone));
+    };
+
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [settings]);
 
   // Request notification permission on component mount
   useEffect(() => {
@@ -51,7 +68,6 @@ export function Dashboard() {
         const dueDate = new Date(task.due_date);
         // Check if due date is today and task is not done
         if (dueDate.toDateString() === now.toDateString() && task.status !== 'done') {
-          // You can refine this logic to check for specific times if needed
           showBrowserNotification(`Tarefa Próxima: ${task.title}`, {
             body: `A tarefa '${task.title}' vence hoje!`, 
             tag: task.id
@@ -61,52 +77,66 @@ export function Dashboard() {
     });
   }, [tasks, showBrowserNotification]);
 
-  // Estatísticas rápidas - ordenadas por prioridade
-  const today = new Date();
-  const todayString = today.toDateString();
-  const currentWeekday = today.getDay();
-  
-  const todayTasks = tasks.filter(task => {
-    // Tarefas com data específica para hoje
-    if (task.due_date && new Date(task.due_date).toDateString() === todayString) {
-      return true;
-    }
+  // Get today's tasks with proper filtering
+  const getTodayTasks = () => {
+    const today = new Date();
+    const currentWeekday = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
-    // Tarefas com repetição diária
-    if (task.repeat_enabled && task.repeat_type === 'daily') {
-      return true;
-    }
-    
-    // Tarefas com repetição semanal (dias específicos)
-    if (task.repeat_enabled && task.repeat_type === 'weekly' && task.repeat_days?.includes(currentWeekday.toString())) {
-      return true;
-    }
-    
-    // Tarefas com repetição em dias da semana (segunda a sexta)
-    if (task.repeat_enabled && task.repeat_type === 'weekdays' && currentWeekday >= 1 && currentWeekday <= 5) {
-      return true;
-    }
-    
-    return false;
-  }).sort((a, b) => {
-    // Primeiro: tarefas atrasadas
-    const aOverdue = a.due_date && new Date(a.due_date) < today && a.status !== 'done';
-    const bOverdue = b.due_date && new Date(b.due_date) < today && b.status !== 'done';
-    
-    if (aOverdue && !bOverdue) return -1;
-    if (!aOverdue && bOverdue) return 1;
-    
-    // Segundo: ordenar por horário
-    if (a.start_time && b.start_time) {
-      return a.start_time.localeCompare(b.start_time);
-    }
-    if (a.start_time && !b.start_time) return -1;
-    if (!a.start_time && b.start_time) return 1;
-    
-    return 0;
-  });
+    return tasks.filter(task => {
+      // Skip completed tasks
+      if (task.status === 'done') return false;
+      
+      // Tasks with specific due date for today
+      if (task.due_date) {
+        const dueDate = new Date(task.due_date);
+        if (dueDate.toDateString() === today.toDateString()) {
+          return true;
+        }
+      }
+      
+      // Tasks with daily repeat
+      if (task.repeat_enabled && task.repeat_type === 'daily') {
+        return true;
+      }
+      
+      // Tasks with weekly repeat (specific days)
+      if (task.repeat_enabled && task.repeat_type === 'weekly' && task.repeat_days) {
+        return task.repeat_days.includes(currentWeekday.toString());
+      }
+      
+      // Tasks with weekdays repeat (Monday to Friday)
+      if (task.repeat_enabled && task.repeat_type === 'weekdays' && currentWeekday >= 1 && currentWeekday <= 5) {
+        return true;
+      }
+      
+      return false;
+    }).sort((a, b) => {
+      // Sort by priority first (high > medium > low)
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Then by time if available
+      if (a.start_time && b.start_time) {
+        return a.start_time.localeCompare(b.start_time);
+      }
+      if (a.start_time && !b.start_time) return -1;
+      if (!a.start_time && b.start_time) return 1;
+      
+      return 0;
+    });
+  };
 
-  const completedToday = todayTasks.filter(task => task.status === 'done');
+  const todayTasks = getTodayTasks();
+  const completedToday = tasks.filter(task => {
+    if (task.status !== 'done') return false;
+    
+    const today = new Date();
+    const updatedDate = new Date(task.updated_at);
+    return updatedDate.toDateString() === today.toDateString();
+  });
+  
   const pendingTasks = tasks.filter(task => task.status !== 'done');
   const highPriorityTasks = pendingTasks.filter(task => task.priority === 'high');
 
@@ -139,7 +169,7 @@ export function Dashboard() {
             Bem-vindo de volta, {user?.email?.split('@')[0]}!
           </h1>
           <p className="text-muted-foreground mt-1">
-            Acompanhe seu progresso e gerencie suas atividades
+            {currentDateTime}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -167,7 +197,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <TaskForm 
               onSubmit={handleCreateTask} 
               onCancel={() => setIsTaskFormOpen(false)} 
@@ -187,7 +217,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </DialogTrigger>
-          <DialogContent className="max-w-xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <ProjectForm 
               onSubmit={handleCreateProject} 
               onCancel={() => setIsProjectFormOpen(false)} 
@@ -207,7 +237,7 @@ export function Dashboard() {
               </CardContent>
             </Card>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <GoalForm 
               onSubmit={handleCreateGoal} 
               onCancel={() => setIsGoalFormOpen(false)} 
@@ -258,7 +288,12 @@ export function Dashboard() {
                         {task.title}
                       </p>
                       {task.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                      )}
+                      {task.start_time && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Horário: {task.start_time}
+                        </p>
                       )}
                     </div>
                     <Badge 

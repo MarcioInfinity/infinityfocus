@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   User, 
   Bell, 
@@ -17,18 +18,22 @@ import {
   Save,
   Eye,
   EyeOff,
-  Trash2
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotificationSettings } from '@/hooks/useNotificationSettings';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { getTimezoneOptions } from '@/utils/dateTime';
 
 export function Settings() {
   const { user } = useAuth();
   const { profile, updateProfile, uploadAvatar, removeAvatar, isLoading, isUpdating, isUploading, isRemoving } = useProfile();
   const { settings, updateSettings, isLoading: isLoadingSettings, isUpdating: isUpdatingSettings } = useNotificationSettings();
+  const { settings: userSettings, updateSettings: updateUserSettings, isLoading: isLoadingUserSettings, isUpdating: isUpdatingUserSettings } = useUserSettings();
   
   const [passwordData, setPasswordData] = useState({
     current: '',
@@ -63,6 +68,12 @@ export function Settings() {
     quiet_days: settings?.quiet_days ?? []
   });
 
+  const [userSettingsForm, setUserSettingsForm] = useState({
+    timezone: userSettings?.timezone || 'America/Sao_Paulo',
+    date_format: userSettings?.date_format || 'DD/MM/YYYY',
+    time_format: userSettings?.time_format || '24h'
+  });
+
   // Update form when data loads
   React.useEffect(() => {
     if (profile) {
@@ -89,6 +100,16 @@ export function Settings() {
     }
   }, [settings]);
 
+  React.useEffect(() => {
+    if (userSettings) {
+      setUserSettingsForm({
+        timezone: userSettings.timezone || 'America/Sao_Paulo',
+        date_format: userSettings.date_format || 'DD/MM/YYYY',
+        time_format: userSettings.time_format || '24h'
+      });
+    }
+  }, [userSettings]);
+
   const handleSaveProfile = () => {
     if (!profileForm.name.trim()) {
       showErrorToast('Erro!', 'O nome é obrigatório');
@@ -100,6 +121,10 @@ export function Settings() {
 
   const handleSaveNotifications = () => {
     updateSettings(notificationForm);
+  };
+
+  const handleSaveUserSettings = () => {
+    updateUserSettings(userSettingsForm);
   };
 
   const handleChangePassword = async () => {
@@ -159,7 +184,7 @@ export function Settings() {
     }));
   };
 
-  if (isLoading || isLoadingSettings) {
+  if (isLoading || isLoadingSettings || isLoadingUserSettings) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div>
@@ -189,7 +214,7 @@ export function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 glass-card">
+        <TabsList className="grid w-full grid-cols-3 glass-card">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="w-4 h-4" />
             Perfil e Conta
@@ -197,6 +222,10 @@ export function Settings() {
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="w-4 h-4" />
             Notificações
+          </TabsTrigger>
+          <TabsTrigger value="datetime" className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Data/Hora
           </TabsTrigger>
         </TabsList>
 
@@ -518,6 +547,81 @@ export function Settings() {
               >
                 <Save className="w-4 h-4 mr-2" />
                 {isUpdatingSettings ? 'Salvando...' : 'Salvar Configurações'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="datetime" className="space-y-6">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Configurações de Data e Hora
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Fuso Horário</Label>
+                  <Select 
+                    value={userSettingsForm.timezone} 
+                    onValueChange={(value) => setUserSettingsForm({...userSettingsForm, timezone: value})}
+                  >
+                    <SelectTrigger className="neon-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-white/20">
+                      {getTimezoneOptions().map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Formato da Data</Label>
+                  <Select 
+                    value={userSettingsForm.date_format} 
+                    onValueChange={(value) => setUserSettingsForm({...userSettingsForm, date_format: value})}
+                  >
+                    <SelectTrigger className="neon-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-white/20">
+                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Formato da Hora</Label>
+                  <Select 
+                    value={userSettingsForm.time_format} 
+                    onValueChange={(value) => setUserSettingsForm({...userSettingsForm, time_format: value})}
+                  >
+                    <SelectTrigger className="neon-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="glass-card border-white/20">
+                      <SelectItem value="24h">24 horas</SelectItem>
+                      <SelectItem value="12h">12 horas (AM/PM)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleSaveUserSettings} 
+                className="w-full glow-button"
+                disabled={isUpdatingUserSettings}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isUpdatingUserSettings ? 'Salvando...' : 'Salvar Configurações'}
               </Button>
             </CardContent>
           </Card>
