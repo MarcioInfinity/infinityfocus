@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,8 +21,6 @@ import {
   Gift,
   Share2,
   Users,
-  Link,
-  Mail,
   Plus,
   FolderOpen,
   CheckSquare
@@ -41,6 +40,11 @@ const goalSchema = z.object({
   notify_enabled: z.boolean(),
   reward_enabled: z.boolean(),
   reward_description: z.string().optional(),
+  repeat_enabled: z.boolean(),
+  repeat_type: z.enum(['daily', 'weekly', 'monthly', 'custom']).optional(),
+  repeat_days: z.array(z.number()).optional(),
+  monthly_day: z.number().min(1).max(31).optional(),
+  custom_dates: z.array(z.date()).optional(),
   description: z.string().optional(),
 });
 
@@ -56,6 +60,24 @@ const categories = [
   { value: 'spiritual', label: 'Espiritual' },
   { value: 'emotional', label: 'Emocional' },
   { value: 'other', label: 'Outros' },
+  { value: 'custom', label: 'Personalizada' },
+];
+
+const frequencyOptions = [
+  { value: 'daily', label: 'Diariamente' },
+  { value: 'weekly', label: 'Semanalmente' },
+  { value: 'monthly', label: 'Mensalmente' },
+  { value: 'custom', label: 'Personalizado' },
+];
+
+const weekDays = [
+  { value: 0, label: 'Dom' },
+  { value: 1, label: 'Seg' },
+  { value: 2, label: 'Ter' },
+  { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' },
+  { value: 5, label: 'Sex' },
+  { value: 6, label: 'Sáb' },
 ];
 
 interface GoalFormProps {
@@ -65,36 +87,49 @@ interface GoalFormProps {
 }
 
 export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
-  const [shareEmails, setShareEmails] = useState<string[]>([]);
-  const [newEmail, setNewEmail] = useState('');
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
-  const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
+  const [showCustomCategory, setShowCustomCategory] = useState(initialData?.category === 'custom');
+  const [shareEmails, setShareEmails] = useState<string[]>(initialData?.share_emails || []);
+  const [newEmail, setNewEmail] = useState("");
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(initialData?.assigned_projects || []);
+  const [selectedTasks, setSelectedTasks] = useState<string[]>(initialData?.assigned_tasks || []);
   const [showNewProject, setShowNewProject] = useState(false);
   const [showNewTask, setShowNewTask] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newTaskName, setNewTaskName] = useState('');
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newTaskName, setNewTaskName] = useState("");
 
   const form = useForm<z.infer<typeof goalSchema>>({
     resolver: zodResolver(goalSchema),
     defaultValues: {
-      name: '',
-      priority: 'medium',
-      category: 'professional',
-      is_shared: false,
-      notify_enabled: false,
-      reward_enabled: false,
-      ...initialData,
+      name: initialData?.name || "",
+      priority: initialData?.priority || "medium",
+      category: initialData?.category || "professional",
+      custom_category: initialData?.custom_category || "",
+      is_shared: initialData?.is_shared || false,
+      start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
+      due_date: initialData?.due_date ? new Date(initialData.due_date) : undefined,
+      time: initialData?.time || "",
+      notify_enabled: initialData?.notify_enabled || false,
+      reward_enabled: initialData?.reward_enabled || false,
+      reward_description: initialData?.reward_description || "",
+      repeat_enabled: initialData?.repeat_enabled || false,
+      repeat_type: initialData?.repeat_type || "daily",
+      repeat_days: initialData?.repeat_days || [],
+      monthly_day: initialData?.monthly_day || undefined,
+      custom_dates: initialData?.custom_dates?.map((date: string) => new Date(date)) || [],
+      description: initialData?.description || "",
     },
   });
 
-  const watchIsShared = form.watch('is_shared');
-  const watchRewardEnabled = form.watch('reward_enabled');
+  const watchIsShared = form.watch("is_shared");
+  const watchRewardEnabled = form.watch("reward_enabled");
+  const watchRepeatEnabled = form.watch("repeat_enabled");
+  const watchRepeatType = form.watch("repeat_type");
+  const watchCategory = form.watch("category");
 
   const addEmail = () => {
     if (newEmail.trim() && !shareEmails.includes(newEmail.trim())) {
       setShareEmails([...shareEmails, newEmail.trim()]);
-      setNewEmail('');
+      setNewEmail("");
     }
   };
 
@@ -105,7 +140,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
   const addNewProject = () => {
     if (newProjectName.trim()) {
       setSelectedProjects([...selectedProjects, newProjectName.trim()]);
-      setNewProjectName('');
+      setNewProjectName("");
       setShowNewProject(false);
     }
   };
@@ -113,7 +148,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
   const addNewTask = () => {
     if (newTaskName.trim()) {
       setSelectedTasks([...selectedTasks, newTaskName.trim()]);
-      setNewTaskName('');
+      setNewTaskName("");
       setShowNewTask(false);
     }
   };
@@ -137,6 +172,9 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
       share_link: watchIsShared ? generateShareLink() : undefined,
       assigned_projects: selectedProjects,
       assigned_tasks: selectedTasks,
+      repeat_days: values.repeat_days?.map(day => day.toString()) || [],
+      repeat_monthly_day: values.monthly_day || null,
+      repeat_custom_dates: values.custom_dates?.map(date => date.toISOString()) || [],
     };
     onSubmit(goalData);
   };
@@ -146,7 +184,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
       <CardHeader>
         <CardTitle className="text-2xl font-bold flex items-center gap-2">
           <Target className="w-6 h-6" />
-          Nova Meta
+          {initialData ? "Editar Meta" : "Nova Meta"}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -200,11 +238,11 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Categoria</FormLabel>
-                      <Select 
+                      <Select
                         onValueChange={(value) => {
                           field.onChange(value);
-                          setShowCustomCategory(value === 'other');
-                        }} 
+                          setShowCustomCategory(value === "custom");
+                        }}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -278,9 +316,9 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                         readOnly
                         className="glass-card border-white/20 text-sm"
                       />
-                      <Button 
-                        type="button" 
-                        size="sm" 
+                      <Button
+                        type="button"
+                        size="sm"
                         className="glow-button"
                         onClick={() => navigator.clipboard.writeText(generateShareLink())}
                       >
@@ -297,7 +335,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                         onChange={(e) => setNewEmail(e.target.value)}
                         placeholder="Convidar por email..."
                         className="glass-card border-white/20"
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addEmail())}
+                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addEmail())}
                       />
                       <Button type="button" onClick={addEmail} size="sm" className="glow-button">
                         <Plus className="w-4 h-4" />
@@ -338,9 +376,8 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                         <FormControl>
                           <Button
                             variant="outline"
-                            className="w-full glass-card border-white/20 justify-start text-left font-normal"
+                            className={`w-full glass-card border-white/20 justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, "PPP", { locale: ptBR }) : "Selecionar data"}
                           </Button>
                         </FormControl>
@@ -350,7 +387,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => date < new Date("1900-01-01")}
                           initialFocus
                         />
                       </PopoverContent>
@@ -371,9 +408,8 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                         <FormControl>
                           <Button
                             variant="outline"
-                            className="w-full glass-card border-white/20 justify-start text-left font-normal"
+                            className={`w-full glass-card border-white/20 justify-start text-left font-normal ${!field.value && "text-muted-foreground"}`}
                           >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, "PPP", { locale: ptBR }) : "Selecionar data"}
                           </Button>
                         </FormControl>
@@ -383,7 +419,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => date < new Date("1900-01-01")}
                           initialFocus
                         />
                       </PopoverContent>
@@ -437,6 +473,152 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
               )}
             />
 
+            {/* Frequência */}
+            <FormField
+              control={form.control}
+              name="repeat_enabled"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Repetir Meta</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      Configurar repetição automática
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {watchRepeatEnabled && (
+              <div className="space-y-4 border rounded-lg p-4">
+                <FormField
+                  control={form.control}
+                  name="repeat_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frequência</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a frequência" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {frequencyOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Seleção de Dias da Semana */}
+                {(watchRepeatType === "weekly" || watchRepeatType === "custom") && (
+                  <FormField
+                    control={form.control}
+                    name="repeat_days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dias da Semana</FormLabel>
+                        <div className="flex flex-wrap gap-2">
+                          {weekDays.map((day) => (
+                            <div key={day.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`day-${day.value}`}
+                                checked={field.value?.includes(day.value) || false}
+                                onCheckedChange={(checked) => {
+                                  const currentDays = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...currentDays, day.value]);
+                                  } else {
+                                    field.onChange(currentDays.filter(d => d !== day.value));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`day-${day.value}`} className="text-sm">
+                                {day.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Repetição Mensal */}
+                {watchRepeatType === "monthly" && (
+                  <FormField
+                    control={form.control}
+                    name="monthly_day"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dia do Mês</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 15"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            min={1}
+                            max={31}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Repetição Personalizada - Seleção de Datas */}
+                {watchRepeatType === "custom" && (
+                  <FormField
+                    control={form.control}
+                    name="custom_dates"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Datas Personalizadas</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={`w-full pl-3 text-left font-normal ${!field.value || field.value.length === 0 && "text-muted-foreground"}`}
+                              >
+                                {field.value && field.value.length > 0 ? (
+                                  field.value.map((date: Date) => format(date, "PPP", { locale: ptBR })).join(", ")
+                                ) : (
+                                  <span>Selecionar datas</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="multiple"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            )}
+
             {/* Recompensa */}
             <div className="space-y-4">
               <FormField
@@ -471,9 +653,9 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                     <FormItem>
                       <FormLabel>Descrição da Recompensa</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          className="glass-card border-white/20" 
+                        <Input
+                          {...field}
+                          className="glass-card border-white/20"
                           placeholder="Ex: Jantar especial, comprar algo para mim..."
                         />
                       </FormControl>
@@ -510,7 +692,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                     onChange={(e) => setNewProjectName(e.target.value)}
                     placeholder="Nome do novo projeto..."
                     className="glass-card border-white/20"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewProject())}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addNewProject())}
                   />
                   <Button type="button" onClick={addNewProject} size="sm" className="glow-button">
                     Adicionar
@@ -563,7 +745,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                     onChange={(e) => setNewTaskName(e.target.value)}
                     placeholder="Nome da nova tarefa..."
                     className="glass-card border-white/20"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewTask())}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addNewTask())}
                   />
                   <Button type="button" onClick={addNewTask} size="sm" className="glow-button">
                     Adicionar
@@ -607,16 +789,16 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
 
             {/* Botões */}
             <div className="flex gap-3 pt-6">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 className="flex-1 neon-border"
                 onClick={onCancel}
               >
                 Cancelar
               </Button>
               <Button type="submit" className="flex-1 glow-button">
-                Salvar
+                {initialData ? "Salvar Alterações" : "Criar Meta"}
               </Button>
             </div>
           </form>
@@ -625,3 +807,4 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
     </Card>
   );
 }
+
