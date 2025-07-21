@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,11 +20,21 @@ export default function InvitePage() {
   const invite = inviteQuery.data;
 
   useEffect(() => {
-    if (!user) {
+    // Salvar o token no localStorage antes de redirecionar para login
+    if (token && !user) {
+      localStorage.setItem('pendingInviteToken', token);
       navigate('/login');
       return;
     }
-  }, [user, navigate]);
+
+    // Se o usuário está logado e há um token pendente, processar o convite
+    if (user && token) {
+      const pendingToken = localStorage.getItem('pendingInviteToken');
+      if (pendingToken === token) {
+        localStorage.removeItem('pendingInviteToken');
+      }
+    }
+  }, [user, navigate, token]);
 
   const handleAcceptInvite = async () => {
     if (!token || !user) return;
@@ -37,7 +46,7 @@ export default function InvitePage() {
       
       // Redirect to projects after a short delay
       setTimeout(() => {
-        navigate('/');
+        navigate('/projects');
       }, 2000);
     } catch (error) {
       console.error('Error accepting invite:', error);
@@ -48,10 +57,23 @@ export default function InvitePage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
-        <Card className="glass-card max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-            <p>Redirecionando para login...</p>
+        <Card className="glass-card w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2">
+              <Users className="w-6 h-6" />
+              Convite para Projeto
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+            <p className="text-muted-foreground">
+              Redirecionando para o login...
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Você será redirecionado de volta para aceitar o convite após fazer login.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -61,10 +83,12 @@ export default function InvitePage() {
   if (inviteQuery.isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
-        <Card className="glass-card max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-            <p>Carregando convite...</p>
+        <Card className="glass-card w-full max-w-md">
+          <CardContent className="flex items-center justify-center p-8">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground">Carregando convite...</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -74,19 +98,19 @@ export default function InvitePage() {
   if (!invite) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
-        <Card className="glass-card max-w-md w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="w-5 h-5" />
+        <Card className="glass-card w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-red-400">
+              <AlertCircle className="w-6 h-6" />
               Convite Inválido
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              Este convite é inválido, já foi usado ou expirou.
+              Este convite é inválido, expirado ou já foi utilizado.
             </p>
             <Button onClick={() => navigate('/')} className="w-full">
-              Voltar ao Início
+              Ir para Dashboard
             </Button>
           </CardContent>
         </Card>
@@ -97,23 +121,20 @@ export default function InvitePage() {
   if (isAccepted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
-        <Card className="glass-card max-w-md w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-400">
-              <CheckCircle className="w-5 h-5" />
+        <Card className="glass-card w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center gap-2 text-green-400">
+              <CheckCircle className="w-6 h-6" />
               Convite Aceito!
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              Você agora faz parte do projeto <strong>{invite.projects?.name}</strong>!
+              Você foi adicionado ao projeto com sucesso!
             </p>
             <p className="text-sm text-muted-foreground">
-              Redirecionando em alguns segundos...
+              Redirecionando para seus projetos...
             </p>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div className="bg-gradient-to-r from-primary to-accent h-2 rounded-full animate-pulse" style={{ width: '100%' }} />
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -122,53 +143,55 @@ export default function InvitePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
-      <Card className="glass-card max-w-md w-full">
-        <CardHeader>
-          <CardTitle className="text-center">Convite de Projeto</CardTitle>
+      <Card className="glass-card w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">
+            <Users className="w-6 h-6" />
+            Convite para Projeto
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center space-y-4">
-            <div 
-              className="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-2xl font-bold text-white"
-              style={{ backgroundColor: invite.projects?.color || '#3B82F6' }}
-            >
-              {invite.projects?.name?.charAt(0)?.toUpperCase() || 'P'}
-            </div>
-            
-            <div>
-              <h2 className="text-xl font-semibold">{invite.projects?.name}</h2>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold">{invite.projects?.name}</h3>
               {invite.projects?.description && (
-                <p className="text-muted-foreground mt-2">
+                <p className="text-muted-foreground text-sm">
                   {invite.projects.description}
                 </p>
               )}
             </div>
 
-            <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                <span>Papel:</span>
-                <Badge variant="secondary" className="ml-1">
-                  {invite.role === 'admin' ? 'Administrador' : 
-                   invite.role === 'member' ? 'Membro' : 'Visualizador'}
-                </Badge>
-              </div>
+            <div className="flex items-center justify-center gap-2">
+              <Badge variant="outline" className="capitalize">
+                {invite.role === 'admin' ? 'Administrador' : 
+                 invite.role === 'member' ? 'Membro' : 'Visualizador'}
+              </Badge>
+              {invite.projects?.color && (
+                <div 
+                  className="w-4 h-4 rounded-full border-2 border-white/20"
+                  style={{ backgroundColor: invite.projects.color }}
+                />
+              )}
             </div>
 
-            <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-              <Calendar className="w-3 h-3" />
-              <span>
-                Expira em: {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
-              </span>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <div className="flex items-center justify-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  Convite criado em {new Date(invite.created_at).toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+              {invite.email && (
+                <p>Enviado para: {invite.email}</p>
+              )}
             </div>
           </div>
 
           <div className="space-y-3">
             <Button 
-              onClick={handleAcceptInvite}
+              onClick={handleAcceptInvite} 
               disabled={isAcceptingInvite}
-              className="w-full glow-button"
-              size="lg"
+              className="w-full"
             >
               {isAcceptingInvite ? (
                 <>
@@ -189,10 +212,9 @@ export default function InvitePage() {
             </Button>
           </div>
 
-          <p className="text-xs text-center text-muted-foreground">
-            Ao aceitar este convite, você terá acesso ao projeto e suas funcionalidades 
-            de acordo com seu nível de permissão.
-          </p>
+          <div className="text-xs text-muted-foreground text-center">
+            Ao aceitar este convite, você terá acesso ao projeto e suas tarefas.
+          </div>
         </CardContent>
       </Card>
     </div>
