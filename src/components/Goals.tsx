@@ -255,11 +255,8 @@ export function Goals() {
         goal={selectedGoal}
         isOpen={!!selectedGoal}
         onClose={() => setSelectedGoal(null)}
-        onEdit={() => {
-          setEditingGoal(selectedGoal);
-          setSelectedGoal(null);
-        }}
         onDelete={handleDeleteGoal}
+        onUpdate={handleUpdateGoal}
       />
     </div>
   );
