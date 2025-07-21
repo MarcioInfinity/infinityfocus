@@ -164,7 +164,7 @@ export function Layout({
       <div className="absolute inset-0 opacity-30">
         
         
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
+        
       </div>
 
       {/* Mobile Menu Button */}
