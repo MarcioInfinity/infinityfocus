@@ -14,6 +14,7 @@ import { KanbanBoard } from "./components/KanbanBoard";
 import { Goals } from "./components/Goals";
 import { Settings } from "./components/Settings";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import InvitePage from "./pages/InvitePage";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,7 @@ const App = () => (
           <Routes>
             {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             
             {/* Invite Route - Public but requires auth */}
             <Route path="/invite/:token" element={<InvitePage />} />
