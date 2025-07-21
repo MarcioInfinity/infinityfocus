@@ -91,11 +91,7 @@ export function Layout({
   if (isMobile) {
     return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         {/* Background Effects */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
-          <div className="absolute top-10 right-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-float-delayed"></div>
-          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
-        </div>
+        
 
         {/* Mobile Top Navigation */}
         <div className="fixed top-0 left-0 right-0 z-50 h-14 glass-card border-b border-white/20 flex items-center justify-between px-4">
