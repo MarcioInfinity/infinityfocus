@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Plus, Target, FolderKanban, CheckCircle2, Calendar, TrendingUp, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -77,7 +76,7 @@ export function Dashboard() {
     });
   }, [tasks, showBrowserNotification]);
 
-  // Get today's tasks with proper filtering
+  // Get today's tasks with improved filtering logic
   const getTodayTasks = () => {
     const today = new Date();
     const currentWeekday = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -89,7 +88,10 @@ export function Dashboard() {
       // Tasks with specific due date for today
       if (task.due_date) {
         const dueDate = new Date(task.due_date);
-        if (dueDate.toDateString() === today.toDateString()) {
+        // Compare only the date part, ignoring time
+        const todayDateString = today.toDateString();
+        const dueDateString = dueDate.toDateString();
+        if (dueDateString === todayDateString) {
           return true;
         }
       }
@@ -100,13 +102,31 @@ export function Dashboard() {
       }
       
       // Tasks with weekly repeat (specific days)
+      // Fix: Convert currentWeekday to string for comparison and handle both number and string arrays
       if (task.repeat_enabled && task.repeat_type === 'weekly' && task.repeat_days) {
-        return task.repeat_days.includes(currentWeekday.toString());
+        const repeatDays = Array.isArray(task.repeat_days) ? task.repeat_days : [];
+        return repeatDays.includes(currentWeekday) || repeatDays.includes(currentWeekday.toString());
       }
       
       // Tasks with weekdays repeat (Monday to Friday)
       if (task.repeat_enabled && task.repeat_type === 'weekdays' && currentWeekday >= 1 && currentWeekday <= 5) {
         return true;
+      }
+      
+      // Tasks with custom repeat that include today
+      if (task.repeat_enabled && task.repeat_type === 'custom' && task.repeat_days) {
+        const repeatDays = Array.isArray(task.repeat_days) ? task.repeat_days : [];
+        return repeatDays.includes(currentWeekday) || repeatDays.includes(currentWeekday.toString());
+      }
+      
+      // Tasks with start_date for today (even without due_date)
+      if (task.start_date) {
+        const startDate = new Date(task.start_date);
+        const todayDateString = today.toDateString();
+        const startDateString = startDate.toDateString();
+        if (startDateString === todayDateString) {
+          return true;
+        }
       }
       
       return false;
@@ -158,6 +178,38 @@ export function Dashboard() {
   const handleToggleTask = (taskId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'done' ? 'todo' : 'done';
     updateTask({ id: taskId, updates: { status: newStatus } });
+  };
+
+  // Format time for display
+  const formatTime = (timeString: string) => {
+    if (!timeString) return '';
+    try {
+      const [hours, minutes] = timeString.split(':');
+      return `${hours}:${minutes}`;
+    } catch {
+      return timeString;
+    }
+  };
+
+  // Format date with time for display
+  const formatDateWithTime = (dateString: string, timeString?: string) => {
+    try {
+      const date = new Date(dateString);
+      const dateFormatted = date.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      
+      if (timeString) {
+        return `${dateFormatted} às ${formatTime(timeString)}`;
+      }
+      
+      return dateFormatted;
+    } catch {
+      return dateString;
+    }
   };
 
   return (
@@ -290,11 +342,26 @@ export function Dashboard() {
                       {task.description && (
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
                       )}
-                      {task.start_time && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Horário: {task.start_time}
-                        </p>
-                      )}
+                      {/* Exibir horário junto com a data */}
+                      <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                        {task.start_time && (
+                          <span className="flex items-center gap-1">
+                            🕐 {formatTime(task.start_time)}
+                          </span>
+                        )}
+                        {task.due_date && (
+                          <span className="flex items-center gap-1">
+                            📅 {formatDateWithTime(task.due_date, task.start_time)}
+                          </span>
+                        )}
+                        {task.repeat_enabled && (
+                          <span className="flex items-center gap-1">
+                            🔄 {task.repeat_type === 'daily' ? 'Diário' : 
+                                task.repeat_type === 'weekly' ? 'Semanal' :
+                                task.repeat_type === 'weekdays' ? 'Dias úteis' : 'Personalizado'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <Badge 
                       variant="outline" 
