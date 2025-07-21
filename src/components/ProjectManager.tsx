@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Plus, FolderKanban, Users, Calendar, Settings, MoreHorizontal, Eye, Edit, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
 import { KanbanBoard } from './KanbanBoard';
 import { InviteModal } from './modals/InviteModal';
+import { useNavigate } from 'react-router-dom';
 
 const roleColors = {
   owner: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
@@ -24,12 +26,12 @@ const roleColors = {
 };
 
 export function ProjectManager() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { projects, createProject, isLoading } = useProjects();
   const [filter, setFilter] = useState<'all' | 'owned' | 'member'>('all');
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
-  const [isKanbanOpen, setIsKanbanOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -42,7 +44,7 @@ export function ProjectManager() {
       case 'owned':
         return project.owner_id === user.id;
       case 'member':
-        return project.owner_id !== user.id;
+        return project.owner_id !== user.id && project.members?.some((m: any) => m.user_id === user.id);
       default:
         return true;
     }
@@ -67,8 +69,7 @@ export function ProjectManager() {
   };
 
   const handleOpenKanban = (project: any) => {
-    setSelectedProject(project);
-    setIsKanbanOpen(true);
+    navigate(`/projects/${project.id}/kanban`);
   };
 
   const handleOpenInvite = (projectId: string) => {
@@ -84,6 +85,10 @@ export function ProjectManager() {
   const handleOpenSettings = (project: any) => {
     setSelectedProject(project);
     setIsSettingsModalOpen(true);
+  };
+
+  const handleFilterChange = (newFilter: 'all' | 'owned' | 'member') => {
+    setFilter(newFilter);
   };
 
   if (isLoading) {
@@ -133,7 +138,7 @@ export function ProjectManager() {
               Novo Projeto
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <ProjectForm 
               onSubmit={handleCreateProject} 
               onCancel={() => setIsProjectFormOpen(false)} 
@@ -144,19 +149,30 @@ export function ProjectManager() {
 
       {/* Filters */}
       <div className="flex gap-2">
-        {(['all', 'owned', 'member'] as const).map(filterOption => (
-          <Button
-            key={filterOption}
-            variant={filter === filterOption ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFilter(filterOption)}
-            className={filter === filterOption ? 'glow-button' : 'neon-border'}
-          >
-            {filterOption === 'all' && 'Todos'}
-            {filterOption === 'owned' && 'Meus Projetos'}
-            {filterOption === 'member' && 'Participando'}
-          </Button>
-        ))}
+        <Button
+          variant={filter === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleFilterChange('all')}
+          className={filter === 'all' ? 'glow-button' : 'neon-border'}
+        >
+          Todos
+        </Button>
+        <Button
+          variant={filter === 'owned' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleFilterChange('owned')}
+          className={filter === 'owned' ? 'glow-button' : 'neon-border'}
+        >
+          Meus Projetos
+        </Button>
+        <Button
+          variant={filter === 'member' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleFilterChange('member')}
+          className={filter === 'member' ? 'glow-button' : 'neon-border'}
+        >
+          Participando
+        </Button>
       </div>
 
       {/* Projects Grid */}
@@ -178,7 +194,7 @@ export function ProjectManager() {
                     Criar Primeiro Projeto
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
                   <ProjectForm 
                     onSubmit={handleCreateProject} 
                     onCancel={() => setIsProjectFormOpen(false)} 
@@ -196,7 +212,7 @@ export function ProjectManager() {
               const totalTasks = project.tasks?.length || 0;
 
               return (
-                <Card key={project.id} className="project-card">
+                <Card key={project.id} className="project-card cursor-pointer" onClick={() => handleOpenKanban(project)}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -214,27 +230,27 @@ export function ProjectManager() {
                         </div>
                       </div>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="glass-card border-white/20">
-                          <DropdownMenuItem onClick={() => handleOpenKanban(project)}>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenKanban(project); }}>
                             <Eye className="w-4 h-4 mr-2" />
                             Visualizar
                           </DropdownMenuItem>
                           {(userRole === 'owner' || userRole === 'admin') && (
                             <>
-                              <DropdownMenuItem onClick={() => handleOpenEdit(project)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(project); }}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenInvite(project.id)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenInvite(project.id); }}>
                                 <UserPlus className="w-4 h-4 mr-2" />
                                 Convidar Membros
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenSettings(project)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenSettings(project); }}>
                                 <Settings className="w-4 h-4 mr-2" />
                                 Configurações
                               </DropdownMenuItem>
@@ -300,7 +316,7 @@ export function ProjectManager() {
                       <Button 
                         className="flex-1 glow-button" 
                         size="sm"
-                        onClick={() => handleOpenKanban(project)}
+                        onClick={(e) => { e.stopPropagation(); handleOpenKanban(project); }}
                       >
                         <FolderKanban className="w-4 h-4 mr-2" />
                         Abrir Quadro
@@ -310,7 +326,7 @@ export function ProjectManager() {
                           variant="outline" 
                           size="sm" 
                           className="neon-border"
-                          onClick={() => handleOpenInvite(project.id)}
+                          onClick={(e) => { e.stopPropagation(); handleOpenInvite(project.id); }}
                         >
                           <UserPlus className="w-4 h-4" />
                         </Button>
@@ -336,22 +352,11 @@ export function ProjectManager() {
             <Plus className="w-6 h-6" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <ProjectForm 
             onSubmit={handleCreateProject} 
             onCancel={() => setIsProjectFormOpen(false)} 
           />
-        </DialogContent>
-      </Dialog>
-
-      {/* Kanban Board Modal */}
-      <Dialog open={isKanbanOpen} onOpenChange={setIsKanbanOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-          {selectedProject && (
-            <KanbanBoard 
-              projectId={selectedProject.id}
-            />
-          )}
         </DialogContent>
       </Dialog>
 

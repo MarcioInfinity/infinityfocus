@@ -38,7 +38,7 @@ import { supabase } from '@/integrations/supabase/client';
 const mockColumns: KanbanColumn[] = [
   {
     id: '1',
-    title: 'A Fazer',
+    title: 'Nova',
     status: 'todo',
     color: '#64748b',
     tasks: [],
@@ -247,6 +247,10 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     setIsTaskFormOpen(true);
   };
 
+  const openInviteModal = () => {
+    setIsInviteModalOpen(true);
+  };
+
   return (
     <div className="space-y-4 animate-fade-in h-full">
       {/* Compact Header */}
@@ -262,7 +266,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
                 Tarefa
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
               <TaskForm
                 onSubmit={handleCreateTask}
                 onCancel={() => {
@@ -278,7 +282,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
             size="sm"
             variant="outline" 
             className="neon-border"
-            onClick={() => setIsInviteModalOpen(true)}
+            onClick={openInviteModal}
           >
             <User className="w-4 h-4 mr-1" />
             Convite
@@ -286,17 +290,17 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         </div>
       </div>
 
-      {/* Compact Kanban Board with Enhanced Scrolling */}
+      {/* Enhanced Kanban Board with darker background */}
       <div className="kanban-container">
         <div className="kanban-scroll-wrapper">
-          <div className="flex gap-3 pb-4 min-w-max">
+          <div className="flex gap-3 pb-4 min-w-max bg-black/30 backdrop-blur-sm rounded-lg p-4">
             {columns.map((column) => {
               const StatusIcon = statusIcons[column.status];
               
               return (
                 <div
                   key={column.id}
-                  className="kanban-column min-w-[200px] max-w-[200px] flex-shrink-0"
+                  className="kanban-column min-w-[200px] max-w-[200px] flex-shrink-0 bg-black/20 backdrop-blur-sm rounded-lg p-3"
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(column.id, column.status)}
                 >
@@ -362,7 +366,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
                         return (
                           <Card
                             key={task.id}
-                            className={`task-card cursor-move hover:scale-105 transition-transform ${isOverdue ? 'border-red-500/50' : ''}`}
+                            className={`task-card cursor-move hover:scale-105 transition-transform bg-black/40 backdrop-blur-sm ${isOverdue ? 'border-red-500/50' : ''}`}
                             draggable
                             onDragStart={() => handleDragStart(task)}
                           >

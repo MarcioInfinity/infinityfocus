@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Plus, Target, Calendar, TrendingUp, Edit, Trash2, Eye, MoreHorizontal, CheckCircle, Award } from 'lucide-react';
+import { Plus, Target, Calendar, TrendingUp, Edit, Trash2, Eye, MoreHorizontal, CheckCircle, Award, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoalForm } from './forms/GoalForm';
+import { RewardForm } from './forms/RewardForm';
 import { EditGoalModal } from './modals/EditGoalModal';
 import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { GoalChecklist } from './GoalChecklist';
@@ -20,6 +21,7 @@ export function Goals() {
   const { goals, createGoal, updateGoal, deleteGoal, isLoading } = useGoals();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
+  const [isRewardFormOpen, setIsRewardFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -31,6 +33,13 @@ export function Goals() {
     createGoal(goalData);
     setIsGoalFormOpen(false);
     showSuccessToast('Meta criada com sucesso!');
+  };
+
+  const handleCreateReward = (rewardData: any) => {
+    // This will be connected to Supabase later
+    console.log('Reward data:', rewardData);
+    setIsRewardFormOpen(false);
+    showSuccessToast('Recompensa criada com sucesso!');
   };
 
   const handleEditGoal = (goalData: any) => {
@@ -175,20 +184,36 @@ export function Goals() {
             Defina e acompanhe suas metas pessoais e profissionais
           </p>
         </div>
-        <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
-          <DialogTrigger asChild>
-            <Button className="glow-button">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Meta
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-            <GoalForm 
-              onSubmit={handleCreateGoal} 
-              onCancel={() => setIsGoalFormOpen(false)} 
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
+            <DialogTrigger asChild>
+              <Button className="glow-button">
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Meta
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+              <GoalForm 
+                onSubmit={handleCreateGoal} 
+                onCancel={() => setIsGoalFormOpen(false)} 
+              />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={isRewardFormOpen} onOpenChange={setIsRewardFormOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="neon-border">
+                <Gift className="w-4 h-4 mr-2" />
+                Nova Recompensa
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+              <RewardForm 
+                onSubmit={handleCreateReward} 
+                onCancel={() => setIsRewardFormOpen(false)} 
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Tabs */}
