@@ -163,7 +163,7 @@ export function Layout({
       {/* Background Effects */}
       <div className="absolute inset-0 opacity-30">
         
-        <div className="absolute top-10 right-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-float-delayed"></div>
+        
         <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-float"></div>
       </div>
 
