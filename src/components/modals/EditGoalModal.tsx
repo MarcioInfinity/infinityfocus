@@ -13,20 +13,49 @@ import { CalendarIcon, Plus, X } from 'lucide-react';
 import { Goal, Priority, CategoryType } from '@/types';
 
 interface EditGoalModalProps {
-  goal: Goal;
+  goal: Goal | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedGoal: Goal) => void;
 }
 
+const defaultGoal: Goal = {
+  id: '',
+  name: '',
+  description: '',
+  priority: 'medium' as Priority,
+  category: 'professional' as CategoryType,
+  progress: 0,
+  start_date: '',
+  due_date: '',
+  is_shared: false,
+  notifications_enabled: false,
+  reward_enabled: false,
+  reward_description: '',
+  assigned_projects: [],
+  assigned_tasks: [],
+  notes: '',
+  checklist: [],
+  created_by: '',
+  created_at: '',
+  updated_at: ''
+};
+
 export function EditGoalModal({ goal, isOpen, onClose, onSave }: EditGoalModalProps) {
-  const [formData, setFormData] = useState<Goal>(goal);
+  const [formData, setFormData] = useState<Goal>(goal || defaultGoal);
   const [customCategory, setCustomCategory] = useState<CategoryType>('other');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
 
   useEffect(() => {
-    setFormData(goal);
+    if (goal) {
+      setFormData(goal);
+    }
   }, [goal]);
+
+  // Don't render the modal content if goal is null
+  if (!goal) {
+    return null;
+  }
 
   const categories = [
     { value: 'professional', label: 'Profissional' },
