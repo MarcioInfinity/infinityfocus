@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,7 +13,7 @@ import { NotificationManager } from "./components/NotificationManager";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { Goals } from "./components/Goals";
 import { Settings } from "./components/Settings";
-import { Login } from "./pages/Login";
+import Login from "./pages/Login";
 import InvitePage from "./pages/InvitePage";
 import NotFound from "./pages/NotFound";
 
