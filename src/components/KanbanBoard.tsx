@@ -218,9 +218,9 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   };
 
   const handleCreateTask = (taskData: any) => {
+    createTask(taskData);
     setIsTaskFormOpen(false);
     setSelectedColumn(null);
-    showSuccessToast('Tarefa criada com sucesso!');
   };
 
   const handleUpdateColumn = (updatedColumn: KanbanColumn) => {
