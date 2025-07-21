@@ -98,10 +98,10 @@ export function Layout({
           {/* Logo à esquerda */}
           <div className="flex items-center space-x-2">
             <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
-              <Target className="h-4 w-4 text-white" />
+              <img src="/assets/images/infinity_focus_logo_no_bg.png" alt="Infinity Focus Logo" className="h-4 w-4" />
             </div>
             <h1 className="text-sm font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              INFINITY FOCUS
+              Infinity Focus
             </h1>
           </div>
 
@@ -172,11 +172,11 @@ export function Layout({
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <Target className="h-6 w-6 text-white" />
+              <img src="/assets/images/infinity_focus_logo_no_bg.png" alt="Infinity Focus Logo" className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                INFINITY FOCUS
+                Infinity Focus
               </h1>
               <p className="text-xs text-muted-foreground">Gestão & Produtividade</p>
             </div>
