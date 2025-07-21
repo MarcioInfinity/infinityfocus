@@ -52,8 +52,10 @@ const taskSchema = z.object({
     }),
   notify_enabled: z.boolean(),
   frequency_enabled: z.boolean(),
-  frequency_type: z.enum(['daily', 'weekly', 'monthly', 'weekdays', 'custom']).optional(),
+  frequency_type: z.enum(["daily", "weekly", "monthly", "custom"]).optional(),
   frequency_days: z.array(z.number()).optional(),
+  monthly_day: z.number().min(1).max(31).optional(),
+  custom_dates: z.array(z.date()).optional(),
   assign_to_project: z.boolean(),
   project_id: z.string().optional(),
   description: z.string().optional(),
@@ -88,7 +90,6 @@ const frequencyOptions = [
   { value: 'daily', label: 'Diariamente' },
   { value: 'weekly', label: 'Semanalmente' },
   { value: 'monthly', label: 'Mensalmente' },
-  { value: 'weekdays', label: 'Dias úteis' },
   { value: 'custom', label: 'Personalizado' },
 ];
 
@@ -103,23 +104,30 @@ const weekDays = [
 ];
 
 export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defaultProjectId }: TaskFormProps) {
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
-  const [newChecklistItem, setNewChecklistItem] = useState('');
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(initialData?.checklist || []);
+  const [newChecklistItem, setNewChecklistItem] = useState("");
+  const [showCustomCategory, setShowCustomCategory] = useState(initialData?.category === "custom");
 
   const form = useForm<z.infer<typeof taskSchema>>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: '',
-      priority: 'medium',
-      category: 'professional',
-      is_indefinite: false,
-      time: '', // Valor padrão vazio para evitar problemas
-      notify_enabled: false,
-      frequency_enabled: false,
-      assign_to_project: !!defaultProjectId,
-      project_id: defaultProjectId || '',
-      ...initialData,
+      title: initialData?.title || "",
+      priority: initialData?.priority || "medium",
+      category: initialData?.category || "professional",
+      custom_category: initialData?.custom_category || "",
+      start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
+      due_date: initialData?.due_date ? new Date(initialData.due_date) : undefined,
+      is_indefinite: initialData?.is_indefinite || false,
+      time: initialData?.time || "",
+      notify_enabled: initialData?.notify_enabled || false,
+      frequency_enabled: initialData?.repeat_enabled || false,
+      frequency_type: initialData?.repeat_type || "daily",
+      frequency_days: initialData?.repeat_days?.map(Number) || [],
+      monthly_day: initialData?.repeat_monthly_day || undefined,
+      custom_dates: initialData?.repeat_custom_dates?.map((date: string) => new Date(date)) || [],
+      assign_to_project: initialData?.project_id ? true : (!!defaultProjectId || false),
+      project_id: initialData?.project_id || defaultProjectId || "",
+      description: initialData?.description || "",
     },
   });
 
@@ -147,23 +155,23 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
   };
 
   const handleSubmit = (values: z.infer<typeof taskSchema>) => {
-    // Processamento adicional dos dados antes do envio
     const taskData = {
       ...values,
-      // Garantir que o horário seja enviado no formato correto ou como null
       start_time: values.time || null,
-      checklist,
-      // Converter frequency_days para array de strings se necessário
-      repeat_days: values.frequency_days?.map(day => day.toString()) || [],
+      checklist: checklist,
       repeat_enabled: values.frequency_enabled,
       repeat_type: values.frequency_type || null,
+      repeat_days: values.frequency_days?.map(day => day.toString()) || [],
+      repeat_monthly_day: values.monthly_day || null,
+      repeat_custom_dates: values.custom_dates?.map(date => date.toISOString()) || [],
     };
     
-    // Remover campos desnecessários
     delete taskData.time;
     delete taskData.frequency_enabled;
     delete taskData.frequency_type;
     delete taskData.frequency_days;
+    delete taskData.monthly_day;
+    delete taskData.custom_dates;
     
     onSubmit(taskData);
   };
@@ -497,6 +505,69 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                             </div>
                           ))}
                         </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Repetição Mensal */}
+                {watchFrequencyType === 'monthly' && (
+                  <FormField
+                    control={form.control}
+                    name="monthly_day"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dia do Mês</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 15" 
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            min={1}
+                            max={31}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Repetição Personalizada - Seleção de Datas */}
+                {watchFrequencyType === 'custom' && (
+                  <FormField
+                    control={form.control}
+                    name="custom_dates"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Datas Personalizadas</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={`w-full pl-3 text-left font-normal ${!field.value || field.value.length === 0 && "text-muted-foreground"}`}
+                              >
+                                {field.value && field.value.length > 0 ? (
+                                  field.value.map((date: Date) => format(date, "PPP", { locale: ptBR })).join(", ")
+                                ) : (
+                                  <span>Selecionar datas</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="multiple"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
