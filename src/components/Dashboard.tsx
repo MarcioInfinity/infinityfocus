@@ -79,71 +79,80 @@ export function Dashboard() {
   // Get today's tasks with improved filtering logic
   const getTodayTasks = () => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize para o início do dia
     const currentWeekday = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentMonthDay = today.getDate();
     
     return tasks.filter(task => {
-      // Skip completed tasks
+      // Ignorar tarefas concluídas
       if (task.status === 'done') return false;
-      
-      // Tasks with specific due date for today
+
+      // 1. Tarefas com data de término no passado (atrasadas)
       if (task.due_date) {
         const dueDate = new Date(task.due_date);
-        // Compare only the date part, ignoring time
-        const todayDateString = today.toDateString();
-        const dueDateString = dueDate.toDateString();
-        if (dueDateString === todayDateString) {
-          return true;
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate < today) {
+          return true; // Tarefa atrasada
         }
       }
-      
-      // Tasks with daily repeat
-      if (task.repeat_enabled && task.repeat_type === 'daily') {
+
+      // 2. Tarefas com data de início ou término para hoje
+      const isToday = (dateString: string | undefined) => {
+        if (!dateString) return false;
+        const date = new Date(dateString);
+        date.setHours(0, 0, 0, 0);
+        return date.getTime() === today.getTime();
+      };
+
+      if (isToday(task.start_date) || isToday(task.due_date)) {
         return true;
       }
-      
-      // Tasks with weekly repeat (specific days)
-      // Fix: Convert currentWeekday to string for comparison and handle both number and string arrays
-      if (task.repeat_enabled && task.repeat_type === 'weekly' && task.repeat_days) {
-        const repeatDays = Array.isArray(task.repeat_days) ? task.repeat_days : [];
-        return repeatDays.includes(currentWeekday) || repeatDays.includes(currentWeekday.toString());
-      }
-      
-      // Tasks with weekdays repeat (Monday to Friday)
-      if (task.repeat_enabled && task.repeat_type === 'weekdays' && currentWeekday >= 1 && currentWeekday <= 5) {
-        return true;
-      }
-      
-      // Tasks with custom repeat that include today
-      if (task.repeat_enabled && task.repeat_type === 'custom' && task.repeat_days) {
-        const repeatDays = Array.isArray(task.repeat_days) ? task.repeat_days : [];
-        return repeatDays.includes(currentWeekday) || repeatDays.includes(currentWeekday.toString());
-      }
-      
-      // Tasks with start_date for today (even without due_date)
-      if (task.start_date) {
-        const startDate = new Date(task.start_date);
-        const todayDateString = today.toDateString();
-        const startDateString = startDate.toDateString();
-        if (startDateString === todayDateString) {
-          return true;
+
+      // 3. Tarefas com repetição que se aplicam a hoje
+      if (task.repeat_enabled) {
+        switch (task.repeat_type) {
+          case 'daily':
+            return true;
+          case 'weekly':
+            const repeatDaysWeekly = Array.isArray(task.repeat_days) ? task.repeat_days.map(Number) : [];
+            return repeatDaysWeekly.includes(currentWeekday);
+          case 'monthly':
+            return task.monthly_day === currentMonthDay;
+          case 'custom':
+            const repeatCustomDates = Array.isArray(task.custom_dates) ? task.custom_dates.map(d => new Date(d)) : [];
+            return repeatCustomDates.some(d => d.toDateString() === today.toDateString());
+          default:
+            return false;
         }
       }
       
       return false;
     }).sort((a, b) => {
-      // Sort by priority first (high > medium > low)
+      // Prioridade: Alta > Média > Baixa
       const priorityOrder = { high: 3, medium: 2, low: 1 };
       const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-      
       if (priorityDiff !== 0) return priorityDiff;
-      
-      // Then by time if available
+
+      // Tarefas atrasadas primeiro
+      const aIsOverdue = a.due_date && new Date(a.due_date).setHours(0,0,0,0) < today.getTime();
+      const bIsOverdue = b.due_date && new Date(b.due_date).setHours(0,0,0,0) < today.getTime();
+      if (aIsOverdue && !bIsOverdue) return -1;
+      if (!aIsOverdue && bIsOverdue) return 1;
+
+      // Depois por horário (se disponível)
       if (a.start_time && b.start_time) {
         return a.start_time.localeCompare(b.start_time);
       }
       if (a.start_time && !b.start_time) return -1;
       if (!a.start_time && b.start_time) return 1;
       
+      // Finalmente por data de término (mais próxima primeiro)
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+      if (a.due_date && !b.due_date) return -1;
+      if (!a.due_date && b.due_date) return 1;
+
       return 0;
     });
   };
@@ -310,73 +319,162 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {todayTasks.length === 0 ? (
-              <div className="text-center py-8">
-                <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">Nenhuma tarefa para hoje</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Aproveite para planejar ou descansar! 😊
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {todayTasks.map(task => (
-                  <div
-                    key={task.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                      task.status === 'done' 
-                        ? 'bg-green-500/10 border-green-500/20' 
-                        : 'bg-card border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={task.status === 'done'}
-                      onChange={() => handleToggleTask(task.id, task.status)}
-                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
-                    />
-                    <div className="flex-1">
-                      <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                        {task.title}
-                      </p>
-                      {task.description && (
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
-                      )}
-                      {/* Exibir horário junto com a data */}
-                      <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                        {task.start_time && (
-                          <span className="flex items-center gap-1">
-                            🕐 {formatTime(task.start_time)}
-                          </span>
-                        )}
-                        {task.due_date && (
-                          <span className="flex items-center gap-1">
-                            📅 {formatDateWithTime(task.due_date, task.start_time)}
-                          </span>
-                        )}
-                        {task.repeat_enabled && (
-                          <span className="flex items-center gap-1">
-                            🔄 {task.repeat_type === 'daily' ? 'Diário' : 
-                                task.repeat_type === 'weekly' ? 'Semanal' :
-                                task.repeat_type === 'weekdays' ? 'Dias úteis' : 'Personalizado'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className={
-                        task.priority === 'high' ? 'border-red-500/50 text-red-400' :
-                        task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
-                        'border-green-500/50 text-green-400'
-                      }
-                    >
-                      {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
-                    </Badge>
+            <Tabs defaultValue="today" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="today">Hoje</TabsTrigger>
+                <TabsTrigger value="all">Todas as Tarefas</TabsTrigger>
+              </TabsList>
+              <TabsContent value="today">
+                {todayTasks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground">Nenhuma tarefa para hoje</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Aproveite para planejar ou descansar! 😊
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
+                ) : (
+                  <div className="space-y-3">
+                    {todayTasks.map(task => {
+                      const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
+                      
+                      return (
+                        <div
+                          key={task.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                            task.status === 'done' 
+                              ? 'bg-green-500/10 border-green-500/20' 
+                              : isOverdue
+                              ? 'bg-red-500/10 border-red-500/20'
+                              : 'bg-card border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={task.status === 'done'}
+                            onChange={() => handleToggleTask(task.id, task.status)}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                                {task.title}
+                              </p>
+                              {isOverdue && (
+                                <Badge variant="destructive" className="text-xs">
+                                  Atrasada
+                                </Badge>
+                              )}
+                            </div>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                            )}
+                            <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                              {task.start_time && (
+                                <span className="flex items-center gap-1">
+                                  🕐 {formatTime(task.start_time)}
+                                </span>
+                              )}
+                              {task.due_date && (
+                                <span className="flex items-center gap-1">
+                                  📅 {formatDateWithTime(task.due_date, task.start_time)}
+                                </span>
+                              )}
+                              {task.repeat_enabled && (
+                                <span className="flex items-center gap-1">
+                                  🔄 {task.repeat_type === 'daily' ? 'Diário' : 
+                                      task.repeat_type === 'weekly' ? 'Semanal' :
+                                      task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Badge 
+                            variant="outline" 
+                            className={
+                              task.priority === 'high' ? 'border-red-500/50 text-red-400' :
+                              task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
+                              'border-green-500/50 text-green-400'
+                            }
+                          >
+                            {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="all">
+                {tasks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground">Nenhuma tarefa cadastrada</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Comece criando sua primeira tarefa! 😊
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {tasks.map(task => (
+                      <div
+                        key={task.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                          task.status === 'done' 
+                            ? 'bg-green-500/10 border-green-500/20' 
+                            : 'bg-card border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={task.status === 'done'}
+                          onChange={() => handleToggleTask(task.id, task.status)}
+                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
+                        />
+                        <div className="flex-1">
+                          <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                          )}
+                          {/* Exibir horário junto com a data */}
+                          <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                            {task.start_time && (
+                              <span className="flex items-center gap-1">
+                                🕐 {formatTime(task.start_time)}
+                              </span>
+                            )}
+                            {task.due_date && (
+                              <span className="flex items-center gap-1">
+                                📅 {formatDateWithTime(task.due_date, task.start_time)}
+                              </span>
+                            )}
+                            {task.repeat_enabled && (
+                              <span className="flex items-center gap-1">
+                                🔄 {task.repeat_type === 'daily' ? 'Diário' : 
+                                    task.repeat_type === 'weekly' ? 'Semanal' :
+                                    task.repeat_type === 'weekdays' ? 'Dias úteis' : 'Personalizado'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={
+                            task.priority === 'high' ? 'border-red-500/50 text-red-400' :
+                            task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
+                            'border-green-500/50 text-green-400'
+                          }
+                        >
+                          {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
