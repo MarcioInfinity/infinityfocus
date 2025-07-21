@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Star, Gift, DollarSign, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
