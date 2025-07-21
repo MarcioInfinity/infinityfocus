@@ -161,11 +161,7 @@ export function Layout({
   // Desktop Layout
   return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Background Effects */}
-      <div className="absolute inset-0 opacity-30">
-        
-        
-        
-      </div>
+      
 
       {/* Mobile Menu Button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
