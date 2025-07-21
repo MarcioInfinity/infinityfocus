@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Plus, FolderKanban, Users, Calendar, Settings, MoreHorizontal, Eye, Edit, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -102,7 +101,7 @@ export function ProjectManager() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
-            <Card key={i} className="glass-card animate-pulse">
+            <Card key={i} className="project-card animate-pulse">
               <CardContent className="p-6">
                 <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
                 <div className="h-3 bg-muted rounded w-full mb-2"></div>
@@ -134,7 +133,7 @@ export function ProjectManager() {
               Novo Projeto
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl">
             <ProjectForm 
               onSubmit={handleCreateProject} 
               onCancel={() => setIsProjectFormOpen(false)} 
@@ -179,7 +178,7 @@ export function ProjectManager() {
                     Criar Primeiro Projeto
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl">
                   <ProjectForm 
                     onSubmit={handleCreateProject} 
                     onCancel={() => setIsProjectFormOpen(false)} 
@@ -197,7 +196,7 @@ export function ProjectManager() {
               const totalTasks = project.tasks?.length || 0;
 
               return (
-                <Card key={project.id} className="glass-card hover:border-primary/30 transition-all duration-300">
+                <Card key={project.id} className="project-card">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -216,38 +215,26 @@ export function ProjectManager() {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button variant="ghost" size="sm">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="glass-card border-white/20">
-                          <DropdownMenuItem 
-                            onClick={() => handleOpenKanban(project)}
-                            className="cursor-pointer"
-                          >
+                          <DropdownMenuItem onClick={() => handleOpenKanban(project)}>
                             <Eye className="w-4 h-4 mr-2" />
                             Visualizar
                           </DropdownMenuItem>
                           {(userRole === 'owner' || userRole === 'admin') && (
                             <>
-                              <DropdownMenuItem 
-                                onClick={() => handleOpenEdit(project)}
-                                className="cursor-pointer"
-                              >
+                              <DropdownMenuItem onClick={() => handleOpenEdit(project)}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleOpenInvite(project.id)}
-                                className="cursor-pointer"
-                              >
+                              <DropdownMenuItem onClick={() => handleOpenInvite(project.id)}>
                                 <UserPlus className="w-4 h-4 mr-2" />
                                 Convidar Membros
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleOpenSettings(project)}
-                                className="cursor-pointer"
-                              >
+                              <DropdownMenuItem onClick={() => handleOpenSettings(project)}>
                                 <Settings className="w-4 h-4 mr-2" />
                                 Configurações
                               </DropdownMenuItem>
@@ -341,6 +328,21 @@ export function ProjectManager() {
           </div>
         )}
       </div>
+
+      {/* Floating Action Button */}
+      <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
+        <DialogTrigger asChild>
+          <Button className="floating-action animate-pulse-glow">
+            <Plus className="w-6 h-6" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <ProjectForm 
+            onSubmit={handleCreateProject} 
+            onCancel={() => setIsProjectFormOpen(false)} 
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Kanban Board Modal */}
       <Dialog open={isKanbanOpen} onOpenChange={setIsKanbanOpen}>

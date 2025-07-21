@@ -487,7 +487,6 @@ export type Database = {
           email: string | null
           expires_at: string
           id: string
-          invite_link: string | null
           project_id: string
           role: Database["public"]["Enums"]["project_role"]
           token: string
@@ -500,7 +499,6 @@ export type Database = {
           email?: string | null
           expires_at?: string
           id?: string
-          invite_link?: string | null
           project_id: string
           role?: Database["public"]["Enums"]["project_role"]
           token: string
@@ -513,7 +511,6 @@ export type Database = {
           email?: string | null
           expires_at?: string
           id?: string
-          invite_link?: string | null
           project_id?: string
           role?: Database["public"]["Enums"]["project_role"]
           token?: string
@@ -729,36 +726,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_settings: {
-        Row: {
-          created_at: string | null
-          date_format: string | null
-          id: string
-          time_format: string | null
-          timezone: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          date_format?: string | null
-          id?: string
-          time_format?: string | null
-          timezone?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          date_format?: string | null
-          id?: string
-          time_format?: string | null
-          timezone?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {

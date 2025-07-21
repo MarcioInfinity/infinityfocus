@@ -1,42 +1,114 @@
 
-import { useState } from 'react';
-import { Plus, CheckCircle, Target, FolderKanban, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Target, FolderKanban, CheckCircle2, Calendar, TrendingUp, Users, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { DashboardStats } from './DashboardStats';
 import { TaskForm } from './forms/TaskForm';
 import { ProjectForm } from './forms/ProjectForm';
 import { GoalForm } from './forms/GoalForm';
+import { useAuth } from '@/hooks/useAuth';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
-import { useAuth } from '@/hooks/useAuth';
-import { useTodayTasks } from '@/hooks/useTodayTasks';
-import { DateTimeDisplay } from './DateTimeDisplay';
+import { useRealtime } from '@/hooks/useRealtime';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export function Dashboard() {
   const { user } = useAuth();
   const { tasks, createTask, updateTask } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
-  const { todayTasks } = useTodayTasks();
+  const { requestNotificationPermission, showBrowserNotification } = useNotifications();
+
+  // Habilitar atualizações em tempo real
+  useRealtime();
 
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
 
-  // Estatísticas
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.status === 'done').length;
-  const overdueTasks = tasks.filter(task => {
-    if (task.status === 'done') return false;
-    if (!task.due_date) return false;
-    return new Date(task.due_date) < new Date();
-  }).length;
+  // Request notification permission on component mount
+  useEffect(() => {
+    requestNotificationPermission().then(permissionGranted => {
+      if (permissionGranted) {
+        console.log('Notification permission granted.');
+      } else {
+        console.log('Notification permission denied or not supported.');
+      }
+    });
+  }, []);
 
-  const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+  // Logic to show notifications for upcoming tasks
+  useEffect(() => {
+    const now = new Date();
+    tasks.forEach(task => {
+      if (task.due_date && task.notifications_enabled) {
+        const dueDate = new Date(task.due_date);
+        // Check if due date is today and task is not done
+        if (dueDate.toDateString() === now.toDateString() && task.status !== 'done') {
+          // You can refine this logic to check for specific times if needed
+          showBrowserNotification(`Tarefa Próxima: ${task.title}`, {
+            body: `A tarefa '${task.title}' vence hoje!`, 
+            tag: task.id
+          });
+        }
+      }
+    });
+  }, [tasks, showBrowserNotification]);
+
+  // Estatísticas rápidas - ordenadas por prioridade
+  const today = new Date();
+  const todayString = today.toDateString();
+  const currentWeekday = today.getDay();
+  
+  const todayTasks = tasks.filter(task => {
+    // Tarefas com data específica para hoje
+    if (task.due_date && new Date(task.due_date).toDateString() === todayString) {
+      return true;
+    }
+    
+    // Tarefas com repetição diária
+    if (task.repeat_enabled && task.repeat_type === 'daily') {
+      return true;
+    }
+    
+    // Tarefas com repetição semanal (dias específicos)
+    if (task.repeat_enabled && task.repeat_type === 'weekly' && task.repeat_days?.includes(currentWeekday.toString())) {
+      return true;
+    }
+    
+    // Tarefas com repetição em dias da semana (segunda a sexta)
+    if (task.repeat_enabled && task.repeat_type === 'weekdays' && currentWeekday >= 1 && currentWeekday <= 5) {
+      return true;
+    }
+    
+    return false;
+  }).sort((a, b) => {
+    // Primeiro: tarefas atrasadas
+    const aOverdue = a.due_date && new Date(a.due_date) < today && a.status !== 'done';
+    const bOverdue = b.due_date && new Date(b.due_date) < today && b.status !== 'done';
+    
+    if (aOverdue && !bOverdue) return -1;
+    if (!aOverdue && bOverdue) return 1;
+    
+    // Segundo: ordenar por horário
+    if (a.start_time && b.start_time) {
+      return a.start_time.localeCompare(b.start_time);
+    }
+    if (a.start_time && !b.start_time) return -1;
+    if (!a.start_time && b.start_time) return 1;
+    
+    return 0;
+  });
+
+  const completedToday = todayTasks.filter(task => task.status === 'done');
+  const pendingTasks = tasks.filter(task => task.status !== 'done');
+  const highPriorityTasks = pendingTasks.filter(task => task.priority === 'high');
 
   const handleCreateTask = (taskData: any) => {
     createTask(taskData);
@@ -53,156 +125,152 @@ export function Dashboard() {
     setIsGoalFormOpen(false);
   };
 
-  const handleToggleTask = (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-      updateTask({
-        id: taskId,
-        updates: { status: task.status === 'done' ? 'todo' : 'done' }
-      });
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'medium': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'low': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-    }
-  };
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'high': return '🔴';
-      case 'medium': return '🟡';
-      case 'low': return '🟢';
-      default: return '⚪';
-    }
+  const handleToggleTask = (taskId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'done' ? 'todo' : 'done';
+    updateTask({ id: taskId, updates: { status: newStatus } });
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header com Data e Hora */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Bem-vindo, {user?.email?.split('@')[0]}!
-        </h1>
-        <DateTimeDisplay />
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Bem-vindo de volta, {user?.email?.split('@')[0]}!
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Acompanhe seu progresso e gerencie suas atividades
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="glass-card">
+            <Bell className="w-3 h-3 mr-1" />
+            Atualizações em tempo real ativadas
+          </Badge>
+        </div>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <CheckCircle className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tarefas Concluídas</p>
-                <p className="text-2xl font-bold">{completedTasks}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Quick Stats */}
+      <DashboardStats />
 
-        <Card className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-accent/20">
-                <Target className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Metas Ativas</p>
-                <p className="text-2xl font-bold">{goals.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+          <DialogTrigger asChild>
+            <Card className="glass-card hover:scale-105 transition-transform cursor-pointer">
+              <CardContent className="flex items-center justify-center p-6">
+                <div className="text-center">
+                  <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-primary" />
+                  <h3 className="font-semibold mb-1">Nova Tarefa</h3>
+                  <p className="text-sm text-muted-foreground">Criar uma nova tarefa</p>
+                </div>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+            <TaskForm 
+              onSubmit={handleCreateTask} 
+              onCancel={() => setIsTaskFormOpen(false)} 
+            />
+          </DialogContent>
+        </Dialog>
 
-        <Card className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <FolderKanban className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Projetos</p>
-                <p className="text-2xl font-bold">{projects.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
+          <DialogTrigger asChild>
+            <Card className="glass-card hover:scale-105 transition-transform cursor-pointer">
+              <CardContent className="flex items-center justify-center p-6">
+                <div className="text-center">
+                  <FolderKanban className="w-12 h-12 mx-auto mb-3 text-accent" />
+                  <h3 className="font-semibold mb-1">Novo Projeto</h3>
+                  <p className="text-sm text-muted-foreground">Criar um novo projeto</p>
+                </div>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+            <ProjectForm 
+              onSubmit={handleCreateProject} 
+              onCancel={() => setIsProjectFormOpen(false)} 
+            />
+          </DialogContent>
+        </Dialog>
 
-        <Card className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/20">
-                <AlertCircle className="w-5 h-5 text-red-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Em Atraso</p>
-                <p className="text-2xl font-bold">{overdueTasks}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
+          <DialogTrigger asChild>
+            <Card className="glass-card hover:scale-105 transition-transform cursor-pointer">
+              <CardContent className="flex items-center justify-center p-6">
+                <div className="text-center">
+                  <Target className="w-12 h-12 mx-auto mb-3 text-secondary" />
+                  <h3 className="font-semibold mb-1">Nova Meta</h3>
+                  <p className="text-sm text-muted-foreground">Definir uma nova meta</p>
+                </div>
+              </CardContent>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[75vh] overflow-y-auto" style={{ transform: 'translateY(20%)' }}>
+            <GoalForm 
+              onSubmit={handleCreateGoal} 
+              onCancel={() => setIsGoalFormOpen(false)} 
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tarefas do Dia */}
-        <Card className="glass-card">
-          <CardHeader className="pb-3">
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Today's Tasks */}
+        <Card className="glass-card lg:col-span-2">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Tarefas do Dia
+              <Calendar className="w-5 h-5 text-primary" />
+              Tarefas de Hoje
+              <Badge variant="outline">{todayTasks.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {todayTasks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Nenhuma tarefa para hoje</p>
+              <div className="text-center py-8">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">Nenhuma tarefa para hoje</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Aproveite para planejar ou descansar! 😊
+                </p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {todayTasks.map((task) => (
+              <div className="space-y-3">
+                {todayTasks.map(task => (
                   <div
                     key={task.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-background/50 border border-white/10 hover:border-white/20 transition-all"
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      task.status === 'done' 
+                        ? 'bg-green-500/10 border-green-500/20' 
+                        : 'bg-card border-border hover:border-primary/50'
+                    }`}
                   >
-                    <button
-                      onClick={() => handleToggleTask(task.id)}
-                      className="flex-shrink-0"
-                    >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                        task.status === 'done' 
-                          ? 'bg-green-500 border-green-500 text-white' 
-                          : 'border-muted-foreground hover:border-primary'
-                      }`}>
-                        {task.status === 'done' && <CheckCircle className="w-3 h-3" />}
-                      </div>
-                    </button>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className={`font-medium truncate ${
-                          task.status === 'done' ? 'line-through text-muted-foreground' : ''
-                        }`}>
-                          {task.title}
-                        </p>
-                        <Badge variant="outline" className={`text-xs ${getPriorityColor(task.priority)}`}>
-                          {getPriorityIcon(task.priority)} {task.priority}
-                        </Badge>
-                      </div>
-                      {task.start_time && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                          <Clock className="w-3 h-3" />
-                          {task.start_time} {task.end_time && `- ${task.end_time}`}
-                        </div>
+                    <input
+                      type="checkbox"
+                      checked={task.status === 'done'}
+                      onChange={() => handleToggleTask(task.id, task.status)}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
+                    />
+                    <div className="flex-1">
+                      <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
                       )}
                     </div>
+                    <Badge 
+                      variant="outline" 
+                      className={
+                        task.priority === 'high' ? 'border-red-500/50 text-red-400' :
+                        task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
+                        'border-green-500/50 text-green-400'
+                      }
+                    >
+                      {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -210,123 +278,149 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Progresso Geral */}
-        <Card className="glass-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-accent" />
-              Progresso Geral
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Taxa de Conclusão</span>
-                <span className="font-medium">{Math.round(completionRate)}%</span>
+        {/* Quick Overview */}
+        <div className="space-y-6">
+          {/* Progress Card */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-accent" />
+                Progresso Hoje
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Tarefas Concluídas</span>
+                  <span>{completedToday.length}/{todayTasks.length}</span>
+                </div>
+                <Progress 
+                  value={todayTasks.length > 0 ? (completedToday.length / todayTasks.length) * 100 : 0} 
+                  className="h-2"
+                />
               </div>
-              <Progress value={completionRate} className="h-2" />
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total de Tarefas</span>
-                <span className="font-medium">{totalTasks}</span>
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">{pendingTasks.length}</p>
+                  <p className="text-xs text-muted-foreground">Pendentes</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-400">{highPriorityTasks.length}</p>
+                  <p className="text-xs text-muted-foreground">Alta Prioridade</p>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Concluídas</span>
-                <span className="font-medium text-green-400">{completedTasks}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Em Andamento</span>
-                <span className="font-medium text-blue-400">{totalTasks - completedTasks}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Projects Summary */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-secondary" />
+                  Projetos Ativos
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => window.location.href = '/projects'}
+                  className="text-xs hover:text-primary"
+                >
+                  Ir para Projetos
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {projects.length === 0 ? (
+                <div className="text-center py-4">
+                  <FolderKanban className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground">Nenhum projeto</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {projects.slice(0, 3).map(project => (
+                    <div key={project.id} className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{project.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Progress 
+                            value={project.tasks ? (project.tasks.filter(t => t.status === 'done').length / Math.max(project.tasks.length, 1)) * 100 : 0} 
+                            className="h-1 flex-1"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {project.members?.length || 0} membro{(project.members?.length || 0) !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {projects.length > 3 && (
+                    <p className="text-xs text-muted-foreground text-center pt-2">
+                      +{projects.length - 3} projeto{projects.length - 3 !== 1 ? 's' : ''} adicional{projects.length - 3 !== 1 ? 'is' : ''}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Goals Summary */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-secondary" />
+                  Metas Atuais
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => window.location.href = '/goals'}
+                  className="text-xs hover:text-primary"
+                >
+                  Ir para Metas
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {goals.length === 0 ? (
+                <div className="text-center py-4">
+                  <Target className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground">Nenhuma meta definida</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {goals.slice(0, 3).map(goal => (
+                    <div key={goal.id} className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{goal.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Progress 
+                            value={goal.progress || 0} 
+                            className="h-1 flex-1"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {Math.round(goal.progress || 0)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {goals.length > 3 && (
+                    <p className="text-xs text-muted-foreground text-center pt-2">
+                      +{goals.length - 3} meta{goals.length - 3 !== 1 ? 's' : ''} adicional{goals.length - 3 !== 1 ? 'is' : ''}
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      {/* Ações Rápidas */}
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Ações Rápidas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
-              <DialogTrigger asChild>
-                <Button className="h-20 glow-button flex-col gap-2">
-                  <Plus className="w-6 h-6" />
-                  Nova Tarefa
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                <TaskForm 
-                  onSubmit={handleCreateTask} 
-                  onCancel={() => setIsTaskFormOpen(false)} 
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isProjectFormOpen} onOpenChange={setIsProjectFormOpen}>
-              <DialogTrigger asChild>
-                <Button className="h-20 glow-button flex-col gap-2">
-                  <FolderKanban className="w-6 h-6" />
-                  Novo Projeto
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                <ProjectForm 
-                  onSubmit={handleCreateProject} 
-                  onCancel={() => setIsProjectFormOpen(false)} 
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isGoalFormOpen} onOpenChange={setIsGoalFormOpen}>
-              <DialogTrigger asChild>
-                <Button className="h-20 glow-button flex-col gap-2">
-                  <Target className="w-6 h-6" />
-                  Nova Meta
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                <GoalForm 
-                  onSubmit={handleCreateGoal} 
-                  onCancel={() => setIsGoalFormOpen(false)} 
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Navegação Rápida */}
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle>Navegação Rápida</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button 
-              variant="outline" 
-              className="h-16 neon-border justify-start"
-              onClick={() => window.location.href = '/projects'}
-            >
-              <FolderKanban className="w-5 h-5 mr-3" />
-              Ir para Projetos
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="h-16 neon-border justify-start"
-              onClick={() => window.location.href = '/goals'}
-            >
-              <Target className="w-5 h-5 mr-3" />
-              Ir para Metas
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

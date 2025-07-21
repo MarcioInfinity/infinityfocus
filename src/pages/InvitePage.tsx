@@ -7,14 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Users, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import { useProjectInvites } from '@/hooks/useProjectInvites';
 import { useAuth } from '@/hooks/useAuth';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getInviteByToken, acceptInviteAsync, isAcceptingInvite } = useProjectInvites();
+  const { getInviteByToken, acceptInvite, isAcceptingInvite } = useProjectInvites();
+  const { showSuccessToast, showErrorToast } = useToastNotifications();
   const [isAccepted, setIsAccepted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const inviteQuery = getInviteByToken(token || '');
   const invite = inviteQuery.data;
@@ -30,17 +31,17 @@ export default function InvitePage() {
     if (!token || !user) return;
 
     try {
-      setError(null);
-      await acceptInviteAsync({ token });
+      await acceptInvite({ token });
       setIsAccepted(true);
+      showSuccessToast('Convite aceito com sucesso!');
       
       // Redirect to projects after a short delay
       setTimeout(() => {
-        navigate('/projects');
+        navigate('/');
       }, 2000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error accepting invite:', error);
-      setError(error.message || 'Erro ao aceitar convite');
+      showErrorToast('Erro ao aceitar convite');
     }
   };
 
@@ -70,7 +71,7 @@ export default function InvitePage() {
     );
   }
 
-  if (!invite || inviteQuery.error) {
+  if (!invite) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
         <Card className="glass-card max-w-md w-full">
@@ -84,8 +85,8 @@ export default function InvitePage() {
             <p className="text-muted-foreground">
               Este convite é inválido, já foi usado ou expirou.
             </p>
-            <Button onClick={() => navigate('/projects')} className="w-full">
-              Voltar aos Projetos
+            <Button onClick={() => navigate('/')} className="w-full">
+              Voltar ao Início
             </Button>
           </CardContent>
         </Card>
@@ -108,7 +109,7 @@ export default function InvitePage() {
               Você agora faz parte do projeto <strong>{invite.projects?.name}</strong>!
             </p>
             <p className="text-sm text-muted-foreground">
-              Redirecionando para projetos...
+              Redirecionando em alguns segundos...
             </p>
             <div className="w-full bg-muted rounded-full h-2">
               <div className="bg-gradient-to-r from-primary to-accent h-2 rounded-full animate-pulse" style={{ width: '100%' }} />
@@ -162,12 +163,6 @@ export default function InvitePage() {
             </div>
           </div>
 
-          {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
-          )}
-
           <div className="space-y-3">
             <Button 
               onClick={handleAcceptInvite}
@@ -187,7 +182,7 @@ export default function InvitePage() {
             
             <Button 
               variant="outline" 
-              onClick={() => navigate('/projects')}
+              onClick={() => navigate('/')}
               className="w-full"
             >
               Cancelar

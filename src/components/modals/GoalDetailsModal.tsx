@@ -14,7 +14,7 @@ import {
 import { Goal } from '@/types';
 
 interface GoalDetailsModalProps {
-  goal: Goal | null;
+  goal: Goal;
   isOpen: boolean;
   onClose: () => void;
   onDelete: (goalId: string) => void;
@@ -22,32 +22,16 @@ interface GoalDetailsModalProps {
 }
 
 export function GoalDetailsModal({ goal, isOpen, onClose, onDelete, onUpdate }: GoalDetailsModalProps) {
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(goal.notes || '');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Early return if goal is null
-  if (!goal) {
-    return null;
-  }
-
-  // Update notes when goal changes
-  useState(() => {
-    if (goal) {
-      setNotes(goal.notes || '');
-    }
-  });
-
   const handleSaveNotes = () => {
-    if (goal) {
-      onUpdate({ ...goal, notes, updated_at: new Date().toISOString() });
-    }
+    onUpdate({ ...goal, notes, updated_at: new Date().toISOString() });
   };
 
   const handleDelete = () => {
-    if (goal) {
-      onDelete(goal.id);
-      onClose();
-    }
+    onDelete(goal.id);
+    onClose();
   };
 
   const daysLeft = goal.due_date 
@@ -157,7 +141,7 @@ export function GoalDetailsModal({ goal, isOpen, onClose, onDelete, onUpdate }: 
 
           {/* Connected Projects and Tasks */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {goal.assigned_projects && goal.assigned_projects.length > 0 && (
+            {goal.assigned_projects.length > 0 && (
               <div className="glass-card p-4 space-y-3">
                 <h3 className="font-semibold">Projetos Vinculados</h3>
                 <div className="space-y-2">
@@ -174,7 +158,7 @@ export function GoalDetailsModal({ goal, isOpen, onClose, onDelete, onUpdate }: 
               </div>
             )}
 
-            {goal.assigned_tasks && goal.assigned_tasks.length > 0 && (
+            {goal.assigned_tasks.length > 0 && (
               <div className="glass-card p-4 space-y-3">
                 <h3 className="font-semibold">Tarefas Vinculadas</h3>
                 <div className="space-y-2">
