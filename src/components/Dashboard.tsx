@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DashboardStats } from './DashboardStats';
-import { TaskFormImproved } from '../components/forms/TaskFormImproved';
+import { TaskFormImproved } from './forms/TaskFormImproved';
 import { ProjectForm } from './forms/ProjectForm';
 import { GoalForm } from './forms/GoalForm';
 import { useAuth } from '@/hooks/useAuth';
@@ -288,7 +288,7 @@ export function DashboardImproved() {
                               )}
                               {task.repeat_enabled && (
                                 <Badge variant="outline" className="text-xs">
-                                  🔄 {task.repeat_type === 'daily' ? 'Diário' : 
+                                  🔄 ${task.repeat_type === 'daily' ? 'Diário' : 
                                       task.repeat_type === 'weekly' ? 'Semanal' :
                                       task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
                                 </Badge>
@@ -300,12 +300,12 @@ export function DashboardImproved() {
                             <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
                               {task.start_time && (
                                 <span className="flex items-center gap-1">
-                                  🕐 {formatTime(task.start_time)}
+                                  🕐 ${formatTime(task.start_time)}
                                 </span>
                               )}
                               {task.due_date && (
                                 <span className="flex items-center gap-1">
-                                  📅 {formatDateWithTime(task.due_date, task.start_time)}
+                                  📅 ${formatDateWithTime(task.due_date, task.start_time)}
                                 </span>
                               )}
                             </div>
@@ -318,7 +318,7 @@ export function DashboardImproved() {
                               'border-green-500/50 text-green-400'
                             }
                           >
-                            {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                            ${task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
                           </Badge>
                         </div>
                       );
@@ -363,17 +363,17 @@ export function DashboardImproved() {
                           <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
                             {task.start_time && (
                               <span className="flex items-center gap-1">
-                                🕐 {formatTime(task.start_time)}
+                                🕐 ${formatTime(task.start_time)}
                               </span>
                             )}
                             {task.due_date && (
                               <span className="flex items-center gap-1">
-                                📅 {formatDateWithTime(task.due_date, task.start_time)}
+                                📅 ${formatDateWithTime(task.due_date, task.start_time)}
                               </span>
                             )}
                             {task.repeat_enabled && (
                               <span className="flex items-center gap-1">
-                                🔄 {task.repeat_type === 'daily' ? 'Diário' : 
+                                🔄 ${task.repeat_type === 'daily' ? 'Diário' : 
                                     task.repeat_type === 'weekly' ? 'Semanal' :
                                     task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
                               </span>
@@ -388,7 +388,7 @@ export function DashboardImproved() {
                             'border-green-500/50 text-green-400'
                           }
                         >
-                          {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                          ${task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
                         </Badge>
                       </div>
                     ))}
@@ -413,7 +413,7 @@ export function DashboardImproved() {
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Tarefas Concluídas</span>
-                  <span>{completedToday.length}/{todayTasks.length}</span>
+                  <span>${completedToday.length}/${todayTasks.length}</span>
                 </div>
                 <Progress 
                   value={todayTasks.length > 0 ? (completedToday.length / todayTasks.length) * 100 : 0} 
@@ -422,11 +422,11 @@ export function DashboardImproved() {
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{pendingTasks.length}</p>
+                  <p className="text-2xl font-bold text-primary">${pendingTasks.length}</p>
                   <p className="text-xs text-muted-foreground">Pendentes</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-400">{highPriorityTasks.length}</p>
+                  <p className="text-2xl font-bold text-red-400">${highPriorityTasks.length}</p>
                   <p className="text-xs text-muted-foreground">Alta Prioridade</p>
                 </div>
               </div>
@@ -473,7 +473,7 @@ export function DashboardImproved() {
                             className="h-1 flex-1"
                           />
                           <span className="text-xs text-muted-foreground">
-                            {project.members?.length || 0} membro{(project.members?.length || 0) !== 1 ? 's' : ''}
+                            ${project.members?.length || 0} membro${(project.members?.length || 0) !== 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
@@ -481,7 +481,7 @@ export function DashboardImproved() {
                   ))}
                   {projects.length > 3 && (
                     <p className="text-xs text-muted-foreground text-center pt-2">
-                      +{projects.length - 3} projeto{projects.length - 3 !== 1 ? 's' : ''} adicional{projects.length - 3 !== 1 ? 'is' : ''}
+                      +${projects.length - 3} projeto${projects.length - 3 !== 1 ? 's' : ''} adicional${projects.length - 3 !== 1 ? 'is' : ''}
                     </p>
                   )}
                 </div>
@@ -525,7 +525,7 @@ export function DashboardImproved() {
                             className="h-1 flex-1"
                           />
                           <span className="text-xs text-muted-foreground">
-                            {Math.round(goal.progress || 0)}%
+                            ${Math.round(goal.progress || 0)}%
                           </span>
                         </div>
                       </div>
@@ -533,7 +533,7 @@ export function DashboardImproved() {
                   ))}
                   {goals.length > 3 && (
                     <p className="text-xs text-muted-foreground text-center pt-2">
-                      +{goals.length - 3} meta{goals.length - 3 !== 1 ? 's' : ''} adicional{goals.length - 3 !== 1 ? 'is' : ''}
+                      +${goals.length - 3} meta${goals.length - 3 !== 1 ? 's' : ''} adicional${goals.length - 3 !== 1 ? 'is' : ''}
                     </p>
                   )}
                 </div>
@@ -545,4 +545,5 @@ export function DashboardImproved() {
     </div>
   );
 }
+
 
