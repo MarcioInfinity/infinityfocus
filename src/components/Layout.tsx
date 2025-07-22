@@ -1,236 +1,204 @@
-import { ReactNode, useState } from 'react';
-import { Home, CheckSquare, FolderKanban, Target, Bell, Settings, Menu, X, LogOut } from 'lucide-react';
+
+import React from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { Badge } from '@/components/ui/badge';
+import {
+  LayoutDashboard,
+  CheckSquare,
+  FolderOpen,
+  Target,
+  Settings,
+  Menu,
+  X,
+  LogOut,
+  User
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { supabase } from '@/integrations/supabase/client';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-interface LayoutProps {
-  children: ReactNode;
-}
-const navItems = [{
-  icon: Home,
-  label: 'Dashboard',
-  path: '/'
-}, {
-  icon: CheckSquare,
-  label: 'Tarefas',
-  path: '/tasks'
-}, {
-  icon: FolderKanban,
-  label: 'Projetos',
-  path: '/projects'
-}, {
-  icon: Target,
-  label: 'Metas',
-  path: '/goals'
-}, {
-  icon: Bell,
-  label: 'Notificações',
-  path: '/notifications'
-}, {
-  icon: Settings,
-  label: 'Configurações',
-  path: '/settings'
-}];
-const mobileBottomNavItems = [{
-  icon: Home,
-  label: 'Dashboard',
-  path: '/'
-}, {
-  icon: CheckSquare,
-  label: 'Tarefas',
-  path: '/tasks'
-}, {
-  icon: FolderKanban,
-  label: 'Projetos',
-  path: '/projects'
-}, {
-  icon: Target,
-  label: 'Metas',
-  path: '/goals'
-}];
-export function Layout({
-  children
-}: LayoutProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useProfile } from '@/hooks/useProfile';
+
+const navigation = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Tarefas', href: '/tasks', icon: CheckSquare },
+  { name: 'Projetos', href: '/projects', icon: FolderOpen },
+  { name: 'Metas', href: '/goals', icon: Target },
+  { name: 'Configurações', href: '/settings', icon: Settings },
+];
+
+export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    showSuccessToast
-  } = useToastNotifications();
-  const {
-    user
-  } = useAuth();
-  const {
-    profile
-  } = useProfile();
-  const isMobile = useIsMobile();
-  const isActivePath = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(path);
-  };
-  const handleLogout = async () => {
+  const { user, signOut } = useAuth();
+  const { profile } = useProfile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
-      showSuccessToast('Logout realizado com sucesso!');
+      await signOut();
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
 
-  // Mobile Layout
-  if (isMobile) {
-    return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-        {/* Background Effects */}
-        
-
-        {/* Mobile Top Navigation */}
-        <div className="fixed top-0 left-0 right-0 z-50 h-14 glass-card border-b border-white/20 flex items-center justify-between px-4">
-          {/* Logo à esquerda */}
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
-              <img src="/assets/images/infinity_focus_logo_no_bg.png" alt="Infinity Focus Logo" className="h-4 w-4" />
-            </div>
-            <h1 className="text-sm font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Infinity Focus
-            </h1>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      {/* Mobile Header */}
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between p-4 bg-card/50 backdrop-blur-sm border-b border-border/50">
+          <div className="flex items-center gap-3">
+            <img 
+              src="/assets/images/infinity_focus_logo_no_bg.png" 
+              alt="Infinity Academy" 
+              className="h-10 w-auto object-contain"
+              style={{ 
+                filter: 'drop-shadow(0 0 8px rgba(99, 102, 241, 0.3))',
+                background: 'transparent'
+              }}
+            />
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Infinity Academy
+            </span>
           </div>
+          
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar} alt={profile?.name} />
+                    <AvatarFallback>
+                      {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sair</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72">
+                <nav className="flex flex-col gap-2 mt-6">
+                  {navigation.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Button
+                        key={item.name}
+                        variant={isActive ? "default" : "ghost"}
+                        className={cn(
+                          "justify-start",
+                          isActive && "glow-button"
+                        )}
+                        onClick={() => {
+                          navigate(item.href);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {item.name}
+                      </Button>
+                    );
+                  })}
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </div>
 
-          {/* Menu Dropdown à direita */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Configurações
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/notifications')}>
-                <Bell className="mr-2 h-4 w-4" />
-                Notificações
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout} className="text-red-400">
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <div className="lg:flex">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
+          <div className="flex flex-col flex-grow bg-card/30 backdrop-blur-sm border-r border-border/50">
+            {/* Logo */}
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-border/50">
+              <img 
+                src="/assets/images/infinity_focus_logo_no_bg.png" 
+                alt="Infinity Academy" 
+                className="h-12 w-auto object-contain"
+                style={{ 
+                  filter: 'drop-shadow(0 0 10px rgba(99, 102, 241, 0.4))',
+                  background: 'transparent'
+                }}
+              />
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Infinity Academy
+              </span>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex-1 px-4 py-4 space-y-2">
+              {navigation.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Button
+                    key={item.name}
+                    variant={isActive ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start",
+                      isActive && "glow-button"
+                    )}
+                    onClick={() => navigate(item.href)}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.name}
+                  </Button>
+                );
+              })}
+            </nav>
+
+            {/* User Profile */}
+            <div className="p-4 border-t border-border/50">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-start h-auto p-2">
+                    <Avatar className="h-8 w-8 mr-2">
+                      <AvatarImage src={profile?.avatar} alt={profile?.name} />
+                      <AvatarFallback>
+                        {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-medium">{profile?.name || 'Usuário'}</span>
+                      <span className="text-xs text-muted-foreground">{user?.email}</span>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
 
         {/* Main Content */}
-        <div className="pt-14 pb-20 min-h-screen">
-          <main className="p-4">
-            {children}
+        <div className="lg:ml-64 flex-1 flex flex-col min-h-screen">
+          <main className="flex-1 p-4 lg:p-8">
+            <div className="mx-auto max-w-7xl">
+              <Outlet />
+            </div>
           </main>
         </div>
-
-        {/* Mobile Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 h-16 glass-card border-t border-white/20">
-          <div className="flex items-center justify-around h-full px-2">
-            {mobileBottomNavItems.map(item => {
-            const isActive = isActivePath(item.path);
-            return <Link key={item.path} to={item.path} className={`flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-white'}`}>
-                  <item.icon className={`h-5 w-5 mb-1 ${isActive ? 'text-primary' : ''}`} />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </Link>;
-          })}
-          </div>
-        </div>
-
-        {/* Toast Notifications */}
-        <Toaster />
-      </div>;
-  }
-
-  // Desktop Layout
-  return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Background Effects */}
-      
-
-      {/* Mobile Menu Button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <Button variant="outline" size="sm" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="glass-card neon-border">
-          {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-        </Button>
       </div>
-
-      {/* Sidebar */}
-      <div className={`fixed left-0 top-0 z-40 h-full w-64 glass-card border-r border-white/20 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-        {/* Logo */}
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <img src="/assets/images/infinity_focus_logo_no_bg.png" alt="Infinity Focus Logo" className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Infinity Focus
-              </h1>
-              <p className="text-xs text-muted-foreground">Gestão & Produtividade</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="p-4 space-y-2 flex-1">
-          {navItems.map(item => {
-          const isActive = isActivePath(item.path);
-          return <Link key={item.path} to={item.path} onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive ? 'bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 text-primary glow-text' : 'hover:bg-white/5 text-muted-foreground hover:text-white'}`}>
-                <item.icon className={`h-5 w-5 ${isActive ? 'text-primary' : ''}`} />
-                <span className="font-medium">{item.label}</span>
-              </Link>;
-        })}
-        </nav>
-
-        {/* User Profile */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={profile?.avatar || ''} />
-                <AvatarFallback className="text-sm font-semibold bg-primary/20 text-primary">
-                  {(profile?.name || user?.email || 'U').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
-                  {profile?.name || user?.email || 'Usuário'}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {profile?.email || user?.email || ''}
-                </p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10" title="Sair">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />}
-
-      {/* Main Content */}
-      <div className="lg:ml-64 min-h-screen">
-        <main className="p-4 lg:p-8 pt-16 lg:pt-8">
-          {children}
-        </main>
-      </div>
-
-      {/* Toast Notifications */}
-      <Toaster />
-    </div>;
+    </div>
+  );
 }

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Plus, Target, Calendar, TrendingUp, Edit, Trash2, Eye, MoreHorizontal, CheckCircle, Award, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,9 @@ import { EditGoalModal } from './modals/EditGoalModal';
 import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { GoalChecklist } from './GoalChecklist';
 import { useGoals } from '@/hooks/useGoals';
+import { useRewards } from '@/hooks/useRewards';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
+
 export function Goals() {
   const {
     goals,
@@ -23,10 +26,18 @@ export function Goals() {
     deleteGoal,
     isLoading
   } = useGoals();
+  
+  const {
+    createReward,
+    claimReward,
+    isCreating: isCreatingReward
+  } = useRewards();
+  
   const {
     showSuccessToast,
     showErrorToast
   } = useToastNotifications();
+  
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [isRewardFormOpen, setIsRewardFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<any>(null);
@@ -35,17 +46,30 @@ export function Goals() {
   const [currentTab, setCurrentTab] = useState('ativas');
   const [filterYear, setFilterYear] = useState<string>('2025');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
+
   const handleCreateGoal = (goalData: any) => {
     createGoal(goalData);
     setIsGoalFormOpen(false);
     showSuccessToast('Meta criada com sucesso!');
   };
+
   const handleCreateReward = (rewardData: any) => {
-    // This will be connected to Supabase later
-    console.log('Reward data:', rewardData);
+    // Determine attributed_to_type and attributed_to_id based on form data
+    const rewardPayload = {
+      title: rewardData.title,
+      description: rewardData.description,
+      celebration_level: rewardData.celebration_level,
+      investment_value: rewardData.investment_value,
+      currency: rewardData.currency || 'BRL',
+      attributed_to_type: rewardData.attributed_to_type || 'goal',
+      attributed_to_id: rewardData.attributed_to_id,
+      attributed_item_name: rewardData.attributed_item_name,
+    };
+
+    createReward(rewardPayload);
     setIsRewardFormOpen(false);
-    showSuccessToast('Recompensa criada com sucesso!');
   };
+
   const handleEditGoal = (goalData: any) => {
     updateGoal({
       id: goalData.id,
@@ -53,6 +77,7 @@ export function Goals() {
     });
     showSuccessToast('Meta atualizada com sucesso!');
   };
+
   const handleDeleteGoal = async (goalId: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
       try {
@@ -63,6 +88,7 @@ export function Goals() {
       }
     }
   };
+
   const handleClaimReward = (goalId: string) => {
     // Mark reward as claimed
     updateGoal({
@@ -74,17 +100,21 @@ export function Goals() {
     });
     showSuccessToast('Recompensa resgatada!');
   };
+
   const openEditModal = (goal: any) => {
     setSelectedGoal(goal);
     setIsEditModalOpen(true);
   };
+
   const openDetailsModal = (goal: any) => {
     setSelectedGoal(goal);
     setIsDetailsModalOpen(true);
   };
+
   const filterGoals = (status: string) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
     switch (status) {
       case 'ativas':
         return goals.filter(goal => goal.progress < 100);
@@ -123,7 +153,9 @@ export function Goals() {
         return goals;
     }
   };
+
   const filteredGoals = filterGoals(currentTab);
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -136,6 +168,7 @@ export function Goals() {
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'professional':
@@ -154,6 +187,7 @@ export function Goals() {
         return '🎯';
     }
   };
+
   if (isLoading) {
     return <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -175,6 +209,7 @@ export function Goals() {
         </div>
       </div>;
   }
+
   return <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -204,7 +239,12 @@ export function Goals() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <RewardForm onSubmit={handleCreateReward} onCancel={() => setIsRewardFormOpen(false)} />
+              <RewardForm 
+                onSubmit={handleCreateReward} 
+                onCancel={() => setIsRewardFormOpen(false)}
+                goals={goals}
+                isSubmitting={isCreatingReward}
+              />
             </DialogContent>
           </Dialog>
         </div>

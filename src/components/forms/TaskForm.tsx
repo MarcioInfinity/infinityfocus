@@ -1,716 +1,526 @@
-import { useState } from 'react';
+
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import {
-  CalendarIcon,
-  Plus,
-  X,
-  Clock,
-  Bell,
-  Repeat,
-  FolderKanban,
-  Target,
-  CheckSquare,
-  Trash2
-} from 'lucide-react';
-import { Priority, CategoryType, FrequencyType } from '@/types';
+import { CalendarIcon, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { CategoryType, Priority, FrequencyType } from '@/types';
 
-// Schema corrigido com validação de horário mais flexível
 const taskSchema = z.object({
-  title: z.string().min(1, 'Nome da tarefa é obrigatório'),
-  priority: z.enum(['low', 'medium', 'high']),
-  category: z.string(),
-  custom_category: z.string().optional(),
-  start_date: z.date().optional(),
-  due_date: z.date().optional(),
-  is_indefinite: z.boolean(),
-  // Validação de horário corrigida - aceita formato HH:mm ou vazio
-  time: z.string()
-    .optional()
-    .refine((val) => {
-      if (!val || val === '') return true;
-      // Regex para validar formato HH:mm (24h)
-      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      return timeRegex.test(val);
-    }, {
-      message: 'Formato de horário inválido. Use HH:mm (ex: 14:30)'
-    }),
-  notify_enabled: z.boolean(),
-  frequency_enabled: z.boolean(),
-  frequency_type: z.enum(["daily", "weekly", "monthly", "custom"]).optional(),
-  frequency_days: z.array(z.number()).optional(),
-  monthly_day: z.number().min(1).max(31).optional(),
-  custom_dates: z.array(z.date()).optional(),
-  assign_to_project: z.boolean(),
-  project_id: z.string().optional(),
+  title: z.string().min(1, 'Título é obrigatório'),
   description: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high']),
+  category: z.enum([
+    'professional', 'intellectual', 'finance', 'social', 
+    'relationship', 'family', 'leisure', 'health', 'spiritual', 'emotional', 'other'
+  ]),
+  due_date: z.date().optional(),
+  start_date: z.date().optional(),
+  start_time: z.string().optional(),
+  end_time: z.string().optional(),
+  is_indefinite: z.boolean().default(false),
+  tags: z.array(z.string()).default([]),
+  notifications_enabled: z.boolean().default(false),
+  repeat_enabled: z.boolean().default(false),
+  repeat_type: z.enum(['daily', 'weekly', 'monthly', 'custom']).optional(),
+  repeat_days: z.array(z.string()).optional(),
+  monthly_day: z.number().min(1).max(31).optional(),
+  project_id: z.string().optional(),
+  goal_id: z.string().optional(),
 });
 
-interface ChecklistItem {
-  id: string;
-  text: string;
-  completed: boolean;
-}
+type TaskFormData = z.infer<typeof taskSchema>;
 
 interface TaskFormProps {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: TaskFormData) => void;
   onCancel: () => void;
-  initialData?: any;
-  projects?: any[];
   defaultProjectId?: string;
+  defaultGoalId?: string;
+  initialData?: Partial<TaskFormData>;
 }
 
-const categories = [
-  { value: 'professional', label: 'Profissional' },
-  { value: 'intellectual', label: 'Intelectual' },
-  { value: 'finance', label: 'Finanças' },
-  { value: 'social', label: 'Social' },
-  { value: 'relationship', label: 'Relacionamento' },
-  { value: 'health', label: 'Saúde' },
-  { value: 'personal', label: 'Pessoal' },
-  { value: 'custom', label: 'Personalizada' },
-];
+export function TaskForm({ onSubmit, onCancel, defaultProjectId, defaultGoalId, initialData }: TaskFormProps) {
+  const [newTag, setNewTag] = useState('');
+  const [customDays, setCustomDays] = useState<number[]>([]);
 
-const frequencyOptions = [
-  { value: 'daily', label: 'Diariamente' },
-  { value: 'weekly', label: 'Semanalmente' },
-  { value: 'monthly', label: 'Mensalmente' },
-  { value: 'custom', label: 'Personalizado' },
-];
-
-const weekDays = [
-  { value: 0, label: 'Dom' },
-  { value: 1, label: 'Seg' },
-  { value: 2, label: 'Ter' },
-  { value: 3, label: 'Qua' },
-  { value: 4, label: 'Qui' },
-  { value: 5, label: 'Sex' },
-  { value: 6, label: 'Sáb' },
-];
-
-export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defaultProjectId }: TaskFormProps) {
-  const [checklist, setChecklist] = useState<ChecklistItem[]>(initialData?.checklist || []);
-  const [newChecklistItem, setNewChecklistItem] = useState("");
-  const [showCustomCategory, setShowCustomCategory] = useState(initialData?.category === "custom");
-
-  const form = useForm<z.infer<typeof taskSchema>>({
+  const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: initialData?.title || "",
-      priority: initialData?.priority || "medium",
-      category: initialData?.category || "professional",
-      custom_category: initialData?.custom_category || "",
-      start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
-      due_date: initialData?.due_date ? new Date(initialData.due_date) : undefined,
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      priority: initialData?.priority || 'medium',
+      category: initialData?.category || 'professional',
+      due_date: initialData?.due_date,
+      start_date: initialData?.start_date,
+      start_time: initialData?.start_time || '',
+      end_time: initialData?.end_time || '',
       is_indefinite: initialData?.is_indefinite || false,
-      time: initialData?.time || "",
-      notify_enabled: initialData?.notify_enabled || false,
-      frequency_enabled: initialData?.repeat_enabled || false,
-      frequency_type: initialData?.repeat_type || "daily",
-      frequency_days: initialData?.repeat_days?.map(Number) || [],
-      monthly_day: initialData?.repeat_monthly_day || undefined,
-      custom_dates: initialData?.repeat_custom_dates?.map((date: string) => new Date(date)) || [],
-      assign_to_project: initialData?.project_id ? true : (!!defaultProjectId || false),
-      project_id: initialData?.project_id || defaultProjectId || "",
-      description: initialData?.description || "",
+      tags: initialData?.tags || [],
+      notifications_enabled: initialData?.notifications_enabled || false,
+      repeat_enabled: initialData?.repeat_enabled || false,
+      repeat_type: initialData?.repeat_type,
+      repeat_days: initialData?.repeat_days || [],
+      monthly_day: initialData?.monthly_day,
+      project_id: defaultProjectId || initialData?.project_id,
+      goal_id: defaultGoalId || initialData?.goal_id,
     },
   });
 
-  const watchIsIndefinite = form.watch('is_indefinite');
-  const watchNotifyEnabled = form.watch('notify_enabled');
-  const watchFrequencyEnabled = form.watch('frequency_enabled');
-  const watchAssignToProject = form.watch('assign_to_project');
-  const watchCategory = form.watch('category');
-  const watchFrequencyType = form.watch('frequency_type');
+  const repeatEnabled = form.watch('repeat_enabled');
+  const repeatType = form.watch('repeat_type');
+  const tags = form.watch('tags');
 
-  const addChecklistItem = () => {
-    if (newChecklistItem.trim()) {
-      const newItem: ChecklistItem = {
-        id: Date.now().toString(),
-        text: newChecklistItem.trim(),
-        completed: false,
-      };
-      setChecklist([...checklist, newItem]);
-      setNewChecklistItem('');
+  const addTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      form.setValue('tags', [...tags, newTag.trim()]);
+      setNewTag('');
     }
   };
 
-  const removeChecklistItem = (id: string) => {
-    setChecklist(checklist.filter(item => item.id !== id));
+  const removeTag = (tagToRemove: string) => {
+    form.setValue('tags', tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleSubmit = (values: z.infer<typeof taskSchema>) => {
-    const taskData = {
-      ...values,
-      start_time: values.time || null,
-      checklist: checklist,
-      repeat_enabled: values.frequency_enabled,
-      repeat_type: values.frequency_type || null,
-      repeat_days: values.frequency_days?.map(day => day.toString()) || [],
-      repeat_monthly_day: values.monthly_day || null,
-      repeat_custom_dates: values.custom_dates?.map(date => date.toISOString()) || [],
-    };
-    
-    delete taskData.time;
-    delete taskData.frequency_enabled;
-    delete taskData.frequency_type;
-    delete taskData.frequency_days;
-    delete taskData.monthly_day;
-    delete taskData.custom_dates;
-    
-    onSubmit(taskData);
+  const toggleCustomDay = (day: number) => {
+    const newCustomDays = customDays.includes(day) 
+      ? customDays.filter(d => d !== day)
+      : [...customDays, day].sort((a, b) => a - b);
+    setCustomDays(newCustomDays);
+    form.setValue('repeat_days', newCustomDays.map(String));
+  };
+
+  const handleSubmit = (data: TaskFormData) => {
+    onSubmit(data);
   };
 
   return (
-    <Card className="glass-card max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold flex items-center gap-2">
-          <Plus className="w-6 h-6" />
-          {initialData ? 'Editar Tarefa' : 'Nova Tarefa'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            {/* Nome da Tarefa */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Tarefa *</FormLabel>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">
+            {initialData ? 'Editar Tarefa' : 'Nova Tarefa'}
+          </h2>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Título *</FormLabel>
+              <FormControl>
+                <Input placeholder="Digite o título da tarefa" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Descreva a tarefa (opcional)" 
+                  className="min-h-[80px]"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="priority"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Prioridade</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <Input placeholder="Digite o nome da tarefa" {...field} />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a prioridade" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    <SelectItem value="low">🟢 Baixa</SelectItem>
+                    <SelectItem value="medium">🟡 Média</SelectItem>
+                    <SelectItem value="high">🔴 Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            {/* Prioridade */}
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prioridade</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Categoria</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="professional">💼 Profissional</SelectItem>
+                    <SelectItem value="intellectual">🧠 Intelectual</SelectItem>
+                    <SelectItem value="finance">💰 Financeiro</SelectItem>
+                    <SelectItem value="social">👥 Social</SelectItem>
+                    <SelectItem value="relationship">❤️ Relacionamento</SelectItem>
+                    <SelectItem value="family">👨‍👩‍👧‍👦 Família</SelectItem>
+                    <SelectItem value="leisure">🎮 Lazer</SelectItem>
+                    <SelectItem value="health">🏥 Saúde</SelectItem>
+                    <SelectItem value="spiritual">🙏 Espiritual</SelectItem>
+                    <SelectItem value="emotional">😊 Emocional</SelectItem>
+                    <SelectItem value="other">📝 Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="start_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Data de Início</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a prioridade" />
-                      </SelectTrigger>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "dd/MM/yyyy")
+                        ) : (
+                          <span>Selecione a data</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="low">🟢 Baixa</SelectItem>
-                      <SelectItem value="medium">🟡 Média</SelectItem>
-                      <SelectItem value="high">🔴 Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            {/* Categoria */}
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Categoria</FormLabel>
-                  <Select 
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      setShowCustomCategory(value === 'custom');
-                    }} 
-                    defaultValue={field.value}
+          <FormField
+            control={form.control}
+            name="due_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Data de Vencimento</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "dd/MM/yyyy")
+                        ) : (
+                          <span>Selecione a data</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="start_time"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hora de Início</FormLabel>
+                <FormControl>
+                  <Input type="time" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="end_time"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Hora de Término</FormLabel>
+                <FormControl>
+                  <Input type="time" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="is_indefinite"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Tarefa Indefinida</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Tarefa sem data de vencimento específica
+                </div>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <div>
+          <FormLabel>Tags</FormLabel>
+          <div className="flex gap-2 mt-2">
+            <Input
+              placeholder="Adicionar tag"
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+            />
+            <Button type="button" variant="outline" size="sm" onClick={addTag}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {tags.map((tag) => (
+                <div key={tag} className="flex items-center gap-1 bg-secondary px-2 py-1 rounded-md text-sm">
+                  {tag}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 w-4 h-4"
+                    onClick={() => removeTag(tag)}
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Categoria Personalizada */}
-            {showCustomCategory && (
-              <FormField
-                control={form.control}
-                name="custom_category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome da Categoria Personalizada</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Digite o nome da categoria" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Datas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="start_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data de Início</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: ptBR })
-                            ) : (
-                              <span>Selecionar data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date("1900-01-01")}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="due_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Data de Término</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={`w-full pl-3 text-left font-normal ${!field.value && "text-muted-foreground"}`}
-                            disabled={watchIsIndefinite}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP", { locale: ptBR })
-                            ) : (
-                              <span>Selecionar data</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date("1900-01-01")}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              ))}
             </div>
+          )}
+        </div>
 
-            {/* Tarefa Indefinida */}
-            <FormField
-              control={form.control}
-              name="is_indefinite"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Tarefa Indefinida</FormLabel>
-                    <div className="text-sm text-muted-foreground">
-                      Tarefa sem data de término específica
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {/* Horário - Campo corrigido */}
-            <FormField
-              control={form.control}
-              name="time"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Horário
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="time"
-                      placeholder="HH:mm"
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Notificações */}
-            <FormField
-              control={form.control}
-              name="notify_enabled"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base flex items-center gap-2">
-                      <Bell className="w-4 h-4" />
-                      Notificações
-                    </FormLabel>
-                    <div className="text-sm text-muted-foreground">
-                      Receber notificações sobre esta tarefa
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {/* Repetição */}
-            <FormField
-              control={form.control}
-              name="frequency_enabled"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base flex items-center gap-2">
-                      <Repeat className="w-4 h-4" />
-                      Repetir Tarefa
-                    </FormLabel>
-                    <div className="text-sm text-muted-foreground">
-                      Configurar repetição automática
-                    </div>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {/* Opções de Repetição */}
-            {watchFrequencyEnabled && (
-              <div className="space-y-4 border rounded-lg p-4">
-                <FormField
-                  control={form.control}
-                  name="frequency_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Frequência</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a frequência" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {frequencyOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Seleção de Dias da Semana */}
-                {(watchFrequencyType === 'weekly' || watchFrequencyType === 'custom') && (
-                  <FormField
-                    control={form.control}
-                    name="frequency_days"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dias da Semana</FormLabel>
-                        <div className="flex flex-wrap gap-2">
-                          {weekDays.map((day) => (
-                            <div key={day.value} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`day-${day.value}`}
-                                checked={field.value?.includes(day.value) || false}
-                                onCheckedChange={(checked) => {
-                                  const currentDays = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...currentDays, day.value]);
-                                  } else {
-                                    field.onChange(currentDays.filter(d => d !== day.value));
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`day-${day.value}`} className="text-sm">
-                                {day.label}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Repetição Mensal */}
-                {watchFrequencyType === 'monthly' && (
-                  <FormField
-                    control={form.control}
-                    name="monthly_day"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dia do Mês</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="Ex: 15" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            min={1}
-                            max={31}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Repetição Personalizada - Seleção de Datas */}
-                {watchFrequencyType === 'custom' && (
-                  <FormField
-                    control={form.control}
-                    name="custom_dates"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Datas Personalizadas</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className={`w-full pl-3 text-left font-normal ${!field.value || field.value.length === 0 && "text-muted-foreground"}`}
-                              >
-                                {field.value && field.value.length > 0 ? (
-                                  field.value.map((date: Date) => format(date, "PPP", { locale: ptBR })).join(", ")
-                                ) : (
-                                  <span>Selecionar datas</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="multiple"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+        <FormField
+          control={form.control}
+          name="notifications_enabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Notificações</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Receber lembretes sobre esta tarefa
+                </div>
               </div>
-            )}
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
-            {/* Atribuir a Projeto */}
-            {projects.length > 0 && (
-              <FormField
-                control={form.control}
-                name="assign_to_project"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base flex items-center gap-2">
-                        <FolderKanban className="w-4 h-4" />
-                        Atribuir a Projeto
-                      </FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Vincular esta tarefa a um projeto
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Seleção de Projeto */}
-            {watchAssignToProject && projects.length > 0 && (
-              <FormField
-                control={form.control}
-                name="project_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Projeto</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um projeto" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Descrição */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Descreva os detalhes da tarefa..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Checklist */}
-            <div className="space-y-4">
-              <Label className="text-base flex items-center gap-2">
-                <CheckSquare className="w-4 h-4" />
-                Checklist
-              </Label>
-              
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Adicionar item ao checklist"
-                  value={newChecklistItem}
-                  onChange={(e) => setNewChecklistItem(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addChecklistItem()}
-                />
-                <Button type="button" onClick={addChecklistItem} size="sm">
-                  <Plus className="w-4 h-4" />
-                </Button>
+        <FormField
+          control={form.control}
+          name="repeat_enabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Repetir Tarefa</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Configurar repetição automática
+                </div>
               </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
-              {checklist.length > 0 && (
-                <div className="space-y-2">
-                  {checklist.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2 p-2 border rounded">
+        {repeatEnabled && (
+          <FormField
+            control={form.control}
+            name="repeat_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Repetição</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de repetição" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="daily">Diariamente</SelectItem>
+                    <SelectItem value="weekly">Semanalmente</SelectItem>
+                    <SelectItem value="monthly">Mensalmente</SelectItem>
+                    <SelectItem value="custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {repeatEnabled && repeatType === 'weekly' && (
+          <FormField
+            control={form.control}
+            name="repeat_days"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dias da Semana</FormLabel>
+                <div className="grid grid-cols-7 gap-2">
+                  {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, index) => (
+                    <div key={day} className="flex items-center space-x-2">
                       <Checkbox
-                        checked={item.completed}
+                        id={`day-${index}`}
+                        checked={field.value?.includes(String(index)) || false}
                         onCheckedChange={(checked) => {
-                          setChecklist(checklist.map(i => 
-                            i.id === item.id ? { ...i, completed: checked as boolean } : i
-                          ));
+                          const currentDays = field.value || [];
+                          if (checked) {
+                            field.onChange([...currentDays, String(index)]);
+                          } else {
+                            field.onChange(currentDays.filter(d => d !== String(index)));
+                          }
                         }}
                       />
-                      <span className={item.completed ? 'line-through text-muted-foreground' : ''}>
-                        {item.text}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeChecklistItem(item.id)}
-                        className="ml-auto"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <label htmlFor={`day-${index}`} className="text-sm font-medium">
+                        {day}
+                      </label>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
-            {/* Botões */}
-            <div className="flex gap-4 pt-4">
-              <Button type="submit" className="flex-1">
-                {initialData ? 'Atualizar Tarefa' : 'Criar Tarefa'}
-              </Button>
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancelar
-              </Button>
+        {repeatEnabled && repeatType === 'monthly' && (
+          <FormField
+            control={form.control}
+            name="monthly_day"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Dia do Mês</FormLabel>
+                <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o dia do mês" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                      <SelectItem key={day} value={day.toString()}>
+                        Dia {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {repeatEnabled && repeatType === 'custom' && (
+          <FormItem>
+            <FormLabel>Dias Personalizados do Mês</FormLabel>
+            <div className="grid grid-cols-7 gap-2 max-h-40 overflow-y-auto border rounded p-2">
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                <div key={day} className="flex items-center space-x-1">
+                  <Checkbox
+                    id={`custom-day-${day}`}
+                    checked={customDays.includes(day)}
+                    onCheckedChange={() => toggleCustomDay(day)}
+                  />
+                  <label htmlFor={`custom-day-${day}`} className="text-sm">
+                    {day}
+                  </label>
+                </div>
+              ))}
             </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+            {customDays.length > 0 && (
+              <div className="text-sm text-muted-foreground mt-2">
+                Selecionados: {customDays.join(', ')}
+              </div>
+            )}
+          </FormItem>
+        )}
+
+        <div className="flex gap-2 pt-4">
+          <Button type="submit" className="flex-1">
+            {initialData ? 'Atualizar' : 'Criar'} Tarefa
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
