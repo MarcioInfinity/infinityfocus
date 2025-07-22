@@ -1,11 +1,10 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
 import { Task } from '@/types';
 
-export function useTasks() {
+export function useTasksImproved() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
@@ -49,6 +48,7 @@ export function useTasks() {
 
       console.log('Creating task with data:', taskData);
 
+      // CORREÇÃO #1: Melhorar o mapeamento dos dados de repetição
       const taskPayload = {
         title: taskData.title,
         description: taskData.description || null,
@@ -57,7 +57,7 @@ export function useTasks() {
         status: 'todo' as const,
         due_date: taskData.due_date || null,
         start_date: taskData.start_date || null,
-        start_time: taskData.time || null,
+        start_time: taskData.start_time || null,
         end_time: taskData.end_time || null,
         is_indefinite: taskData.is_indefinite || false,
         assigned_to: taskData.assigned_to || null,
@@ -65,9 +65,14 @@ export function useTasks() {
         goal_id: taskData.goal_id || null,
         tags: taskData.tags || [],
         notifications_enabled: taskData.notify_enabled || false,
-        repeat_enabled: taskData.frequency_enabled || false,
-        repeat_type: taskData.frequency_type || null,
-        repeat_days: taskData.frequency_days ? taskData.frequency_days.map(String) : null,
+        
+        // CORREÇÃO: Campos de repetição corrigidos
+        repeat_enabled: taskData.repeat_enabled || false,
+        repeat_type: taskData.repeat_type || null,
+        repeat_days: taskData.repeat_days || null,
+        repeat_monthly_day: taskData.repeat_monthly_day || null,
+        repeat_custom_dates: taskData.repeat_custom_dates || null,
+        
         created_by: user.id,
         user_id: user.id,
         owner_id: user.id,
@@ -182,8 +187,99 @@ export function useTasks() {
     },
   });
 
+  // CORREÇÃO #2: Função melhorada para filtrar tarefas do dia
+  const getTodayTasks = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar para o início do dia
+    const currentWeekday = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentMonthDay = today.getDate();
+    
+    return (tasksQuery.data || []).filter(task => {
+      // Ignorar tarefas concluídas
+      if (task.status === 'done') return false;
+
+      // 1. Tarefas com data de término no passado (atrasadas)
+      if (task.due_date) {
+        const dueDate = new Date(task.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        if (dueDate < today) {
+          return true; // Tarefa atrasada
+        }
+      }
+
+      // 2. Tarefas com data de início ou término para hoje
+      const isToday = (dateString: string | undefined) => {
+        if (!dateString) return false;
+        const date = new Date(dateString);
+        date.setHours(0, 0, 0, 0);
+        return date.getTime() === today.getTime();
+      };
+
+      if (isToday(task.start_date) || isToday(task.due_date)) {
+        return true;
+      }
+
+      // 3. Tarefas com repetição que se aplicam a hoje
+      if (task.repeat_enabled) {
+        switch (task.repeat_type) {
+          case 'daily':
+            return true;
+          case 'weekly':
+            // CORREÇÃO: Verificar se repeat_days é array de strings ou números
+            const repeatDaysWeekly = Array.isArray(task.repeat_days) 
+              ? task.repeat_days.map(d => typeof d === 'string' ? parseInt(d) : d) 
+              : [];
+            return repeatDaysWeekly.includes(currentWeekday);
+          case 'monthly':
+            return task.repeat_monthly_day === currentMonthDay;
+          case 'custom':
+            // CORREÇÃO: Verificar datas personalizadas
+            const repeatCustomDates = Array.isArray(task.repeat_custom_dates) 
+              ? task.repeat_custom_dates.map(d => new Date(d)) 
+              : [];
+            return repeatCustomDates.some(d => {
+              d.setHours(0, 0, 0, 0);
+              return d.getTime() === today.getTime();
+            });
+          default:
+            return false;
+        }
+      }
+      
+      return false;
+    }).sort((a, b) => {
+      // Prioridade: Alta > Média > Baixa
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      // Tarefas atrasadas primeiro
+      const aIsOverdue = a.due_date && new Date(a.due_date).setHours(0,0,0,0) < today.getTime();
+      const bIsOverdue = b.due_date && new Date(b.due_date).setHours(0,0,0,0) < today.getTime();
+      if (aIsOverdue && !bIsOverdue) return -1;
+      if (!aIsOverdue && bIsOverdue) return 1;
+
+      // Depois por horário (se disponível)
+      if (a.start_time && b.start_time) {
+        return a.start_time.localeCompare(b.start_time);
+      }
+      if (a.start_time && !b.start_time) return -1;
+      if (!a.start_time && b.start_time) return 1;
+      
+      // Finalmente por data de término (mais próxima primeiro)
+      if (a.due_date && b.due_date) {
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+      if (a.due_date && !b.due_date) return -1;
+      if (!a.due_date && b.due_date) return 1;
+
+      return 0;
+    });
+  };
+
   return {
     tasks: tasksQuery.data || [],
+    todayTasks: getTodayTasks(),
     isLoading: tasksQuery.isLoading,
     error: tasksQuery.error,
     createTask: createTaskMutation.mutate,
@@ -194,3 +290,4 @@ export function useTasks() {
     isDeleting: deleteTaskMutation.isPending,
   };
 }
+
