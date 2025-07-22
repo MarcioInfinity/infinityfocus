@@ -56,7 +56,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      await signUp(email, password, name.trim());
+      await signUp(email, password, { name: name.trim() });
       // Redirecionar para o dashboard após cadastro bem-sucedido
       navigate('/');
     } catch (error: any) {

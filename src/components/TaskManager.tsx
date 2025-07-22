@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Plus, Calendar, Tag, User, Trash2, Edit3, CheckCircle2, Clock, AlertCircle, List, Grid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,17 +57,6 @@ export function TaskManager() {
   const handleOpenEditModal = (task: any) => {
     setEditingTask(task);
     setIsEditModalOpen(true);
-  };
-
-  const handleSaveTask = (taskData: any) => {
-    if (editingTask) {
-      updateTask({
-        id: editingTask.id,
-        updates: taskData
-      });
-      setIsEditModalOpen(false);
-      setEditingTask(null);
-    }
   };
 
   if (isLoading) {
@@ -338,7 +328,6 @@ export function TaskManager() {
         task={editingTask}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSaveTask}
       />
     </div>
   );

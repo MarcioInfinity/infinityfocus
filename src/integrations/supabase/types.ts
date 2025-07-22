@@ -634,92 +634,6 @@ export type Database = {
         }
         Relationships: []
       }
-      reward_claims: {
-        Row: {
-          claimed_at: string | null
-          created_at: string | null
-          id: string
-          notes: string | null
-          reward_id: string
-          user_id: string
-        }
-        Insert: {
-          claimed_at?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          reward_id: string
-          user_id: string
-        }
-        Update: {
-          claimed_at?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          reward_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reward_claims_reward_id_fkey"
-            columns: ["reward_id"]
-            isOneToOne: false
-            referencedRelation: "rewards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rewards: {
-        Row: {
-          attributed_item_name: string | null
-          attributed_to_id: string
-          attributed_to_type: string
-          celebration_level: string
-          claimed_at: string | null
-          created_at: string | null
-          currency: string | null
-          description: string | null
-          id: string
-          investment_value: number | null
-          is_claimed: boolean | null
-          title: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          attributed_item_name?: string | null
-          attributed_to_id: string
-          attributed_to_type: string
-          celebration_level: string
-          claimed_at?: string | null
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          investment_value?: number | null
-          is_claimed?: boolean | null
-          title: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          attributed_item_name?: string | null
-          attributed_to_id?: string
-          attributed_to_type?: string
-          celebration_level?: string
-          claimed_at?: string | null
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          investment_value?: number | null
-          is_claimed?: boolean | null
-          title?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -732,7 +646,6 @@ export type Database = {
           goal_id: string | null
           id: string
           is_indefinite: boolean
-          monthly_day: number | null
           notifications_enabled: boolean
           owner_id: string | null
           priority: Database["public"]["Enums"]["priority"]
@@ -759,7 +672,6 @@ export type Database = {
           goal_id?: string | null
           id?: string
           is_indefinite?: boolean
-          monthly_day?: number | null
           notifications_enabled?: boolean
           owner_id?: string | null
           priority?: Database["public"]["Enums"]["priority"]
@@ -786,7 +698,6 @@ export type Database = {
           goal_id?: string | null
           id?: string
           is_indefinite?: boolean
-          monthly_day?: number | null
           notifications_enabled?: boolean
           owner_id?: string | null
           priority?: Database["public"]["Enums"]["priority"]
@@ -851,18 +762,7 @@ export type Database = {
       }
     }
     Views: {
-      reward_stats: {
-        Row: {
-          avg_reward_value: number | null
-          claimed_rewards: number | null
-          pending_rewards: number | null
-          total_claimed_value: number | null
-          total_pending_value: number | null
-          total_rewards: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       create_project_safe: {
@@ -872,23 +772,6 @@ export type Database = {
       drop_all_policies_on_table: {
         Args: { p_schema_name: string; p_table_name: string }
         Returns: undefined
-      }
-      get_user_rewards: {
-        Args: { p_user_id?: string }
-        Returns: {
-          id: string
-          title: string
-          description: string
-          celebration_level: string
-          investment_value: number
-          currency: string
-          attributed_to_type: string
-          attributed_to_id: string
-          attributed_item_name: string
-          is_claimed: boolean
-          claimed_at: string
-          created_at: string
-        }[]
       }
       is_project_member: {
         Args: { p_project_id: string }
