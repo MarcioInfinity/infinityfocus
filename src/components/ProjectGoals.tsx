@@ -1,21 +1,26 @@
 import { useState, useEffect } from 'react';
-import { Plus, Flag } from 'lucide-react';
+import { Plus, Flag, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { GoalForm } from './forms/GoalForm';
 import { useGoals } from '@/hooks/useGoals';
 import { Goal } from '@/types';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface ProjectGoalsProps {
   projectId: string;
 }
 
 export function ProjectGoals({ projectId }: ProjectGoalsProps) {
-  const { goals, createGoal, isLoading } = useGoals(projectId);
+  const { goals, createGoal, updateGoal, deleteGoal, isLoading } = useGoals(); // Usar o hook useGoals sem projectId para pegar todas as metas
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [projectGoals, setProjectGoals] = useState<Goal[]>([]);
 
+  // Filtrar as metas que pertencem a este projeto
   useEffect(() => {
     if (goals) {
       setProjectGoals(goals.filter(goal => goal.project_id === projectId));
@@ -25,6 +30,18 @@ export function ProjectGoals({ projectId }: ProjectGoalsProps) {
   const handleCreateGoal = (goalData: any) => {
     createGoal({ ...goalData, project_id: projectId });
     setIsGoalFormOpen(false);
+  };
+
+  const handleUpdateGoal = (goalData: any) => {
+    if (editingGoal) {
+      updateGoal({ id: editingGoal.id, updates: { ...goalData, project_id: projectId } });
+      setEditingGoal(null);
+      setIsGoalFormOpen(false);
+    }
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    deleteGoal(goalId);
   };
 
   if (isLoading) {
@@ -48,8 +65,12 @@ export function ProjectGoals({ projectId }: ProjectGoalsProps) {
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
             <GoalForm
-              onSubmit={handleCreateGoal}
-              onCancel={() => setIsGoalFormOpen(false)}
+              onSubmit={editingGoal ? handleUpdateGoal : handleCreateGoal}
+              onCancel={() => {
+                setIsGoalFormOpen(false);
+                setEditingGoal(null);
+              }}
+              initialData={editingGoal}
               defaultProjectId={projectId}
             />
           </DialogContent>
@@ -83,12 +104,55 @@ export function ProjectGoals({ projectId }: ProjectGoalsProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projectGoals.map(goal => (
             <Card key={goal.id} className="glass-card">
-              <CardHeader>
-                <CardTitle>{goal.name}</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-semibold">{goal.name}</CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => {
+                      setEditingGoal(goal);
+                      setIsGoalFormOpen(true);
+                    }}>
+                      <Edit2 className="mr-2 h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-400">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá permanentemente esta meta.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteGoal(goal.id)} className="bg-red-500 hover:bg-red-600">
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 <p className="text-sm text-muted-foreground">{goal.description}</p>
-                {/* Add more goal details here if needed */}
+                {goal.due_date && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Vencimento: {new Date(goal.due_date).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
+                {/* Adicione mais detalhes da meta aqui se necessário */}
               </CardContent>
             </Card>
           ))}
