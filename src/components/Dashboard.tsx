@@ -257,8 +257,15 @@ export function Dashboard() {
                 ) : (
                   <div className="space-y-3">
                     {todayTasks.map(task => {
-                      const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0);
-                      
+                      const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) && task.status !== 'done';
+                      const isRepeatingToday = task.repeat_enabled && (
+                        (task.repeat_type === 'daily') ||
+                        (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay())) ||
+                        (task.repeat_type === 'monthly' && task.repeat_monthly_day === new Date().getDate()) ||
+                        (task.repeat_type === 'custom' && task.repeat_custom_dates?.some(d => new Date(d).toDateString() === new Date().toDateString()))
+                      );
+                      const isDueToday = task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString() && task.status !== 'done';
+
                       return (
                         <div
                           key={task.id}
@@ -267,6 +274,8 @@ export function Dashboard() {
                               ? 'bg-green-500/10 border-green-500/20' 
                               : isOverdue
                               ? 'bg-red-500/10 border-red-500/20'
+                              : isDueToday
+                              ? 'bg-yellow-500/10 border-yellow-500/20'
                               : 'bg-card border-border hover:border-primary/50'
                           }`}
                         >
@@ -286,7 +295,12 @@ export function Dashboard() {
                                   Atrasada
                                 </Badge>
                               )}
-                              {task.repeat_enabled && (
+                              {isDueToday && !isOverdue && (
+                                <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                                  Vence Hoje
+                                </Badge>
+                              )}
+                              {isRepeatingToday && (
                                 <Badge variant="outline" className="text-xs">
                                   🔄 ${task.repeat_type === 'daily' ? 'Diário' : 
                                       task.repeat_type === 'weekly' ? 'Semanal' :
@@ -545,5 +559,4 @@ export function Dashboard() {
     </div>
   );
 }
-
 
