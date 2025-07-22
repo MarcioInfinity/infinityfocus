@@ -2,8 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Home, CheckSquare, FolderKanban, Target, Bell, Settings, Menu, X, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Toaster } from '@/components/ui/sonner';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { Toaster } from 'sonner'; // Alterado de '@/components/ui/sonner' para 'sonner'
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -65,9 +64,7 @@ export function Layout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    showSuccessToast
-  } = useToastNotifications();
+  // Removido useToastNotifications, agora o Toaster é importado diretamente de 'sonner'
   const {
     user
   } = useAuth();
@@ -86,7 +83,7 @@ export function Layout({
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      showSuccessToast('Logout realizado com sucesso!');
+      // showSuccessToast('Logout realizado com sucesso!'); // Removido, usar toast diretamente
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
