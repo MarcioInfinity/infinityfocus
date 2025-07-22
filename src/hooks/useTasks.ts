@@ -54,7 +54,7 @@ export function useTasks() {
         description: taskData.description || null,
         priority: taskData.priority || 'medium',
         category: taskData.category || 'professional',
-        status: 'todo' as const,
+        status: taskData.status || 'todo' as const,
         due_date: taskData.due_date || null,
         start_date: taskData.start_date || null,
         start_time: taskData.start_time || null,
@@ -70,8 +70,8 @@ export function useTasks() {
         repeat_enabled: taskData.repeat_enabled || false,
         repeat_type: taskData.repeat_type || null,
         repeat_days: taskData.repeat_days || null,
-        repeat_monthly_day: taskData.repeat_monthly_day || null,
-        repeat_custom_dates: taskData.repeat_custom_dates || null,
+        monthly_day: taskData.monthly_day || null,
+        custom_dates: taskData.custom_dates || null,
         
         created_by: user.id,
         user_id: user.id,
@@ -228,11 +228,11 @@ export function useTasks() {
               : [];
             return repeatDaysWeekly.includes(currentWeekday);
           case 'monthly':
-            return task.repeat_monthly_day === currentMonthDay;
+            return task.monthly_day === currentMonthDay;
           case 'custom':
             // Verificar datas personalizadas
-            const repeatCustomDates = Array.isArray(task.repeat_custom_dates) 
-              ? task.repeat_custom_dates.map(d => new Date(d)) 
+            const repeatCustomDates = Array.isArray(task.custom_dates) 
+              ? task.custom_dates.map(d => new Date(d)) 
               : [];
             return repeatCustomDates.some(d => {
               d.setHours(0, 0, 0, 0);
