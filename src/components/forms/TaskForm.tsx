@@ -106,7 +106,7 @@ const weekDays = [
   { value: 6, label: 'Sáb' },
 ];
 
-export function TaskFormImproved({ onSubmit, onCancel, initialData, projects = [], goals = [], defaultProjectId }: TaskFormProps) {
+export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals = [], defaultProjectId }: TaskFormProps) {
   const [checklist, setChecklist] = useState<ChecklistItem[]>(initialData?.checklist || []);
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [showCustomCategory, setShowCustomCategory] = useState(initialData?.category === "custom");
