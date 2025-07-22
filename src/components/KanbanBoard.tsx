@@ -1,522 +1,283 @@
 import { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  MoreHorizontal, 
-  Calendar, 
-  User, 
-  Flag,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  UserPlus,
-  Edit2,
-  Check,
-  X
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
 import { TaskForm } from './forms/TaskForm';
-import { InviteModal } from './modals/InviteModal';
-import { EditColumnModal } from './modals/EditColumnModal';
-import { Task, KanbanColumn, Priority } from '@/types';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useTasks } from '@/hooks/useTasks';
-import { supabase } from '@/integrations/supabase/client';
-
-const mockColumns: KanbanColumn[] = [
-  {
-    id: '1',
-    title: 'Nova',
-    status: 'todo',
-    color: '#64748b',
-    tasks: [],
-    position: 0
-  },
-  {
-    id: '2',
-    title: 'Em Progresso',
-    status: 'in-progress',
-    color: '#3b82f6',
-    tasks: [],
-    position: 1
-  },
-  {
-    id: '3',
-    title: 'Em Revisão',
-    status: 'review',
-    color: '#f59e0b',
-    tasks: [],
-    position: 2
-  },
-  {
-    id: '4',
-    title: 'Concluído',
-    status: 'done',
-    color: '#10b981',
-    tasks: [],
-    position: 3
-  }
-];
-
-const priorityColors = {
-  low: 'bg-green-500/20 text-green-400 border-green-500/30',
-  medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  high: 'bg-red-500/20 text-red-400 border-red-500/30'
-};
-
-const statusIcons = {
-  'todo': Clock,
-  'in-progress': AlertCircle,
-  'review': User,
-  'done': CheckCircle
-};
+import { useProjects } from '@/hooks/useProjects';
+import { useGoals } from '@/hooks/useGoals';
+import { Task } from '@/types';
+import { Plus, Calendar, Clock, User, MoreHorizontal, Edit2, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface KanbanBoardProps {
   projectId: string;
 }
 
+const columns = [
+  { id: 'todo', title: 'A Fazer', color: 'bg-blue-500' },
+  { id: 'in_progress', title: 'Em Progresso', color: 'bg-yellow-500' },
+  { id: 'review', title: 'Revisão', color: 'bg-purple-500' },
+  { id: 'done', title: 'Concluído', color: 'bg-green-500' },
+];
+
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
-  const { tasks, updateTask, createTask } = useTasks();
-  const [columns, setColumns] = useState<KanbanColumn[]>(mockColumns);
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
-  const [draggedColumn, setDraggedColumn] = useState<KanbanColumn | null>(null);
+  const { tasks, updateTask, deleteTask, isLoading } = useTasks(projectId);
+  const { projects } = useProjects();
+  const { goals } = useGoals();
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [editingColumn, setEditingColumn] = useState<KanbanColumn | null>(null);
-  const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
-  const { showSuccessToast } = useToastNotifications();
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [tasksByColumn, setTasksByColumn] = useState<Record<string, Task[]>>({
+    todo: [],
+    in_progress: [],
+    review: [],
+    done: [],
+  });
 
-  // Load tasks from the project into columns
+  // Organizar tarefas por coluna em tempo real
   useEffect(() => {
-    const projectTasks = tasks.filter(task => task.project_id === projectId);
-    
-    setColumns(prev => prev.map(column => ({
-      ...column,
-      tasks: projectTasks.filter(task => task.status === column.status)
-    })));
-  }, [tasks, projectId]);
-
-  // Realtime updates
-  useEffect(() => {
-    const channel = supabase
-      .channel('kanban-tasks')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'tasks',
-        filter: `project_id=eq.${projectId}`
-      }, () => {
-        // Refresh task data
-        window.location.reload();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const organized = {
+      todo: tasks.filter(task => task.status === 'todo'),
+      in_progress: tasks.filter(task => task.status === 'in_progress'),
+      review: tasks.filter(task => task.status === 'review'),
+      done: tasks.filter(task => task.status === 'done'),
     };
-  }, [projectId]);
-
-  const handleTaskStatusChange = async (taskId: string, completed: boolean) => {
-    try {
-      await updateTask({ 
-        id: taskId, 
-        updates: { status: completed ? 'done' : 'todo' } 
-      });
-      showSuccessToast(completed ? 'Tarefa concluída!' : 'Tarefa reaberta!');
-    } catch (error) {
-      console.error('Error updating task status:', error);
-    }
-  };
-
-  const handleStartEdit = (taskId: string, currentTitle: string) => {
-    setEditingTask(taskId);
-    setEditValue(currentTitle);
-  };
-
-  const handleSaveEdit = async (taskId: string) => {
-    if (!editValue.trim()) return;
-    
-    try {
-      await updateTask({ 
-        id: taskId, 
-        updates: { title: editValue.trim() } 
-      });
-      showSuccessToast('Título atualizado!');
-      handleCancelEdit();
-    } catch (error) {
-      console.error('Error updating task:', error);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingTask(null);
-    setEditValue('');
-  };
-
-  const handleDragStart = (task: Task) => {
-    setDraggedTask(task);
-  };
-
-  const handleColumnDragStart = (column: KanbanColumn) => {
-    setDraggedColumn(column);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = async (columnId: string, status: Task['status']) => {
-    if (!draggedTask) return;
-
-    try {
-      await updateTask({ 
-        id: draggedTask.id, 
-        updates: { status } 
-      });
-      showSuccessToast('Tarefa movida com sucesso!');
-    } catch (error) {
-      console.error('Error moving task:', error);
-    }
-
-    setDraggedTask(null);
-  };
-
-  const handleColumnDrop = (targetColumnId: string) => {
-    if (!draggedColumn) return;
-
-    const targetColumn = columns.find(col => col.id === targetColumnId);
-    if (!targetColumn) return;
-
-    setColumns(prev => {
-      const newColumns = [...prev];
-      const draggedIndex = newColumns.findIndex(col => col.id === draggedColumn.id);
-      const targetIndex = newColumns.findIndex(col => col.id === targetColumnId);
-
-      const [removed] = newColumns.splice(draggedIndex, 1);
-      newColumns.splice(targetIndex, 0, removed);
-
-      return newColumns.map((col, index) => ({
-        ...col,
-        position: index
-      }));
-    });
-
-    setDraggedColumn(null);
-  };
+    setTasksByColumn(organized);
+  }, [tasks]);
 
   const handleCreateTask = (taskData: any) => {
-    // Ensure the task is associated with the project and has the correct status
-    const taskWithProject = {
-      ...taskData,
-      project_id: projectId,
-      status: selectedColumn ? columns.find(col => col.id === selectedColumn)?.status || 'todo' : 'todo'
-    };
-    
-    createTask(taskWithProject);
+    const { createTask } = useTasks(projectId);
+    createTask({ ...taskData, project_id: projectId, status: 'todo' });
     setIsTaskFormOpen(false);
-    setSelectedColumn(null);
   };
 
-  const handleUpdateColumn = (updatedColumn: KanbanColumn) => {
-    setColumns(prev => prev.map(col => 
-      col.id === updatedColumn.id ? updatedColumn : col
-    ));
-  };
-
-  const handleDeleteColumn = (columnId: string) => {
-    setColumns(prev => prev.filter(col => col.id !== columnId));
-  };
-
-  const getPriorityIcon = (priority: Priority) => {
-    switch (priority) {
-      case 'high': return '🔴';
-      case 'medium': return '🟡';
-      case 'low': return '🟢';
+  const handleUpdateTask = (taskData: any) => {
+    if (editingTask) {
+      updateTask({ id: editingTask.id, updates: taskData });
+      setEditingTask(null);
+      setIsTaskFormOpen(false);
     }
   };
 
-  const openTaskForm = (columnId: string) => {
-    setSelectedColumn(columnId);
-    setIsTaskFormOpen(true);
+  const handleDeleteTask = (taskId: string) => {
+    deleteTask(taskId);
   };
 
-  const openInviteModal = () => {
-    setIsInviteModalOpen(true);
+  const onDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    const task = tasks.find(t => t.id === draggableId);
+    if (!task) return;
+
+    // Atualizar o status da tarefa
+    updateTask({
+      id: task.id,
+      updates: { status: destination.droppableId as Task['status'] }
+    });
   };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getPriorityLabel = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'Alta';
+      case 'medium': return 'Média';
+      case 'low': return 'Baixa';
+      default: return 'Indefinida';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <p className="text-muted-foreground">Carregando quadro Kanban...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4 animate-fade-in h-full">
-      {/* Compact Header */}
-      <div className="flex items-center justify-between gap-4 px-2">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Kanban
-        </h1>
-        <div className="flex gap-2">
-          <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="glow-button">
-                <Plus className="w-4 h-4 mr-1" />
-                Tarefa
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <TaskForm
-                onSubmit={handleCreateTask}
-                onCancel={() => {
-                  setIsTaskFormOpen(false);
-                  setSelectedColumn(null);
-                }}
-                defaultProjectId={projectId}
-              />
-            </DialogContent>
-          </Dialog>
-          
-          <Button 
-            size="sm"
-            variant="outline" 
-            className="neon-border"
-            onClick={openInviteModal}
-          >
-            <User className="w-4 h-4 mr-1" />
-            Convite
-          </Button>
-        </div>
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Quadro Kanban</h2>
+        <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="glow-button">
+              <Plus className="w-4 h-4 mr-1" />
+              Nova Tarefa
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <TaskForm
+              onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
+              onCancel={() => {
+                setIsTaskFormOpen(false);
+                setEditingTask(null);
+              }}
+              initialData={editingTask}
+              projects={projects}
+              goals={goals}
+              defaultProjectId={projectId}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Enhanced Kanban Board with darker background */}
-      <div className="kanban-container">
-        <div className="kanban-scroll-wrapper">
-          <div className="flex gap-3 pb-4 min-w-max bg-black/30 backdrop-blur-sm rounded-lg p-4">
-            {columns.map((column) => {
-              const StatusIcon = statusIcons[column.status];
-              
-              return (
-                <div
-                  key={column.id}
-                  className="kanban-column min-w-[200px] max-w-[200px] flex-shrink-0 bg-black/20 backdrop-blur-sm rounded-lg p-3"
-                  onDragOver={handleDragOver}
-                  onDrop={() => handleDrop(column.id, column.status)}
-                >
-                  <div className="flex items-center justify-between mb-3 px-1">
-                    <div 
-                      className="flex items-center gap-2 cursor-move"
-                      draggable
-                      onDragStart={() => handleColumnDragStart(column)}
-                      onDragOver={handleDragOver}
-                      onDrop={() => handleColumnDrop(column.id)}
-                    >
-                      <StatusIcon className="w-4 h-4" style={{ color: column.color }} />
-                      <h3 className="font-semibold text-sm">{column.title}</h3>
-                      <Badge variant="secondary" className="text-xs h-5">
-                        {column.tasks.length}
-                      </Badge>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                          <MoreHorizontal className="w-3 h-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="glass-card border-white/20">
-                        <DropdownMenuItem onClick={() => openTaskForm(column.id)}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Adicionar Tarefa
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setEditingColumn(column)}>
-                          Editar Coluna
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-red-400"
-                          onClick={() => handleDeleteColumn(column.id)}
-                        >
-                          Excluir Coluna
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {columns.map((column) => (
+            <div key={column.id} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${column.color}`} />
+                <h3 className="font-semibold">{column.title}</h3>
+                <Badge variant="secondary" className="ml-auto">
+                  {tasksByColumn[column.id]?.length || 0}
+                </Badge>
+              </div>
 
-                  <div className="space-y-2 kanban-tasks-container">
-                    {column.tasks.length === 0 ? (
-                      <div className="text-center py-6 text-muted-foreground">
-                        <StatusIcon className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs mb-2">Nenhuma tarefa</p>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-xs h-7"
-                          onClick={() => openTaskForm(column.id)}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Adicionar
-                        </Button>
-                      </div>
-                    ) : (
-                      column.tasks.map((task) => {
-                        const isOverdue = task.due_date && 
-                          new Date(task.due_date) < new Date() && 
-                          task.status !== 'done';
-
-                        return (
+              <Droppable droppableId={column.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-[200px] space-y-2 p-2 rounded-lg border-2 border-dashed transition-colors ${
+                      snapshot.isDraggingOver
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted'
+                    }`}
+                  >
+                    {tasksByColumn[column.id]?.map((task, index) => (
+                      <Draggable key={task.id} draggableId={task.id} index={index}>
+                        {(provided, snapshot) => (
                           <Card
-                            key={task.id}
-                            className={`task-card cursor-move hover:scale-105 transition-transform bg-black/40 backdrop-blur-sm ${isOverdue ? 'border-red-500/50' : ''}`}
-                            draggable
-                            onDragStart={() => handleDragStart(task)}
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`glass-card cursor-move transition-all ${
+                              snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
+                            }`}
                           >
-                            <CardHeader className="pb-2 p-3">
+                            <CardHeader className="pb-2">
                               <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={task.status === 'done'}
-                                    onCheckedChange={(checked) => handleTaskStatusChange(task.id, checked as boolean)}
-                                    className="shrink-0 h-4 w-4"
-                                  />
-                                  <Badge variant="outline" className={`${priorityColors[task.priority]} text-xs h-5`}>
-                                    {getPriorityIcon(task.priority)}
-                                  </Badge>
-                                </div>
+                                <CardTitle className="text-sm font-medium line-clamp-2">
+                                  {task.title}
+                                </CardTitle>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                      <MoreHorizontal className="w-3 h-3" />
+                                    <Button variant="ghost" className="h-6 w-6 p-0">
+                                      <MoreHorizontal className="h-3 w-3" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent className="glass-card border-white/20">
-                                    <DropdownMenuItem onClick={() => handleStartEdit(task.id, task.title)}>
-                                      <Edit2 className="w-4 h-4 mr-2" />
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => {
+                                      setEditingTask(task);
+                                      setIsTaskFormOpen(true);
+                                    }}>
+                                      <Edit2 className="mr-2 h-3 w-3" />
                                       Editar
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                                    <DropdownMenuItem>Mover para...</DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-400">Excluir</DropdownMenuItem>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-400">
+                                          <Trash2 className="mr-2 h-3 w-3" />
+                                          Excluir
+                                        </DropdownMenuItem>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Esta ação não pode ser desfeita. Isso excluirá permanentemente esta tarefa.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteTask(task.id)} className="bg-red-500 hover:bg-red-600">
+                                            Excluir
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
-                              
-                              {editingTask === task.id ? (
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    value={editValue}
-                                    onChange={(e) => setEditValue(e.target.value)}
-                                    className="h-7 text-sm"
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleSaveEdit(task.id);
-                                      if (e.key === 'Escape') handleCancelEdit();
-                                    }}
-                                    autoFocus
-                                  />
-                                  <Button size="sm" variant="ghost" onClick={() => handleSaveEdit(task.id)} className="h-7 w-7 p-0">
-                                    <Check className="w-3 h-3" />
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={handleCancelEdit} className="h-7 w-7 p-0">
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <CardTitle className={`text-sm ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
-                                  {task.title}
-                                </CardTitle>
-                              )}
                             </CardHeader>
-                            
-                            <CardContent className="space-y-2 p-3 pt-0">
+                            <CardContent className="pt-0 space-y-2">
                               {task.description && (
                                 <p className="text-xs text-muted-foreground line-clamp-2">
                                   {task.description}
                                 </p>
                               )}
-
-                              {task.due_date && (
-                                <div className="flex items-center gap-2 text-xs">
-                                  <Calendar className="w-3 h-3" />
-                                  <span className={isOverdue ? 'text-red-400' : 'text-muted-foreground'}>
-                                    {new Date(task.due_date).toLocaleDateString('pt-BR')}
-                                  </span>
-                                  {isOverdue && (
-                                    <Badge variant="destructive" className="text-xs h-4">
-                                      Atrasada
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-
-                              {task.tags && task.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {task.tags.slice(0, 2).map((tag, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs h-4">
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                  {task.tags.length > 2 && (
-                                    <Badge variant="secondary" className="text-xs h-4">
-                                      +{task.tags.length - 2}
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-
-                              {task.assigned_to && (
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="w-5 h-5">
-                                      <AvatarImage src="" />
-                                      <AvatarFallback className="text-xs bg-primary/20">
-                                        {task.assigned_to.charAt(0).toUpperCase()}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs text-muted-foreground">
-                                      Atribuída
-                                    </span>
+                              
+                              <div className="flex items-center justify-between">
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`text-xs ${getPriorityColor(task.priority)} text-white`}
+                                >
+                                  {getPriorityLabel(task.priority)}
+                                </Badge>
+                                
+                                {task.due_date && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Calendar className="w-3 h-3" />
+                                    {format(new Date(task.due_date), 'dd/MM', { locale: ptBR })}
                                   </div>
-                                  {task.notifications && task.notifications.length > 0 && (
-                                    <Badge variant="outline" className="text-xs h-4">
-                                      🔔 {task.notifications.length}
-                                    </Badge>
-                                  )}
+                                )}
+                              </div>
+
+                              {task.start_time && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="w-3 h-3" />
+                                  {task.start_time}
                                 </div>
                               )}
                             </CardContent>
                           </Card>
-                        );
-                      })
-                    )}
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+
+                    {/* Botão para adicionar tarefa diretamente na coluna */}
+                    <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full h-10 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5"
+                          onClick={() => setEditingTask(null)}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Adicionar tarefa
+                        </Button>
+                      </DialogTrigger>
+                    </Dialog>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                )}
+              </Droppable>
+            </div>
+          ))}
         </div>
-      </div>
-
-      {/* Modals */}
-      <InviteModal
-        isOpen={isInviteModalOpen}
-        onClose={() => setIsInviteModalOpen(false)}
-        projectId={projectId}
-      />
-
-      {editingColumn && (
-        <EditColumnModal
-          column={editingColumn}
-          isOpen={!!editingColumn}
-          onClose={() => setEditingColumn(null)}
-          onSave={handleUpdateColumn}
-          onDelete={handleDeleteColumn}
-        />
-      )}
+      </DragDropContext>
     </div>
   );
 }
