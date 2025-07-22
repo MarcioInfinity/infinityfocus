@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DashboardStats } from './DashboardStats';
-import { TaskForm } from './forms/TaskForm';
+import { TaskFormImproved } from './forms/TaskFormImproved';
 import { ProjectForm } from './forms/ProjectForm';
 import { GoalForm } from './forms/GoalForm';
 import { useAuth } from '@/hooks/useAuth';
-import { useTasks } from '@/hooks/useTasks';
+import { useTasksImproved } from '@/hooks/useTasksImproved';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useRealtime } from '@/hooks/useRealtime';
@@ -19,9 +19,10 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { getCurrentDateAndDay } from '@/utils/dateTime';
 
-export function Dashboard() {
+export function DashboardImproved() {
   const { user } = useAuth();
-  const { tasks, createTask, updateTask } = useTasks();
+  // CORREÇÃO #2: Usar hook melhorado de tarefas
+  const { tasks, todayTasks, createTask, updateTask } = useTasksImproved();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
   const { settings } = useUserSettings();
@@ -76,88 +77,6 @@ export function Dashboard() {
     });
   }, [tasks, showBrowserNotification]);
 
-  // Get today's tasks with improved filtering logic
-  const getTodayTasks = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize para o início do dia
-    const currentWeekday = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const currentMonthDay = today.getDate();
-    
-    return tasks.filter(task => {
-      // Ignorar tarefas concluídas
-      if (task.status === 'done') return false;
-
-      // 1. Tarefas com data de término no passado (atrasadas)
-      if (task.due_date) {
-        const dueDate = new Date(task.due_date);
-        dueDate.setHours(0, 0, 0, 0);
-        if (dueDate < today) {
-          return true; // Tarefa atrasada
-        }
-      }
-
-      // 2. Tarefas com data de início ou término para hoje
-      const isToday = (dateString: string | undefined) => {
-        if (!dateString) return false;
-        const date = new Date(dateString);
-        date.setHours(0, 0, 0, 0);
-        return date.getTime() === today.getTime();
-      };
-
-      if (isToday(task.start_date) || isToday(task.due_date)) {
-        return true;
-      }
-
-      // 3. Tarefas com repetição que se aplicam a hoje
-      if (task.repeat_enabled) {
-        switch (task.repeat_type) {
-          case 'daily':
-            return true;
-          case 'weekly':
-            const repeatDaysWeekly = Array.isArray(task.repeat_days) ? task.repeat_days.map(Number) : [];
-            return repeatDaysWeekly.includes(currentWeekday);
-          case 'monthly':
-            return task.monthly_day === currentMonthDay;
-          case 'custom':
-            const repeatCustomDates = Array.isArray(task.custom_dates) ? task.custom_dates.map(d => new Date(d)) : [];
-            return repeatCustomDates.some(d => d.toDateString() === today.toDateString());
-          default:
-            return false;
-        }
-      }
-      
-      return false;
-    }).sort((a, b) => {
-      // Prioridade: Alta > Média > Baixa
-      const priorityOrder = { high: 3, medium: 2, low: 1 };
-      const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-      if (priorityDiff !== 0) return priorityDiff;
-
-      // Tarefas atrasadas primeiro
-      const aIsOverdue = a.due_date && new Date(a.due_date).setHours(0,0,0,0) < today.getTime();
-      const bIsOverdue = b.due_date && new Date(b.due_date).setHours(0,0,0,0) < today.getTime();
-      if (aIsOverdue && !bIsOverdue) return -1;
-      if (!aIsOverdue && bIsOverdue) return 1;
-
-      // Depois por horário (se disponível)
-      if (a.start_time && b.start_time) {
-        return a.start_time.localeCompare(b.start_time);
-      }
-      if (a.start_time && !b.start_time) return -1;
-      if (!a.start_time && b.start_time) return 1;
-      
-      // Finalmente por data de término (mais próxima primeiro)
-      if (a.due_date && b.due_date) {
-        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-      }
-      if (a.due_date && !b.due_date) return -1;
-      if (!a.due_date && b.due_date) return 1;
-
-      return 0;
-    });
-  };
-
-  const todayTasks = getTodayTasks();
   const completedToday = tasks.filter(task => {
     if (task.status !== 'done') return false;
     
@@ -259,9 +178,11 @@ export function Dashboard() {
             </Card>
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-            <TaskForm 
+            <TaskFormImproved 
               onSubmit={handleCreateTask} 
-              onCancel={() => setIsTaskFormOpen(false)} 
+              onCancel={() => setIsTaskFormOpen(false)}
+              projects={projects}
+              goals={goals}
             />
           </DialogContent>
         </Dialog>
@@ -309,7 +230,7 @@ export function Dashboard() {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Tasks */}
+        {/* Today's Tasks - CORREÇÃO #2: Usar todayTasks do hook melhorado */}
         <Card className="glass-card lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -365,6 +286,13 @@ export function Dashboard() {
                                   Atrasada
                                 </Badge>
                               )}
+                              {task.repeat_enabled && (
+                                <Badge variant="outline" className="text-xs">
+                                  🔄 {task.repeat_type === 'daily' ? 'Diário' : 
+                                      task.repeat_type === 'weekly' ? 'Semanal' :
+                                      task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
+                                </Badge>
+                              )}
                             </div>
                             {task.description && (
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
@@ -378,13 +306,6 @@ export function Dashboard() {
                               {task.due_date && (
                                 <span className="flex items-center gap-1">
                                   📅 {formatDateWithTime(task.due_date, task.start_time)}
-                                </span>
-                              )}
-                              {task.repeat_enabled && (
-                                <span className="flex items-center gap-1">
-                                  🔄 {task.repeat_type === 'daily' ? 'Diário' : 
-                                      task.repeat_type === 'weekly' ? 'Semanal' :
-                                      task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
                                 </span>
                               )}
                             </div>
@@ -454,7 +375,7 @@ export function Dashboard() {
                               <span className="flex items-center gap-1">
                                 🔄 {task.repeat_type === 'daily' ? 'Diário' : 
                                     task.repeat_type === 'weekly' ? 'Semanal' :
-                                    task.repeat_type === 'weekdays' ? 'Dias úteis' : 'Personalizado'}
+                                    task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
                               </span>
                             )}
                           </div>
@@ -624,3 +545,4 @@ export function Dashboard() {
     </div>
   );
 }
+
