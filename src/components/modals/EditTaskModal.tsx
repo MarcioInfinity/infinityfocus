@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { TaskFormImproved } from '@/components/forms/TaskFormImproved';
-import { useTasks } from '@/hooks/useTasks';
+import { useTasksImproved } from '@/hooks/useTasksImproved';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
