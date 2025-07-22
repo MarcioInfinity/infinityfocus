@@ -51,9 +51,9 @@ const taskSchema = z.object({
       message: 'Formato de horário inválido. Use HH:mm (ex: 14:30)'
     }),
   notify_enabled: z.boolean(),
-  frequency_enabled: z.boolean(),
-  frequency_type: z.enum(["daily", "weekly", "monthly", "custom"]).optional(),
-  frequency_days: z.array(z.number()).optional(),
+  repeat_enabled: z.boolean(),
+  repeat_type: z.enum(["daily", "weekly", "monthly", "custom"]).optional(),
+  repeat_days: z.array(z.number()).optional(),
   monthly_day: z.number().min(1).max(31).optional(),
   custom_dates: z.array(z.date()).optional(),
   assign_to_project: z.boolean(),
@@ -123,11 +123,11 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
       is_indefinite: initialData?.is_indefinite || false,
       time: initialData?.time || "",
       notify_enabled: initialData?.notify_enabled || false,
-      frequency_enabled: initialData?.repeat_enabled || false,
-      frequency_type: initialData?.repeat_type || "daily",
-      frequency_days: initialData?.repeat_days?.map(Number) || [],
-      monthly_day: initialData?.repeat_monthly_day || undefined,
-      custom_dates: initialData?.repeat_custom_dates?.map((date: string) => new Date(date)) || [],
+      repeat_enabled: initialData?.repeat_enabled || false,
+      repeat_type: initialData?.repeat_type || "daily",
+      repeat_days: initialData?.repeat_days?.map(Number) || [],
+      monthly_day: initialData?.monthly_day || undefined,
+      custom_dates: initialData?.custom_dates?.map((date: string) => new Date(date)) || [],
       assign_to_project: initialData?.project_id ? true : (!!defaultProjectId || false),
       project_id: initialData?.project_id || defaultProjectId || "",
       assign_to_goal: initialData?.goal_id ? true : false,
@@ -165,17 +165,17 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
       ...values,
       start_time: values.time || null,
       checklist: checklist,
-      repeat_enabled: values.frequency_enabled,
-      repeat_type: values.frequency_type || null,
-      repeat_days: values.frequency_days?.map(day => day.toString()) || [],
-      repeat_monthly_day: values.monthly_day || null,
-      repeat_custom_dates: values.custom_dates?.map(date => date.toISOString()) || [],
+      repeat_enabled: values.repeat_enabled,
+      repeat_type: values.repeat_type || null,
+      repeat_days: values.repeat_days?.map(day => day.toString()) || [],
+      monthly_day: values.monthly_day || null,
+      custom_dates: values.custom_dates?.map(date => date.toISOString()) || [],
     };
     
     delete taskData.time;
-    delete taskData.frequency_enabled;
-    delete taskData.frequency_type;
-    delete taskData.frequency_days;
+    delete taskData.repeat_enabled;
+    delete taskData.repeat_type;
+    delete taskData.repeat_days;
     delete taskData.monthly_day;
     delete taskData.custom_dates;
     
@@ -429,12 +429,12 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
               )}
             />
 
-            {/* Repetição - IMPLEMENTAÇÃO MELHORADA */}
+            {/* Repetição */}
             <FormField
               control={form.control}
               name="frequency_enabled"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
                   <div className="space-y-0.5">
                     <FormLabel className="text-base flex items-center gap-2">
                       <Repeat className="w-4 h-4" />
@@ -454,26 +454,26 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
               )}
             />
 
-            {/* Opções de Repetição - IMPLEMENTAÇÃO ESPECÍFICA SOLICITADA */}
             {watchFrequencyEnabled && (
-              <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
+              <div className="space-y-4 border rounded-lg p-4 glass-card border-white/20">
                 <FormField
                   control={form.control}
                   name="frequency_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo de Repetição</FormLabel>
+                      <FormLabel>Frequência</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo de repetição" />
+                          <SelectTrigger className="glass-card border-white/20">
+                            <SelectValue placeholder="Selecione a frequência" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="daily">Diariamente</SelectItem>
-                          <SelectItem value="weekly">Semanalmente</SelectItem>
-                          <SelectItem value="monthly">Mensalmente</SelectItem>
-                          <SelectItem value="custom">Personalizado</SelectItem>
+                        <SelectContent className="glass-card border-white/20">
+                          {frequencyOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -481,32 +481,19 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                   )}
                 />
 
-                {/* DIARIAMENTE - Ativa a tarefa todo dia */}
-                {watchFrequencyType === 'daily' && (
-                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                    <div className="flex items-center gap-2 text-green-400">
-                      <Repeat className="w-4 h-4" />
-                      <span className="font-medium">Repetição Diária Ativada</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Esta tarefa será renovada automaticamente todos os dias, mantendo-se sempre ativa para ser marcada como concluída.
-                    </p>
-                  </div>
-                )}
-
-                {/* SEMANALMENTE - Opção de dias da semana */}
-                {watchFrequencyType === 'weekly' && (
+                {/* Seleção de Dias da Semana */}
+                {(watchFrequencyType === "weekly" || watchFrequencyType === "custom") && (
                   <FormField
                     control={form.control}
                     name="frequency_days"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Dias da Semana</FormLabel>
-                        <div className="grid grid-cols-7 gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {weekDays.map((day) => (
-                            <div key={day.value} className="flex flex-col items-center">
+                            <div key={day.value} className="flex items-center space-x-2">
                               <Checkbox
-                                id={`day-${day.value}`}
+                                id={`task-day-${day.value}`}
                                 checked={field.value?.includes(day.value) || false}
                                 onCheckedChange={(checked) => {
                                   const currentDays = field.value || [];
@@ -517,14 +504,11 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                                   }
                                 }}
                               />
-                              <Label htmlFor={`day-${day.value}`} className="text-xs mt-1">
+                              <Label htmlFor={`task-day-${day.value}`} className="text-sm">
                                 {day.label}
                               </Label>
                             </div>
                           ))}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Selecione os dias da semana em que a tarefa deve se repetir
                         </div>
                         <FormMessage />
                       </FormItem>
@@ -532,8 +516,8 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                   />
                 )}
 
-                {/* MENSALMENTE - Escolher dia do mês */}
-                {watchFrequencyType === 'monthly' && (
+                {/* Repetição Mensal */}
+                {watchFrequencyType === "monthly" && (
                   <FormField
                     control={form.control}
                     name="monthly_day"
@@ -543,24 +527,22 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="Ex: 15 (para dia 15 de cada mês)" 
+                            placeholder="Ex: 15"
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value))}
                             min={1}
                             max={31}
+                            className="glass-card border-white/20"
                           />
                         </FormControl>
-                        <div className="text-sm text-muted-foreground">
-                          Digite o dia do mês (1-31) em que a tarefa deve se repetir
-                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 )}
 
-                {/* PERSONALIZADO - Vários dias do mês */}
-                {watchFrequencyType === 'custom' && (
+                {/* Repetição Personalizada - Seleção de Datas */}
+                {watchFrequencyType === "custom" && (
                   <FormField
                     control={form.control}
                     name="custom_dates"
@@ -572,18 +554,18 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                             <FormControl>
                               <Button
                                 variant="outline"
-                                className={`w-full pl-3 text-left font-normal ${!field.value || field.value.length === 0 && "text-muted-foreground"}`}
+                                className={`w-full pl-3 text-left font-normal glass-card border-white/20 ${!field.value || field.value.length === 0 && "text-muted-foreground"}`}
                               >
                                 {field.value && field.value.length > 0 ? (
-                                  `${field.value.length} data(s) selecionada(s)`
+                                  field.value.map((date: Date) => format(date, "PPP", { locale: ptBR })).join(", ")
                                 ) : (
-                                  <span>Selecionar várias datas</span>
+                                  <span>Selecionar datas</span>
                                 )}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
+                          <PopoverContent className="w-auto p-0 glass-card border-white/20" align="start">
                             <Calendar
                               mode="multiple"
                               selected={field.value}
@@ -592,18 +574,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                             />
                           </PopoverContent>
                         </Popover>
-                        <div className="text-sm text-muted-foreground">
-                          Selecione múltiplas datas específicas para repetição personalizada
-                        </div>
-                        {field.value && field.value.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {field.value.map((date: Date, index: number) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {format(date, "dd/MM", { locale: ptBR })}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -807,4 +777,3 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
     </Card>
   );
 }
-
