@@ -59,7 +59,7 @@ const mobileBottomNavItems = [{
   path: '/goals'
 }];
 
-export function LayoutImproved({
+export function Layout({
   children
 }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
