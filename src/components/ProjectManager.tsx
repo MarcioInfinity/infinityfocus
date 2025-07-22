@@ -1,6 +1,6 @@
-
 import { useState } from 'react';
-import { Plus, FolderKanban, Users, Calendar, Settings, MoreHorizontal, Eye, Edit, UserPlus } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Plus, FolderKanban, Users, Calendar, Settings, MoreHorizontal, Eye, Edit, UserPlus, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import { ProjectSettingsModal } from './modals/ProjectSettingsModal';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
 import { KanbanBoard } from './KanbanBoard';
+import { ProjectGoals } from './ProjectGoals';
 import { InviteModal } from './modals/InviteModal';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,6 +37,7 @@ export function ProjectManager() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [inviteProjectId, setInviteProjectId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'kanban' | 'goals'>('kanban');
 
   const filteredProjects = projects.filter(project => {
     if (!user) return false;
@@ -68,8 +70,8 @@ export function ProjectManager() {
     setIsProjectFormOpen(false);
   };
 
-  const handleOpenKanban = (project: any) => {
-    navigate(`/projects/${project.id}/kanban`);
+  const handleOpenProjectPage = (project: any) => {
+    navigate(`/projects/${project.id}`);
   };
 
   const handleOpenInvite = (projectId: string) => {
@@ -212,7 +214,7 @@ export function ProjectManager() {
               const totalTasks = project.tasks?.length || 0;
 
               return (
-                <Card key={project.id} className="project-card cursor-pointer" onClick={() => handleOpenKanban(project)}>
+                <Card key={project.id} className="project-card cursor-pointer" onClick={() => handleOpenProjectPage(project)}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -236,9 +238,9 @@ export function ProjectManager() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="glass-card border-white/20">
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenKanban(project); }}>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenProjectPage(project); }}>
                             <Eye className="w-4 h-4 mr-2" />
-                            Visualizar
+                            Visualizar Projeto
                           </DropdownMenuItem>
                           {(userRole === 'owner' || userRole === 'admin') && (
                             <>
@@ -316,7 +318,7 @@ export function ProjectManager() {
                       <Button 
                         className="flex-1 glow-button" 
                         size="sm"
-                        onClick={(e) => { e.stopPropagation(); handleOpenKanban(project); }}
+                        onClick={(e) => { e.stopPropagation(); handleOpenProjectPage(project); }}
                       >
                         <FolderKanban className="w-4 h-4 mr-2" />
                         Abrir Quadro
