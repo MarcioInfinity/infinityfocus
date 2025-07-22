@@ -195,11 +195,8 @@ export function useTasks() {
     const currentMonthDay = today.getDate();
     
     return (tasksQuery.data || []).filter(task => {
-      // Ignorar tarefas concluídas
-      if (task.status === 'done') return false;
-
       // 1. Tarefas com data de término no passado (atrasadas)
-      if (task.due_date) {
+      if (task.due_date && task.status !== 'done') {
         const dueDate = new Date(task.due_date);
         dueDate.setHours(0, 0, 0, 0);
         if (dueDate < today) {
@@ -207,25 +204,25 @@ export function useTasks() {
         }
       }
 
-      // 2. Tarefas com data de início ou término para hoje
-      const isToday = (dateString: string | undefined) => {
+      // 2. Tarefas com data de vencimento para hoje
+      const isDueToday = (dateString: string | undefined) => {
         if (!dateString) return false;
         const date = new Date(dateString);
         date.setHours(0, 0, 0, 0);
         return date.getTime() === today.getTime();
       };
 
-      if (isToday(task.start_date) || isToday(task.due_date)) {
+      if (isDueToday(task.due_date) && task.status !== 'done') {
         return true;
       }
 
       // 3. Tarefas com repetição que se aplicam a hoje
-      if (task.repeat_enabled) {
+      if (task.repeat_enabled && task.status !== 'done') {
         switch (task.repeat_type) {
           case 'daily':
             return true;
           case 'weekly':
-            // CORREÇÃO: Verificar se repeat_days é array de strings ou números
+            // Verificar se repeat_days é array de strings ou números
             const repeatDaysWeekly = Array.isArray(task.repeat_days) 
               ? task.repeat_days.map(d => typeof d === 'string' ? parseInt(d) : d) 
               : [];
@@ -233,7 +230,7 @@ export function useTasks() {
           case 'monthly':
             return task.repeat_monthly_day === currentMonthDay;
           case 'custom':
-            // CORREÇÃO: Verificar datas personalizadas
+            // Verificar datas personalizadas
             const repeatCustomDates = Array.isArray(task.repeat_custom_dates) 
               ? task.repeat_custom_dates.map(d => new Date(d)) 
               : [];
@@ -290,4 +287,3 @@ export function useTasks() {
     isDeleting: deleteTaskMutation.isPending,
   };
 }
-
