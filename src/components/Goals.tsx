@@ -9,13 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoalForm } from './forms/GoalForm';
-import { RewardForm } from './forms/RewardForm';
+import { RewardFormImproved } from './forms/RewardFormImproved';
 import { EditGoalModal } from './modals/EditGoalModal';
 import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { GoalChecklist } from './GoalChecklist';
 import { useGoals } from '@/hooks/useGoals';
+import { useRewards } from '@/hooks/useRewards';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
-export function Goals() {
+
+export function GoalsImproved() {
   const {
     goals,
     createGoal,
@@ -23,10 +25,21 @@ export function Goals() {
     deleteGoal,
     isLoading
   } = useGoals();
+  
+  // CORREÇÃO #3: Integração com hook de recompensas
+  const {
+    rewards,
+    createReward,
+    deleteReward,
+    getRewardsByType,
+    isLoading: isLoadingRewards
+  } = useRewards();
+  
   const {
     showSuccessToast,
     showErrorToast
   } = useToastNotifications();
+  
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [isRewardFormOpen, setIsRewardFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<any>(null);
@@ -35,17 +48,24 @@ export function Goals() {
   const [currentTab, setCurrentTab] = useState('ativas');
   const [filterYear, setFilterYear] = useState<string>('2025');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
+
   const handleCreateGoal = (goalData: any) => {
     createGoal(goalData);
     setIsGoalFormOpen(false);
     showSuccessToast('Meta criada com sucesso!');
   };
+
+  // CORREÇÃO #3: Função corrigida para criar recompensas
   const handleCreateReward = (rewardData: any) => {
-    // This will be connected to Supabase later
-    console.log('Reward data:', rewardData);
-    setIsRewardFormOpen(false);
-    showSuccessToast('Recompensa criada com sucesso!');
+    try {
+      createReward(rewardData);
+      setIsRewardFormOpen(false);
+    } catch (error) {
+      console.error('Erro ao criar recompensa:', error);
+      showErrorToast('Erro ao criar recompensa');
+    }
   };
+
   const handleEditGoal = (goalData: any) => {
     updateGoal({
       id: goalData.id,
@@ -53,6 +73,7 @@ export function Goals() {
     });
     showSuccessToast('Meta atualizada com sucesso!');
   };
+
   const handleDeleteGoal = async (goalId: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta meta?')) {
       try {
@@ -63,6 +84,7 @@ export function Goals() {
       }
     }
   };
+
   const handleClaimReward = (goalId: string) => {
     // Mark reward as claimed
     updateGoal({
@@ -74,17 +96,21 @@ export function Goals() {
     });
     showSuccessToast('Recompensa resgatada!');
   };
+
   const openEditModal = (goal: any) => {
     setSelectedGoal(goal);
     setIsEditModalOpen(true);
   };
+
   const openDetailsModal = (goal: any) => {
     setSelectedGoal(goal);
     setIsDetailsModalOpen(true);
   };
+
   const filterGoals = (status: string) => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
     switch (status) {
       case 'ativas':
         return goals.filter(goal => goal.progress < 100);
@@ -118,12 +144,16 @@ export function Goals() {
         }
         return completedGoals;
       case 'recompensas':
-        return goals.filter(goal => goal.progress >= 100 && goal.reward_enabled && new Date(goal.updated_at) >= thirtyDaysAgo);
+        // CORREÇÃO #3: Mostrar recompensas da aba de recompensas
+        return getRewardsByType('goal');
       default:
         return goals;
     }
   };
+
   const filteredGoals = filterGoals(currentTab);
+  const goalRewards = getRewardsByType('goal');
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -136,6 +166,7 @@ export function Goals() {
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'professional':
@@ -154,8 +185,20 @@ export function Goals() {
         return '🎯';
     }
   };
-  if (isLoading) {
-    return <div className="space-y-6 animate-fade-in">
+
+  const getCelebrationIcon = (level: string) => {
+    switch (level) {
+      case 'small': return '🎉';
+      case 'medium': return '🎊';
+      case 'large': return '🏆';
+      case 'epic': return '🎆';
+      default: return '🎁';
+    }
+  };
+
+  if (isLoading || isLoadingRewards) {
+    return (
+      <div className="space-y-6 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -165,17 +208,22 @@ export function Goals() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => <Card key={i} className="glass-card animate-pulse">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="glass-card animate-pulse">
               <CardContent className="p-6">
                 <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
                 <div className="h-3 bg-muted rounded w-full mb-2"></div>
                 <div className="h-3 bg-muted rounded w-2/3"></div>
               </CardContent>
-            </Card>)}
+            </Card>
+          ))}
         </div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="space-y-6 animate-fade-in">
+
+  return (
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -204,7 +252,10 @@ export function Goals() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <RewardForm onSubmit={handleCreateReward} onCancel={() => setIsRewardFormOpen(false)} />
+              <RewardFormImproved 
+                onSubmit={handleCreateReward} 
+                onCancel={() => setIsRewardFormOpen(false)} 
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -215,11 +266,19 @@ export function Goals() {
         <TabsList className="grid w-full grid-cols-3 glass-card">
           <TabsTrigger value="ativas">Ativas</TabsTrigger>
           <TabsTrigger value="concluidas">Concluídas</TabsTrigger>
-          <TabsTrigger value="recompensas">Recompensas</TabsTrigger>
+          <TabsTrigger value="recompensas">
+            Recompensas
+            {goalRewards.length > 0 && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {goalRewards.length}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ativas" className="space-y-4">
-          {filteredGoals.length === 0 ? <Card className="glass-card">
+          {filteredGoals.length === 0 ? (
+            <Card className="glass-card">
               <CardContent className="text-center py-12">
                 <Target className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma meta ativa</h3>
@@ -238,17 +297,22 @@ export function Goals() {
                   </DialogContent>
                 </Dialog>
               </CardContent>
-            </Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredGoals.map(goal => <Card key={goal.id} className="glass-card hover:scale-105 transition-transform">
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => (
+                <Card key={goal.id} className="glass-card hover:scale-105 transition-transform">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">{getCategoryIcon(goal.category)}</span>
                         <div>
                           <CardTitle className="text-lg">{goal.name}</CardTitle>
-                          {goal.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                          {goal.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                               {goal.description}
-                            </p>}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <DropdownMenu>
@@ -297,10 +361,12 @@ export function Goals() {
                           {new Date(goal.due_date).toLocaleDateString('pt-BR')}
                         </span>
                       </div>
-                      {goal.reward_enabled && <div className="flex items-center gap-1">
+                      {goal.reward_enabled && (
+                        <div className="flex items-center gap-1">
                           <Award className="w-4 h-4 text-yellow-400" />
                           <span>Recompensa</span>
-                        </div>}
+                        </div>
+                      )}
                     </div>
 
                     <GoalChecklist goalId={goal.id} />
@@ -315,8 +381,10 @@ export function Goals() {
                       </Button>
                     </div>
                   </CardContent>
-                </Card>)}
-            </div>}
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="concluidas" className="space-y-4">
@@ -344,7 +412,8 @@ export function Goals() {
             </Select>
           </div>
           
-          {filteredGoals.length === 0 ? <Card className="glass-card">
+          {filteredGoals.length === 0 ? (
+            <Card className="glass-card">
               <CardContent className="text-center py-12">
                 <CheckCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma meta concluída</h3>
@@ -352,8 +421,11 @@ export function Goals() {
                   Suas metas concluídas aparecerão aqui
                 </p>
               </CardContent>
-            </Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredGoals.map(goal => <Card key={goal.id} className="glass-card opacity-90">
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredGoals.map(goal => (
+                <Card key={goal.id} className="glass-card opacity-90">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="w-5 h-5 text-green-400" />
@@ -365,46 +437,94 @@ export function Goals() {
                       Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
                     </div>
                     <Progress value={100} className="h-2" />
-                    {goal.reward_enabled && <div className="flex items-center gap-1 text-sm text-yellow-400">
+                    {goal.reward_enabled && (
+                      <div className="flex items-center gap-1 text-sm text-yellow-400">
                         <Award className="w-4 h-4" />
                         <span>Recompensa disponível</span>
-                      </div>}
+                      </div>
+                    )}
                   </CardContent>
-                </Card>)}
-            </div>}
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
+        {/* CORREÇÃO #3: Aba de recompensas corrigida */}
         <TabsContent value="recompensas" className="space-y-4">
-          {filteredGoals.length === 0 ? <Card className="glass-card">
+          {goalRewards.length === 0 ? (
+            <Card className="glass-card">
               <CardContent className="text-center py-12">
                 <Award className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">Nenhuma recompensa disponível</h3>
-                <p className="text-muted-foreground">
-                  Complete metas com recompensas para vê-las aqui
+                <h3 className="text-lg font-semibold mb-2">Nenhuma recompensa criada</h3>
+                <p className="text-muted-foreground mb-4">
+                  Crie recompensas para suas metas para vê-las aqui
                 </p>
+                <Dialog open={isRewardFormOpen} onOpenChange={setIsRewardFormOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="glow-button">
+                      <Gift className="w-4 h-4 mr-2" />
+                      Criar Primeira Recompensa
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+                    <RewardFormImproved 
+                      onSubmit={handleCreateReward} 
+                      onCancel={() => setIsRewardFormOpen(false)} 
+                    />
+                  </DialogContent>
+                </Dialog>
               </CardContent>
-            </Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredGoals.map(goal => <Card key={goal.id} className="glass-card border-yellow-500/30">
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {goalRewards.map(reward => (
+                <Card key={reward.id} className="glass-card border-yellow-500/30">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-2">
-                      <Award className="w-5 h-5 text-yellow-400" />
-                      <CardTitle className="text-lg">{goal.name}</CardTitle>
+                      <span className="text-xl">{getCelebrationIcon(reward.celebration_level)}</span>
+                      <CardTitle className="text-lg">{reward.title}</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {goal.reward_description && <p className="text-sm text-muted-foreground">
-                        <strong>Recompensa:</strong> {goal.reward_description}
-                      </p>}
-                    <div className="text-sm text-muted-foreground">
-                      Concluída em {new Date(goal.updated_at).toLocaleDateString('pt-BR')}
+                    {reward.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {reward.description}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="border-yellow-500/50 text-yellow-400">
+                        {reward.celebration_level === 'small' && '🎉 Pequena'}
+                        {reward.celebration_level === 'medium' && '🎊 Média'}
+                        {reward.celebration_level === 'large' && '🏆 Grande'}
+                        {reward.celebration_level === 'epic' && '🎆 Épica'}
+                      </Badge>
+                      {reward.investment_value > 0 && (
+                        <span className="text-sm font-medium">
+                          {reward.currency === 'BRL' ? 'R$' : reward.currency} {reward.investment_value.toFixed(2)}
+                        </span>
+                      )}
                     </div>
-                    <Button size="sm" className="w-full glow-button" onClick={() => handleClaimReward(goal.id)} disabled={goal.reward_claimed}>
-                      <Award className="w-4 h-4 mr-2" />
-                      {goal.reward_claimed ? 'Recompensa Resgatada' : 'Resgatar Recompensa'}
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Meta:</strong> {reward.attributed_item_name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Criada em {new Date(reward.created_at).toLocaleDateString('pt-BR')}
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10"
+                      onClick={() => deleteReward(reward.id)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Excluir Recompensa
                     </Button>
                   </CardContent>
-                </Card>)}
-            </div>}
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -421,9 +541,24 @@ export function Goals() {
       </Dialog>
 
       {/* Edit Goal Modal */}
-      <EditGoalModal goal={selectedGoal} isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSave={handleEditGoal} />
+      <EditGoalModal 
+        goal={selectedGoal} 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)} 
+        onSave={handleEditGoal} 
+      />
 
       {/* Goal Details Modal */}
-      {selectedGoal && <GoalDetailsModal goal={selectedGoal} isOpen={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} onDelete={handleDeleteGoal} onUpdate={handleEditGoal} />}
-    </div>;
+      {selectedGoal && (
+        <GoalDetailsModal 
+          goal={selectedGoal} 
+          isOpen={isDetailsModalOpen} 
+          onClose={() => setIsDetailsModalOpen(false)} 
+          onDelete={handleDeleteGoal} 
+          onUpdate={handleEditGoal} 
+        />
+      )}
+    </div>
+  );
 }
+
