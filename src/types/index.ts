@@ -1,4 +1,3 @@
-
 export type Priority = 'low' | 'medium' | 'high';
 
 export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done';
@@ -32,6 +31,8 @@ export interface Task {
   repeat_type?: 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
   repeat_days?: string[];
   repeat_interval?: number;
+  monthly_day?: number;
+  custom_dates?: string[];
   created_by: string;
   created_at: string;
   updated_at: string;
