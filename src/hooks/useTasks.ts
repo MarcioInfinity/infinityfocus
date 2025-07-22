@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { useToastNotifications } from './use-toast-notifications';
 import { Task } from '@/types';
 
-export function useTasksImproved() {
+export function useTasks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
