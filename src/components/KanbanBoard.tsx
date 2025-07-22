@@ -33,6 +33,7 @@ import { Task, KanbanColumn, Priority } from '@/types';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useTasks } from '@/hooks/useTasks';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 const mockColumns: KanbanColumn[] = [
   {
@@ -120,7 +121,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         filter: `project_id=eq.${projectId}`
       }, () => {
         // Refresh task data
-        window.location.reload();
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
       })
       .subscribe();
 
