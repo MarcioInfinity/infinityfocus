@@ -138,11 +138,11 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
 
   const watchIsIndefinite = form.watch('is_indefinite');
   const watchNotifyEnabled = form.watch('notify_enabled');
-  const watchFrequencyEnabled = form.watch('frequency_enabled');
+  const watchRepeatEnabled = form.watch("repeat_enabled");
   const watchAssignToProject = form.watch('assign_to_project');
   const watchAssignToGoal = form.watch('assign_to_goal');
   const watchCategory = form.watch('category');
-  const watchFrequencyType = form.watch('frequency_type');
+  const watchRepeatType = form.watch("repeat_type");
 
   const addChecklistItem = () => {
     if (newChecklistItem.trim()) {
@@ -190,7 +190,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
           {initialData ? 'Editar Tarefa' : 'Nova Tarefa'}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-h-[70vh] overflow-y-auto">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             {/* Nome da Tarefa */}
@@ -432,7 +432,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
             {/* Repetição */}
             <FormField
               control={form.control}
-              name="frequency_enabled"
+              name="repeat_enabled"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 glass-card border-white/20">
                   <div className="space-y-0.5">
@@ -454,11 +454,11 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
               )}
             />
 
-            {watchFrequencyEnabled && (
+            {watchRepeatEnabled && (
               <div className="space-y-4 border rounded-lg p-4 glass-card border-white/20">
                 <FormField
                   control={form.control}
-                  name="frequency_type"
+                  name="repeat_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Frequência</FormLabel>
@@ -482,10 +482,10 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                 />
 
                 {/* Seleção de Dias da Semana */}
-                {(watchFrequencyType === "weekly" || watchFrequencyType === "custom") && (
+                {(watchRepeatType === "weekly" || watchRepeatType === "custom") && (
                   <FormField
                     control={form.control}
-                    name="frequency_days"
+                    name="repeat_days"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Dias da Semana</FormLabel>
@@ -517,7 +517,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                 )}
 
                 {/* Repetição Mensal */}
-                {watchFrequencyType === "monthly" && (
+                {watchRepeatType === "monthly" && (
                   <FormField
                     control={form.control}
                     name="monthly_day"
@@ -542,7 +542,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                 )}
 
                 {/* Repetição Personalizada - Seleção de Datas */}
-                {watchFrequencyType === "custom" && (
+                {watchRepeatType === "custom" && (
                   <FormField
                     control={form.control}
                     name="custom_dates"
