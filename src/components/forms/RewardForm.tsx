@@ -30,7 +30,7 @@ const rewardSchema = z.object({
   attributed_to_id: z.string().min(1, 'Item de atribuição é obrigatório'),
 });
 
-interface RewardFormImprovedProps {
+interface RewardFormProps {
   onSubmit: (data: any) => void;
   onCancel: () => void;
   initialData?: any;
@@ -55,7 +55,7 @@ const currencies = [
   { value: 'EUR', label: '€ (Euro)', symbol: '€' },
 ];
 
-export function RewardFormImproved({ onSubmit, onCancel, initialData }: RewardFormImprovedProps) {
+export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps) {
   const { tasks } = useTasks();
   const { projects } = useProjects();
   const { goals } = useGoals();
