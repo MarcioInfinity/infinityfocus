@@ -10,7 +10,7 @@ import { Dashboard } from "./components/Dashboard";
 import { TaskManager } from "./components/TaskManager";
 import { ProjectManager } from "./components/ProjectManager";
 import { NotificationManager } from "./components/NotificationManager";
-import { KanbanBoard } from "./components/KanbanBoard";
+import { ProjectPage } from "./pages/ProjectPage";
 import { Goals } from "./components/Goals";
 import { Settings } from "./components/Settings";
 import Login from "./pages/Login";
@@ -55,7 +55,7 @@ const App = () => (
               <Route path="tasks" element={<TaskManager />} />
               <Route path="goals" element={<Goals />} />
               <Route path="projects" element={<ProjectManager />} />
-              <Route path="projects/:id/kanban" element={<KanbanBoard projectId="1" />} />
+              <Route path="projects/:projectId" element={<ProjectPage />} />
               <Route path="notifications" element={<NotificationManager />} />
               <Route path="settings" element={<Settings />} />
             </Route>
