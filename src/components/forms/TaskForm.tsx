@@ -58,6 +58,8 @@ const taskSchema = z.object({
   custom_dates: z.array(z.date()).optional(),
   assign_to_project: z.boolean(),
   project_id: z.string().optional(),
+  assign_to_goal: z.boolean(),
+  goal_id: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -72,6 +74,7 @@ interface TaskFormProps {
   onCancel: () => void;
   initialData?: any;
   projects?: any[];
+  goals?: any[];
   defaultProjectId?: string;
 }
 
@@ -103,7 +106,7 @@ const weekDays = [
   { value: 6, label: 'Sáb' },
 ];
 
-export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defaultProjectId }: TaskFormProps) {
+export function TaskFormImproved({ onSubmit, onCancel, initialData, projects = [], goals = [], defaultProjectId }: TaskFormProps) {
   const [checklist, setChecklist] = useState<ChecklistItem[]>(initialData?.checklist || []);
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [showCustomCategory, setShowCustomCategory] = useState(initialData?.category === "custom");
@@ -127,6 +130,8 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
       custom_dates: initialData?.repeat_custom_dates?.map((date: string) => new Date(date)) || [],
       assign_to_project: initialData?.project_id ? true : (!!defaultProjectId || false),
       project_id: initialData?.project_id || defaultProjectId || "",
+      assign_to_goal: initialData?.goal_id ? true : false,
+      goal_id: initialData?.goal_id || "",
       description: initialData?.description || "",
     },
   });
@@ -135,6 +140,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
   const watchNotifyEnabled = form.watch('notify_enabled');
   const watchFrequencyEnabled = form.watch('frequency_enabled');
   const watchAssignToProject = form.watch('assign_to_project');
+  const watchAssignToGoal = form.watch('assign_to_goal');
   const watchCategory = form.watch('category');
   const watchFrequencyType = form.watch('frequency_type');
 
@@ -193,7 +199,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome da Tarefa *</FormLabel>
+                  <FormLabel>Título da Tarefa *</FormLabel>
                   <FormControl>
                     <Input placeholder="Digite o nome da tarefa" {...field} />
                   </FormControl>
@@ -319,7 +325,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                 name="due_date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Data de Término</FormLabel>
+                    <FormLabel>Data de Vencimento</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -407,7 +413,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                   <div className="space-y-0.5">
                     <FormLabel className="text-base flex items-center gap-2">
                       <Bell className="w-4 h-4" />
-                      Notificações
+                      Ativar notificações
                     </FormLabel>
                     <div className="text-sm text-muted-foreground">
                       Receber notificações sobre esta tarefa
@@ -423,7 +429,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
               )}
             />
 
-            {/* Repetição */}
+            {/* Repetição - IMPLEMENTAÇÃO MELHORADA */}
             <FormField
               control={form.control}
               name="frequency_enabled"
@@ -432,10 +438,10 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                   <div className="space-y-0.5">
                     <FormLabel className="text-base flex items-center gap-2">
                       <Repeat className="w-4 h-4" />
-                      Repetir Tarefa
+                      Repetir
                     </FormLabel>
                     <div className="text-sm text-muted-foreground">
-                      Configurar repetição automática
+                      Configurar repetição automática da tarefa
                     </div>
                   </div>
                   <FormControl>
@@ -448,27 +454,26 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
               )}
             />
 
-            {/* Opções de Repetição */}
+            {/* Opções de Repetição - IMPLEMENTAÇÃO ESPECÍFICA SOLICITADA */}
             {watchFrequencyEnabled && (
-              <div className="space-y-4 border rounded-lg p-4">
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
                 <FormField
                   control={form.control}
                   name="frequency_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Frequência</FormLabel>
+                      <FormLabel>Tipo de Repetição</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione a frequência" />
+                            <SelectValue placeholder="Selecione o tipo de repetição" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {frequencyOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="daily">Diariamente</SelectItem>
+                          <SelectItem value="weekly">Semanalmente</SelectItem>
+                          <SelectItem value="monthly">Mensalmente</SelectItem>
+                          <SelectItem value="custom">Personalizado</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -476,17 +481,30 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                   )}
                 />
 
-                {/* Seleção de Dias da Semana */}
-                {(watchFrequencyType === 'weekly' || watchFrequencyType === 'custom') && (
+                {/* DIARIAMENTE - Ativa a tarefa todo dia */}
+                {watchFrequencyType === 'daily' && (
+                  <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 text-green-400">
+                      <Repeat className="w-4 h-4" />
+                      <span className="font-medium">Repetição Diária Ativada</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Esta tarefa será renovada automaticamente todos os dias, mantendo-se sempre ativa para ser marcada como concluída.
+                    </p>
+                  </div>
+                )}
+
+                {/* SEMANALMENTE - Opção de dias da semana */}
+                {watchFrequencyType === 'weekly' && (
                   <FormField
                     control={form.control}
                     name="frequency_days"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Dias da Semana</FormLabel>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-7 gap-2">
                           {weekDays.map((day) => (
-                            <div key={day.value} className="flex items-center space-x-2">
+                            <div key={day.value} className="flex flex-col items-center">
                               <Checkbox
                                 id={`day-${day.value}`}
                                 checked={field.value?.includes(day.value) || false}
@@ -499,11 +517,14 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                                   }
                                 }}
                               />
-                              <Label htmlFor={`day-${day.value}`} className="text-sm">
+                              <Label htmlFor={`day-${day.value}`} className="text-xs mt-1">
                                 {day.label}
                               </Label>
                             </div>
                           ))}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Selecione os dias da semana em que a tarefa deve se repetir
                         </div>
                         <FormMessage />
                       </FormItem>
@@ -511,7 +532,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                   />
                 )}
 
-                {/* Repetição Mensal */}
+                {/* MENSALMENTE - Escolher dia do mês */}
                 {watchFrequencyType === 'monthly' && (
                   <FormField
                     control={form.control}
@@ -522,20 +543,23 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="Ex: 15" 
+                            placeholder="Ex: 15 (para dia 15 de cada mês)" 
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value))}
                             min={1}
                             max={31}
                           />
                         </FormControl>
+                        <div className="text-sm text-muted-foreground">
+                          Digite o dia do mês (1-31) em que a tarefa deve se repetir
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 )}
 
-                {/* Repetição Personalizada - Seleção de Datas */}
+                {/* PERSONALIZADO - Vários dias do mês */}
                 {watchFrequencyType === 'custom' && (
                   <FormField
                     control={form.control}
@@ -551,9 +575,9 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                                 className={`w-full pl-3 text-left font-normal ${!field.value || field.value.length === 0 && "text-muted-foreground"}`}
                               >
                                 {field.value && field.value.length > 0 ? (
-                                  field.value.map((date: Date) => format(date, "PPP", { locale: ptBR })).join(", ")
+                                  `${field.value.length} data(s) selecionada(s)`
                                 ) : (
-                                  <span>Selecionar datas</span>
+                                  <span>Selecionar várias datas</span>
                                 )}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                               </Button>
@@ -568,6 +592,18 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                             />
                           </PopoverContent>
                         </Popover>
+                        <div className="text-sm text-muted-foreground">
+                          Selecione múltiplas datas específicas para repetição personalizada
+                        </div>
+                        {field.value && field.value.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {field.value.map((date: Date, index: number) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {format(date, "dd/MM", { locale: ptBR })}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -575,80 +611,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
                 )}
               </div>
             )}
-
-            {/* Atribuir a Projeto */}
-            {projects.length > 0 && (
-              <FormField
-                control={form.control}
-                name="assign_to_project"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base flex items-center gap-2">
-                        <FolderKanban className="w-4 h-4" />
-                        Atribuir a Projeto
-                      </FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Vincular esta tarefa a um projeto
-                      </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Seleção de Projeto */}
-            {watchAssignToProject && projects.length > 0 && (
-              <FormField
-                control={form.control}
-                name="project_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Projeto</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um projeto" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* Descrição */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Descreva os detalhes da tarefa..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Checklist */}
             <div className="space-y-4">
@@ -659,7 +621,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
               
               <div className="flex gap-2">
                 <Input
-                  placeholder="Adicionar item ao checklist"
+                  placeholder="Adicionar item ao checklist..."
                   value={newChecklistItem}
                   onChange={(e) => setNewChecklistItem(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addChecklistItem()}
@@ -699,6 +661,137 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
               )}
             </div>
 
+            {/* Projeto (Opcional) */}
+            {projects.length > 0 && (
+              <FormField
+                control={form.control}
+                name="assign_to_project"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <FolderKanban className="w-4 h-4" />
+                        Projeto (Opcional)
+                      </FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Vincular esta tarefa a um projeto
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Seleção de Projeto */}
+            {watchAssignToProject && projects.length > 0 && (
+              <FormField
+                control={form.control}
+                name="project_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nenhum projeto</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um projeto" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Nenhum projeto</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Meta (Opcional) */}
+            {goals.length > 0 && (
+              <FormField
+                control={form.control}
+                name="assign_to_goal"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        Meta (Opcional)
+                      </FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Vincular esta tarefa a uma meta
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Seleção de Meta */}
+            {watchAssignToGoal && goals.length > 0 && (
+              <FormField
+                control={form.control}
+                name="goal_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nenhuma meta</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma meta" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Nenhuma meta</SelectItem>
+                        {goals.map((goal) => (
+                          <SelectItem key={goal.id} value={goal.id}>
+                            {goal.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Descrição */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descreva os detalhes da tarefa..."
+                      className="resize-none"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Botões */}
             <div className="flex gap-4 pt-4">
               <Button type="submit" className="flex-1">
@@ -714,3 +807,4 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], defau
     </Card>
   );
 }
+
