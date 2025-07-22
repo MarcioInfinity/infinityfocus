@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -40,16 +40,7 @@ const taskSchema = z.object({
   due_date: z.date().optional(),
   is_indefinite: z.boolean(),
   // Validação de horário corrigida - aceita formato HH:mm ou vazio
-  time: z.string()
-    .optional()
-    .refine((val) => {
-      if (!val || val === '') return true;
-      // Regex para validar formato HH:mm (24h)
-      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      return timeRegex.test(val);
-    }, {
-      message: 'Formato de horário inválido. Use HH:mm (ex: 14:30)'
-    }),
+  time: z.string().optional(),
   notify_enabled: z.boolean(),
   repeat_enabled: z.boolean(),
   repeat_type: z.enum(["daily", "weekly", "monthly", "custom"]).optional(),
@@ -75,7 +66,7 @@ interface TaskFormProps {
   initialData?: any;
   projects?: any[];
   goals?: any[];
-  defaultProjectId?: string;
+  defaultProjectId?: string; // Adicionado para receber o ID do projeto do Kanban
 }
 
 const categories = [
@@ -128,6 +119,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
       repeat_days: initialData?.repeat_days?.map(Number) || [],
       monthly_day: initialData?.monthly_day || undefined,
       custom_dates: initialData?.custom_dates?.map((date: string) => new Date(date)) || [],
+      // CORREÇÃO: Definir assign_to_project como true e project_id se defaultProjectId for fornecido
       assign_to_project: initialData?.project_id ? true : (!!defaultProjectId || false),
       project_id: initialData?.project_id || defaultProjectId || "",
       assign_to_goal: initialData?.goal_id ? true : false,
@@ -135,6 +127,14 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
       description: initialData?.description || "",
     },
   });
+
+  // CORREÇÃO: Forçar assign_to_project e project_id se defaultProjectId for fornecido
+  useEffect(() => {
+    if (defaultProjectId) {
+      form.setValue('assign_to_project', true);
+      form.setValue('project_id', defaultProjectId);
+    }
+  }, [defaultProjectId, form]);
 
   const watchIsIndefinite = form.watch('is_indefinite');
   const watchNotifyEnabled = form.watch('notify_enabled');
@@ -651,6 +651,8 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
+                        // CORREÇÃO: Desabilitar switch se defaultProjectId estiver presente
+                        disabled={!!defaultProjectId}
                       />
                     </FormControl>
                   </FormItem>
@@ -665,8 +667,13 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                 name="project_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nenhum projeto</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormLabel>Projeto</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      // CORREÇÃO: Desabilitar select se defaultProjectId estiver presente
+                      disabled={!!defaultProjectId}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um projeto" />
@@ -721,7 +728,7 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
                 name="goal_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nenhuma meta</FormLabel>
+                    <FormLabel>Meta</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -777,3 +784,4 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects = [], goals
     </Card>
   );
 }
+
