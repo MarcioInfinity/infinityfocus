@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DashboardStats } from './DashboardStats';
-import { TaskFormImproved } from './forms/TaskFormImproved';
+import { TaskForm } from './forms/TaskForm';
 import { ProjectForm } from './forms/ProjectForm';
 import { GoalForm } from './forms/GoalForm';
 import { useAuth } from '@/hooks/useAuth';
-import { useTasksImproved } from '@/hooks/useTasksImproved';
+import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useRealtime } from '@/hooks/useRealtime';
@@ -19,10 +19,10 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { getCurrentDateAndDay } from '@/utils/dateTime';
 
-export function DashboardImproved() {
+export function Dashboard() {
   const { user } = useAuth();
   // CORREÇÃO #2: Usar hook melhorado de tarefas
-  const { tasks, todayTasks, createTask, updateTask } = useTasksImproved();
+  const { tasks, todayTasks, createTask, updateTask } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
   const { settings } = useUserSettings();
@@ -178,7 +178,7 @@ export function DashboardImproved() {
             </Card>
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-            <TaskFormImproved 
+            <TaskForm 
               onSubmit={handleCreateTask} 
               onCancel={() => setIsTaskFormOpen(false)}
               projects={projects}
