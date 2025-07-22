@@ -33,7 +33,6 @@ import { Task, KanbanColumn, Priority } from '@/types';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useTasks } from '@/hooks/useTasks';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
 
 const mockColumns: KanbanColumn[] = [
   {
@@ -88,7 +87,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
-  const { tasks, updateTask } = useTasks();
+  const { tasks, updateTask, createTask } = useTasks();
   const [columns, setColumns] = useState<KanbanColumn[]>(mockColumns);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [draggedColumn, setDraggedColumn] = useState<KanbanColumn | null>(null);
@@ -121,7 +120,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
         filter: `project_id=eq.${projectId}`
       }, () => {
         // Refresh task data
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        window.location.reload();
       })
       .subscribe();
 
@@ -219,7 +218,14 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   };
 
   const handleCreateTask = (taskData: any) => {
-    createTask(taskData);
+    // Ensure the task is associated with the project and has the correct status
+    const taskWithProject = {
+      ...taskData,
+      project_id: projectId,
+      status: selectedColumn ? columns.find(col => col.id === selectedColumn)?.status || 'todo' : 'todo'
+    };
+    
+    createTask(taskWithProject);
     setIsTaskFormOpen(false);
     setSelectedColumn(null);
   };
@@ -266,7 +272,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
                 Tarefa
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <TaskForm
                 onSubmit={handleCreateTask}
                 onCancel={() => {
