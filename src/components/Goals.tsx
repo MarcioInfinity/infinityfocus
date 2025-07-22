@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoalForm } from './forms/GoalForm';
-import { RewardFormImproved } from './forms/RewardFormImproved';
+import { RewardForm } from './forms/RewardForm';
 import { EditGoalModal } from './modals/EditGoalModal';
 import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { GoalChecklist } from './GoalChecklist';
@@ -17,7 +17,7 @@ import { useGoals } from '@/hooks/useGoals';
 import { useRewards } from '@/hooks/useRewards';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
-export function GoalsImproved() {
+export function Goals() {
   const {
     goals,
     createGoal,
@@ -252,7 +252,7 @@ export function GoalsImproved() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <RewardFormImproved 
+              <RewardForm 
                 onSubmit={handleCreateReward} 
                 onCancel={() => setIsRewardFormOpen(false)} 
               />
@@ -468,7 +468,7 @@ export function GoalsImproved() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-                    <RewardFormImproved 
+                    <RewardForm 
                       onSubmit={handleCreateReward} 
                       onCancel={() => setIsRewardFormOpen(false)} 
                     />
