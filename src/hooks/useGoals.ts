@@ -1,25 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
-import { useToastNotifications } from './use-toast-notifications';
 import { Goal } from '@/types';
+import { toast } from 'sonner';
 
 export function useGoals(projectId?: string) {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { showSuccessToast, showErrorToast } = useToastNotifications();
 
-  const goalsQuery = useQuery({
-    queryKey: [projectId ? 'projectGoals' : 'goals', user?.id, projectId],
+  const { data: goals = [], isLoading, error } = useQuery({
+    queryKey: ['goals', projectId],
     queryFn: async () => {
-      if (!user) return [];
-      
-      console.log(`Fetching ${projectId ? 'project goals' : 'goals'} for user:`, user.id, projectId ? `(Project ID: ${projectId})` : '');
-      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
       let query = supabase
-        .from(projectId ? 'project_goals' : 'goals')
+        .from('goals')
         .select('*')
-        .eq('created_by', user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (projectId) {
@@ -27,152 +23,149 @@ export function useGoals(projectId?: string) {
       }
 
       const { data, error } = await query;
-
+      
       if (error) {
-        console.error(`Error fetching ${projectId ? 'project goals' : 'goals'}:`, error);
+        console.error('Erro ao buscar metas:', error);
         throw error;
       }
-
-      console.log(`${projectId ? 'Project goals' : 'Goals'} fetched:`, data?.length || 0);
-
-      return (data || []) as Goal[];
+      
+      return data || [];
     },
-    enabled: !!user,
-    staleTime: 30 * 1000, // 30 seconds
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    gcTime: 1000 * 60 * 10, // 10 minutos
   });
 
-  const createGoalMutation = useMutation({
-    mutationFn: async (goalData: any) => {
-      if (!user) throw new Error('User not authenticated');
-
-      console.log('Creating goal with data:', goalData);
-
-      const goalPayload = {
-        name: goalData.name,
-        description: goalData.description || null,
-        priority: goalData.priority || 'medium',
-        category: goalData.category || 'professional',
-        start_date: goalData.start_date || null,
-        due_date: goalData.due_date || null,
-        progress: goalData.progress || 0,
-        is_shared: goalData.is_shared || false,
-        notifications_enabled: goalData.notifications_enabled || false,
-        reward_enabled: goalData.reward_enabled || false,
-        reward_description: goalData.reward_description || null,
-        notes: goalData.notes || null,
-        assigned_tasks: goalData.assigned_tasks || [],
-        assigned_projects: goalData.assigned_projects || [],
-        project_id: goalData.project_id || null,
-        created_by: user.id,
-      };
-
-      console.log('Goal payload:', goalPayload);
+  const createGoal = useMutation({
+    mutationFn: async (goalData: Partial<Goal>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
 
       const { data, error } = await supabase
-        .from(goalData.project_id ? 'project_goals' : 'goals')
-        .insert(goalPayload)
+        .from('goals')
+        .insert([{ ...goalData, user_id: user.id }])
         .select()
         .single();
 
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('Erro ao criar meta:', error);
         throw error;
       }
 
       return data;
     },
-    onSuccess: (data) => {
-      if (data.project_id) {
-        queryClient.invalidateQueries({ queryKey: ['projectGoals', data.project_id] });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['goals'] });
+    onSuccess: (newGoal) => {
+      // Invalidar queries relacionadas de forma mais específica
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      if (newGoal.project_id) {
+        queryClient.invalidateQueries({ queryKey: ['goals', newGoal.project_id] });
       }
-      showSuccessToast('Meta criada com sucesso!');
+      toast.success('Meta criada com sucesso!');
     },
     onError: (error) => {
-      console.error('Error creating goal:', error);
-      showErrorToast('Erro ao criar meta: ' + error.message);
+      console.error('Erro ao criar meta:', error);
+      toast.error('Erro ao criar meta. Tente novamente.');
     },
   });
 
-  const updateGoalMutation = useMutation({
+  const updateGoal = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Goal> }) => {
-      if (!user) throw new Error('User not authenticated');
-      
-      console.log('Updating goal:', id, updates);
-      
       const { data, error } = await supabase
         .from('goals')
         .update(updates)
         .eq('id', id)
-        .eq('created_by', user.id)
         .select()
         .single();
 
       if (error) {
-        console.error('Error updating goal:', error);
+        console.error('Erro ao atualizar meta:', error);
         throw error;
       }
-      
+
       return data;
     },
-    onSuccess: (data, variables) => {
-      if (data.project_id) {
-        queryClient.invalidateQueries({ queryKey: ["projectGoals", data.project_id] });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ["goals"] });
+    onSuccess: (updatedGoal) => {
+      // Invalidar queries relacionadas de forma mais específica
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      if (updatedGoal.project_id) {
+        queryClient.invalidateQueries({ queryKey: ['goals', updatedGoal.project_id] });
       }
-      
-      // Optimistic update
-      queryClient.setQueryData([variables.updates.project_id ? "projectGoals" : "goals", user?.id, variables.updates.project_id], (old: Goal[] | undefined) => {
-        if (!old) return old;
-        return old.map(goal => 
-          goal.id === variables.id ? { ...goal, ...variables.updates } : goal
-        );
-      });
-      
-      showSuccessToast("Meta atualizada com sucesso!");
+      toast.success('Meta atualizada com sucesso!');
     },
     onError: (error) => {
-      console.error('Error updating goal:', error);
-      showErrorToast('Erro ao atualizar meta');
+      console.error('Erro ao atualizar meta:', error);
+      toast.error('Erro ao atualizar meta. Tente novamente.');
     },
   });
 
-  const deleteGoalMutation = useMutation({
+  const deleteGoal = useMutation({
     mutationFn: async (id: string) => {
-      if (!user) throw new Error('User not authenticated');
-      
       const { error } = await supabase
         .from('goals')
         .delete()
-        .eq('id', id)
-        .eq('created_by', user.id);
+        .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao excluir meta:', error);
+        throw error;
+      }
+
+      return id;
     },
-    onSuccess: (data, id) => {
-      // Invalidate both general goals and project goals queries
-      queryClient.invalidateQueries({ queryKey: ["goals"] });
-      queryClient.invalidateQueries({ queryKey: ["projectGoals"] });
-      showSuccessToast("Meta excluída com sucesso!");
+    onSuccess: () => {
+      // Invalidar todas as queries de metas
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      toast.success('Meta excluída com sucesso!');
     },
     onError: (error) => {
-      console.error('Error deleting goal:', error);
-      showErrorToast('Erro ao excluir meta');
+      console.error('Erro ao excluir meta:', error);
+      toast.error('Erro ao excluir meta. Tente novamente.');
+    },
+  });
+
+  const toggleGoalComplete = useMutation({
+    mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
+      const { data, error } = await supabase
+        .from('goals')
+        .update({ 
+          completed,
+          completed_at: completed ? new Date().toISOString() : null 
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao alterar status da meta:', error);
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: (updatedGoal) => {
+      // Invalidar queries relacionadas de forma mais específica
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      if (updatedGoal.project_id) {
+        queryClient.invalidateQueries({ queryKey: ['goals', updatedGoal.project_id] });
+      }
+      toast.success(updatedGoal.completed ? 'Meta concluída!' : 'Meta reaberta!');
+    },
+    onError: (error) => {
+      console.error('Erro ao alterar status da meta:', error);
+      toast.error('Erro ao alterar status da meta. Tente novamente.');
     },
   });
 
   return {
-    goals: goalsQuery.data || [],
-    isLoading: goalsQuery.isLoading,
-    error: goalsQuery.error,
-    createGoal: createGoalMutation.mutate,
-    updateGoal: updateGoalMutation.mutate,
-    deleteGoal: deleteGoalMutation.mutate,
-    isCreating: createGoalMutation.isPending,
-    isUpdating: updateGoalMutation.isPending,
-    isDeleting: deleteGoalMutation.isPending,
+    goals,
+    isLoading,
+    error,
+    createGoal: createGoal.mutate,
+    updateGoal: updateGoal.mutate,
+    deleteGoal: deleteGoal.mutate,
+    toggleGoalComplete: toggleGoalComplete.mutate,
+    isCreating: createGoal.isPending,
+    isUpdating: updateGoal.isPending,
+    isDeleting: deleteGoal.isPending,
+    isToggling: toggleGoalComplete.isPending,
   };
 }
