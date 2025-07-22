@@ -10,9 +10,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 interface LayoutProps {
   children: ReactNode;
 }
+
 const navItems = [{
   icon: Home,
   label: 'Dashboard',
@@ -38,6 +40,7 @@ const navItems = [{
   label: 'Configurações',
   path: '/settings'
 }];
+
 const mobileBottomNavItems = [{
   icon: Home,
   label: 'Dashboard',
@@ -55,7 +58,8 @@ const mobileBottomNavItems = [{
   label: 'Metas',
   path: '/goals'
 }];
-export function Layout({
+
+export function LayoutImproved({
   children
 }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -71,12 +75,14 @@ export function Layout({
     profile
   } = useProfile();
   const isMobile = useIsMobile();
+  
   const isActivePath = (path: string) => {
     if (path === '/') {
       return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
   };
+  
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -95,14 +101,21 @@ export function Layout({
 
         {/* Mobile Top Navigation */}
         <div className="fixed top-0 left-0 right-0 z-50 h-14 glass-card border-b border-white/20 flex items-center justify-between px-4">
-          {/* Logo à esquerda */}
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-primary to-accent rounded-md flex items-center justify-center">
-              <img src="/assets/images/infinity_focus_logo_no_bg.png" alt="Infinity Focus Logo" className="h-4 w-4" />
+          {/* Logo à esquerda - CORREÇÃO #4: Logo sem fundo e maior */}
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img 
+                src="/assets/images/infinity_focus_logo_no_bg.png" 
+                alt="Infinity Focus Logo" 
+                className="h-8 w-8 object-contain"
+              />
             </div>
-            <h1 className="text-sm font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Infinity Focus
-            </h1>
+            <div>
+              <h1 className="text-base font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                Infinity Focus
+              </h1>
+              <p className="text-xs text-muted-foreground">Gestão & Produtividade</p>
+            </div>
           </div>
 
           {/* Menu Dropdown à direita */}
@@ -168,11 +181,15 @@ export function Layout({
 
       {/* Sidebar */}
       <div className={`fixed left-0 top-0 z-40 h-full w-64 glass-card border-r border-white/20 transform transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-        {/* Logo */}
+        {/* Logo - CORREÇÃO #4: Logo sem fundo e maior */}
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <img src="/assets/images/infinity_focus_logo_no_bg.png" alt="Infinity Focus Logo" className="h-6 w-6" />
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img 
+                src="/assets/images/infinity_focus_logo_no_bg.png" 
+                alt="Infinity Focus Logo" 
+                className="h-12 w-12 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -206,10 +223,10 @@ export function Layout({
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  {profile?.name || user?.email || 'Usuário'}
+                  {profile?.name || user?.email || 'Usuário Demo Teste'}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {profile?.email || user?.email || ''}
+                  {profile?.email || user?.email || 'marcio.pereira.infinity@gmail.com'}
                 </p>
               </div>
             </div>
@@ -234,3 +251,4 @@ export function Layout({
       <Toaster />
     </div>;
 }
+
