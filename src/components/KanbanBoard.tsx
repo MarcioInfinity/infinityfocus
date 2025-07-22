@@ -26,12 +26,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { TaskForm } from './forms/TaskForm';
+import { TaskFormImproved } from './forms/TaskFormImproved';
 import { InviteModal } from './modals/InviteModal';
 import { EditColumnModal } from './modals/EditColumnModal';
 import { Task, KanbanColumn, Priority } from '@/types';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useGoals } from '@/hooks/useGoals';
 import { supabase } from '@/integrations/supabase/client';
 
 const mockColumns: KanbanColumn[] = [
@@ -82,12 +84,14 @@ const statusIcons = {
   'done': CheckCircle
 };
 
-interface KanbanBoardProps {
+interface KanbanBoardImprovedProps {
   projectId: string;
 }
 
-export function KanbanBoard({ projectId }: KanbanBoardProps) {
-  const { tasks, updateTask } = useTasks();
+export function KanbanBoardImproved({ projectId }: KanbanBoardImprovedProps) {
+  const { tasks, updateTask, createTask } = useTasks();
+  const { projects } = useProjects();
+  const { goals } = useGoals();
   const [columns, setColumns] = useState<KanbanColumn[]>(mockColumns);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [draggedColumn, setDraggedColumn] = useState<KanbanColumn | null>(null);
@@ -97,7 +101,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
-  const { showSuccessToast } = useToastNotifications();
+  const { showSuccessToast, showErrorToast } = useToastNotifications();
 
   // Load tasks from the project into columns
   useEffect(() => {
@@ -138,6 +142,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       showSuccessToast(completed ? 'Tarefa concluída!' : 'Tarefa reaberta!');
     } catch (error) {
       console.error('Error updating task status:', error);
+      showErrorToast('Erro ao atualizar status da tarefa');
     }
   };
 
@@ -158,6 +163,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       handleCancelEdit();
     } catch (error) {
       console.error('Error updating task:', error);
+      showErrorToast('Erro ao atualizar tarefa');
     }
   };
 
@@ -189,6 +195,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
       showSuccessToast('Tarefa movida com sucesso!');
     } catch (error) {
       console.error('Error moving task:', error);
+      showErrorToast('Erro ao mover tarefa');
     }
 
     setDraggedTask(null);
@@ -217,10 +224,24 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     setDraggedColumn(null);
   };
 
-  const handleCreateTask = (taskData: any) => {
-    createTask(taskData);
-    setIsTaskFormOpen(false);
-    setSelectedColumn(null);
+  // CORREÇÃO #3: Implementar funcionalidade do botão de criar tarefa no Kanban
+  const handleCreateTask = async (taskData: any) => {
+    try {
+      // Garantir que a tarefa seja criada no projeto atual
+      const taskWithProject = {
+        ...taskData,
+        project_id: projectId,
+        assign_to_project: true
+      };
+
+      await createTask(taskWithProject);
+      showSuccessToast('Tarefa criada com sucesso no projeto!');
+      setIsTaskFormOpen(false);
+      setSelectedColumn(null);
+    } catch (error) {
+      console.error('Erro ao criar tarefa:', error);
+      showErrorToast('Erro ao criar tarefa. Tente novamente.');
+    }
   };
 
   const handleUpdateColumn = (updatedColumn: KanbanColumn) => {
@@ -258,6 +279,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           Kanban
         </h1>
         <div className="flex gap-2">
+          {/* CORREÇÃO #3: Botão de criar tarefa funcional */}
           <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="glow-button">
@@ -265,13 +287,15 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
                 Tarefa
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-              <TaskForm
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <TaskFormImproved
                 onSubmit={handleCreateTask}
                 onCancel={() => {
                   setIsTaskFormOpen(false);
                   setSelectedColumn(null);
                 }}
+                projects={projects}
+                goals={goals}
                 defaultProjectId={projectId}
               />
             </DialogContent>
@@ -513,3 +537,4 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
     </div>
   );
 }
+
