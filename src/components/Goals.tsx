@@ -561,4 +561,3 @@ export function GoalsImproved() {
     </div>
   );
 }
-
