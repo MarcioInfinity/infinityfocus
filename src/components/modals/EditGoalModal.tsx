@@ -4,13 +4,13 @@ import { GoalForm } from '@/components/forms/GoalForm';
 import { useGoals } from '@/hooks/useGoals';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
-interface EditGoalModalImprovedProps {
+interface EditGoalModalProps {
   goalId: string | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function EditGoalModalImproved({ goalId, isOpen, onClose }: EditGoalModalImprovedProps) {
+export function EditGoalModal({ goalId, isOpen, onClose }: EditGoalModalProps) {
   const { goals, updateGoal } = useGoals();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
   const [goalData, setGoalData] = useState<any>(null);
