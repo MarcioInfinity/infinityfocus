@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DashboardStats } from './DashboardStats';
-import { TaskFormImproved } from './forms/TaskFormImproved';
+import { TaskFormImproved } from '../components/forms/TaskFormImproved';
 import { ProjectForm } from './forms/ProjectForm';
 import { GoalForm } from './forms/GoalForm';
 import { useAuth } from '@/hooks/useAuth';
