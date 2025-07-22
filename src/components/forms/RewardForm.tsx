@@ -13,8 +13,9 @@ import { Gift, Target, FolderKanban, CheckSquare } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
-// Schema de validação para recompensas
+// Schema de validação para recompensas - CORRIGIDO
 const rewardSchema = z.object({
   title: z.string().min(1, 'Título da recompensa é obrigatório'),
   description: z.string().optional(),
@@ -29,7 +30,7 @@ const rewardSchema = z.object({
   attributed_to_id: z.string().min(1, 'Item de atribuição é obrigatório'),
 });
 
-interface RewardFormProps {
+interface RewardFormImprovedProps {
   onSubmit: (data: any) => void;
   onCancel: () => void;
   initialData?: any;
@@ -48,65 +49,102 @@ const attributionTypes = [
   { value: 'goal', label: 'Meta', icon: Target },
 ];
 
-export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps) {
+const currencies = [
+  { value: 'BRL', label: 'R$ (Real)', symbol: 'R$' },
+  { value: 'USD', label: '$ (Dólar)', symbol: '$' },
+  { value: 'EUR', label: '€ (Euro)', symbol: '€' },
+];
+
+export function RewardFormImproved({ onSubmit, onCancel, initialData }: RewardFormImprovedProps) {
   const { tasks } = useTasks();
   const { projects } = useProjects();
   const { goals } = useGoals();
+  const { showErrorToast } = useToastNotifications();
   
   const [availableItems, setAvailableItems] = useState<Array<{id: string, name: string}>>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof rewardSchema>>({
     resolver: zodResolver(rewardSchema),
     defaultValues: {
-      title: '',
-      description: '',
-      celebration_level: 'medium',
-      investment_value: 0,
-      currency: 'BRL',
-      attributed_to_type: 'task',
-      attributed_to_id: '',
-      ...initialData,
+      title: initialData?.title || '',
+      description: initialData?.description || '',
+      celebration_level: initialData?.celebration_level || 'medium',
+      investment_value: initialData?.investment_value || 0,
+      currency: initialData?.currency || 'BRL',
+      attributed_to_type: initialData?.attributed_to_type || 'task',
+      attributed_to_id: initialData?.attributed_to_id || '',
     },
   });
 
   const watchAttributedType = form.watch('attributed_to_type');
+  const watchCurrency = form.watch('currency');
+  const watchInvestmentValue = form.watch('investment_value');
+  const watchCelebrationLevel = form.watch('celebration_level');
 
   // Atualizar itens disponíveis baseado no tipo selecionado
   useEffect(() => {
     let items: Array<{id: string, name: string}> = [];
     
-    switch (watchAttributedType) {
-      case 'task':
-        items = tasks.map(task => ({ id: task.id, name: task.title }));
-        break;
-      case 'project':
-        items = projects.map(project => ({ id: project.id, name: project.name }));
-        break;
-      case 'goal':
-        items = goals.map(goal => ({ id: goal.id, name: goal.name }));
-        break;
-    }
-    
-    setAvailableItems(items);
-    
-    // Limpar seleção se o item atual não estiver disponível no novo tipo
-    const currentSelection = form.getValues('attributed_to_id');
-    if (currentSelection && !items.find(item => item.id === currentSelection)) {
-      form.setValue('attributed_to_id', '');
+    try {
+      switch (watchAttributedType) {
+        case 'task':
+          items = tasks?.map(task => ({ id: task.id, name: task.title })) || [];
+          break;
+        case 'project':
+          items = projects?.map(project => ({ id: project.id, name: project.name })) || [];
+          break;
+        case 'goal':
+          items = goals?.map(goal => ({ id: goal.id, name: goal.name })) || [];
+          break;
+      }
+      
+      setAvailableItems(items);
+      
+      // Limpar seleção se o item atual não estiver disponível no novo tipo
+      const currentSelection = form.getValues('attributed_to_id');
+      if (currentSelection && !items.find(item => item.id === currentSelection)) {
+        form.setValue('attributed_to_id', '');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar itens:', error);
+      setAvailableItems([]);
     }
   }, [watchAttributedType, tasks, projects, goals, form]);
 
-  const handleSubmit = (values: z.infer<typeof rewardSchema>) => {
-    // Encontrar o nome do item selecionado para incluir nos dados
-    const selectedItem = availableItems.find(item => item.id === values.attributed_to_id);
+  // CORREÇÃO #5: Implementar corretamente o handleSubmit
+  const handleSubmit = async (values: z.infer<typeof rewardSchema>) => {
+    if (isSubmitting) return;
     
-    const rewardData = {
-      ...values,
-      attributed_item_name: selectedItem?.name || '',
-      investment_value: values.investment_value || 0,
-    };
+    setIsSubmitting(true);
     
-    onSubmit(rewardData);
+    try {
+      // Encontrar o nome do item selecionado para incluir nos dados
+      const selectedItem = availableItems.find(item => item.id === values.attributed_to_id);
+      
+      if (!selectedItem) {
+        showErrorToast('Item selecionado não encontrado');
+        return;
+      }
+
+      const rewardData = {
+        ...values,
+        attributed_item_name: selectedItem.name,
+        investment_value: values.investment_value || 0,
+        // Garantir que todos os campos necessários estejam presentes
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      console.log('Dados da recompensa a serem enviados:', rewardData);
+      
+      await onSubmit(rewardData);
+    } catch (error) {
+      console.error('Erro ao criar recompensa:', error);
+      showErrorToast('Erro ao criar recompensa. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getCelebrationIcon = (level: string) => {
@@ -122,6 +160,11 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
   const getAttributionIcon = (type: string) => {
     const typeConfig = attributionTypes.find(t => t.value === type);
     return typeConfig ? typeConfig.icon : CheckSquare;
+  };
+
+  const getCurrencySymbol = (currency: string) => {
+    const currencyConfig = currencies.find(c => c.value === currency);
+    return currencyConfig ? currencyConfig.symbol : 'R$';
   };
 
   return (
@@ -236,9 +279,11 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="BRL">R$ (Real)</SelectItem>
-                        <SelectItem value="USD">$ (Dólar)</SelectItem>
-                        <SelectItem value="EUR">€ (Euro)</SelectItem>
+                        {currencies.map((currency) => (
+                          <SelectItem key={currency.value} value={currency.value}>
+                            {currency.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -323,12 +368,12 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <span>{getCelebrationIcon(form.watch('celebration_level'))}</span>
+                    <span>{getCelebrationIcon(watchCelebrationLevel)}</span>
                     <span className="font-medium">{form.watch('title')}</span>
                   </div>
-                  {form.watch('investment_value') > 0 && (
+                  {watchInvestmentValue > 0 && (
                     <div className="text-muted-foreground">
-                      Valor: {form.watch('currency') === 'BRL' ? 'R$' : form.watch('currency') === 'USD' ? '$' : '€'} {form.watch('investment_value')?.toFixed(2)}
+                      Valor: {getCurrencySymbol(watchCurrency)} {watchInvestmentValue?.toFixed(2)}
                     </div>
                   )}
                   <div className="text-muted-foreground">
@@ -340,10 +385,14 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
 
             {/* Botões */}
             <div className="flex gap-4 pt-4">
-              <Button type="submit" className="flex-1" disabled={availableItems.length === 0}>
-                {initialData ? 'Atualizar Recompensa' : 'Criar Recompensa'}
+              <Button 
+                type="submit" 
+                className="flex-1" 
+                disabled={availableItems.length === 0 || isSubmitting}
+              >
+                {isSubmitting ? 'Criando...' : (initialData ? 'Atualizar Recompensa' : 'Criar Recompensa')}
               </Button>
-              <Button type="button" variant="outline" onClick={onCancel}>
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                 Cancelar
               </Button>
             </div>
@@ -353,3 +402,4 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
     </Card>
   );
 }
+
