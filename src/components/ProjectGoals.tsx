@@ -12,7 +12,7 @@ interface ProjectGoalsProps {
 }
 
 export function ProjectGoals({ projectId }: ProjectGoalsProps) {
-  const { goals, createGoal, isLoading } = useGoals();
+  const { goals, createGoal, isLoading } = useGoals(projectId);
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [projectGoals, setProjectGoals] = useState<Goal[]>([]);
 
@@ -97,4 +97,3 @@ export function ProjectGoals({ projectId }: ProjectGoalsProps) {
     </div>
   );
 }
-
