@@ -5,15 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { TaskFormImproved } from './forms/TaskFormImproved';
+import { TaskForm } from './forms/TaskForm';
 import { EditTaskModal } from './modals/EditTaskModal';
-import { useTasksImproved } from '@/hooks/useTasksImproved';
+import { useTasks } from "@/hooks/useTasks";
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { Task } from '@/types';
 
-interface KanbanBoardImprovedProps {
+interface KanbanBoardProps {
   projectId: string;
 }
 
@@ -24,9 +24,9 @@ const KANBAN_COLUMNS = [
   { id: 'done', title: 'Concluído', color: 'bg-green-500/20' },
 ];
 
-export function KanbanBoardImproved({ projectId }: KanbanBoardImprovedProps) {
+export function KanbanBoard({ projectId }: KanbanBoardProps) {
   // CORREÇÃO #4: Usar hook melhorado de tarefas
-  const { tasks, createTask, updateTask, deleteTask } = useTasksImproved();
+  const { tasks, createTask, updateTask, deleteTask } = useTasks();
   const { projects } = useProjects();
   const { goals } = useGoals();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
@@ -167,7 +167,7 @@ export function KanbanBoardImproved({ projectId }: KanbanBoardImprovedProps) {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-            <TaskFormImproved 
+            <TaskForm 
               onSubmit={handleCreateTask} 
               onCancel={() => setIsTaskFormOpen(false)}
               projects={projects}
