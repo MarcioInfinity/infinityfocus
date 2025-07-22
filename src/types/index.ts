@@ -1,11 +1,10 @@
-
 export type Priority = 'low' | 'medium' | 'high';
 
 export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done';
 
 export type CategoryType = 'professional' | 'intellectual' | 'finance' | 'social' | 'relationship' | 'family' | 'leisure' | 'health' | 'spiritual' | 'emotional' | 'other';
 
-export type FrequencyType = 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
+export type FrequencyType = 'daily' | 'weekly' | 'monthly' | 'custom';
 
 export type NotificationType = 'time' | 'day' | 'date';
 
@@ -29,9 +28,10 @@ export interface Task {
   notifications: Notification[];
   notifications_enabled: boolean;
   repeat_enabled: boolean;
-  repeat_type?: 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
+  repeat_type?: 'daily' | 'weekly' | 'monthly' | 'custom';
   repeat_days?: string[];
   repeat_interval?: number;
+  monthly_day?: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -111,7 +111,7 @@ export interface Project {
   end_time?: string;
   notifications_enabled: boolean;
   repeat_enabled: boolean;
-  repeat_type?: 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
+  repeat_type?: 'daily' | 'weekly' | 'monthly' | 'custom';
   repeat_days?: string[];
   owner_id: string;
   members: ProjectMember[];

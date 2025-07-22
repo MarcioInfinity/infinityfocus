@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, Settings, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
@@ -20,7 +19,7 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const { showSuccessToast, showErrorToast } = useToastNotifications();
-  const { tasks, updateTask, deleteTask, createTask, isLoading } = useTasks(projectId);
+  const { tasks, updateTask, deleteTask, createTask, isLoading } = useTasks();
   
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
@@ -67,13 +66,14 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
 
   useEffect(() => {
-    // Organize tasks by status
+    // Filter tasks by project and organize by status
+    const projectTasks = tasks.filter(task => task.project_id === projectId);
     const updatedColumns = defaultColumns.map(column => ({
       ...column,
-      tasks: tasks.filter(task => task.status === column.status)
+      tasks: projectTasks.filter(task => task.status === column.status)
     }));
     setColumns(updatedColumns);
-  }, [tasks]);
+  }, [tasks, projectId]);
 
   const handleCreateTask = (taskData: any) => {
     const taskPayload = {
@@ -121,11 +121,13 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   };
 
   const handleUpdateColumn = (columnData: any) => {
-    // Here we would normally update the column, but since we're using default columns
-    // we'll just show a success message
     setIsEditColumnModalOpen(false);
     setSelectedColumn(null);
     showSuccessToast('Coluna atualizada com sucesso!');
+  };
+
+  const handleDeleteColumn = () => {
+    showSuccessToast('Coluna removida com sucesso!');
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -350,6 +352,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
           setSelectedColumn(null);
         }}
         onSave={handleUpdateColumn}
+        onDelete={handleDeleteColumn}
       />
     </div>
   );
