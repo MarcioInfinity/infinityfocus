@@ -1,10 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { TaskForm } from '@/components/forms/TaskForm';
-import { useTasks } from '@/hooks/useTasks';
-import { useProjects } from '@/hooks/useProjects';
-import { useGoals } from '@/hooks/useGoals';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { Task, Project, Goal } from '@/types';
 
 interface EditTaskModalProps {
   taskId: string | null;
@@ -17,7 +11,7 @@ export function EditTaskModal({ taskId, isOpen, onClose }: EditTaskModalProps) {
   const { projects } = useProjects();
   const { goals } = useGoals();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
-  const [taskData, setTaskData] = useState<any>(null);
+  const [taskData, setTaskData] = useState<Task | null>(null);
 
   useEffect(() => {
     if (taskId && isOpen) {
@@ -28,7 +22,7 @@ export function EditTaskModal({ taskId, isOpen, onClose }: EditTaskModalProps) {
     }
   }, [taskId, tasks, isOpen]);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Task) => {
     if (!taskId) return;
 
     try {
