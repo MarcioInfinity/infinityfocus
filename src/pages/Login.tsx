@@ -39,8 +39,8 @@ export default function Login() {
     try {
       await signIn(email, password);
       // O redirecionamento será feito pelo useEffect acima
-    } catch (error: any) {
-      setError(error.message || 'Erro ao fazer login');
+    } catch (error: unknown) {
+      setError((error instanceof Error) ? error.message : 'Erro desconhecido ao fazer login');
     } finally {
       setIsLoading(false);
     }
