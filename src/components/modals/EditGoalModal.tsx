@@ -1,8 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { GoalForm } from '@/components/forms/GoalForm';
-import { useGoals } from '@/hooks/useGoals';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { Goal } from '@/types';
 
 interface EditGoalModalProps {
   goalId: string | null;
@@ -13,7 +9,7 @@ interface EditGoalModalProps {
 export function EditGoalModal({ goalId, isOpen, onClose }: EditGoalModalProps) {
   const { goals, updateGoal } = useGoals();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
-  const [goalData, setGoalData] = useState<any>(null);
+  const [goalData, setGoalData] = useState<Goal | null>(null);
 
   useEffect(() => {
     if (goalId && isOpen) {
@@ -24,7 +20,7 @@ export function EditGoalModal({ goalId, isOpen, onClose }: EditGoalModalProps) {
     }
   }, [goalId, goals, isOpen]);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Goal) => {
     if (!goalId) return;
 
     try {
