@@ -190,7 +190,7 @@ export function useProjectInvites() {
     },
   });
 
-  const getProjectInvites = (projectId: string) => {
+  export function useGetProjectInvites(projectId: string) {
     return useQuery({
       queryKey: ['project-invites', projectId],
       queryFn: async () => {
@@ -216,7 +216,7 @@ export function useProjectInvites() {
     });
   };
 
-  const getInviteByToken = (token: string) => {
+  export function useGetInviteByToken(token: string) {
     return useQuery({
       queryKey: ['invite-by-token', token],
       queryFn: async () => {
