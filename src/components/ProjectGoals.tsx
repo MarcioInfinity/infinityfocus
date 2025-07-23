@@ -27,12 +27,12 @@ export function ProjectGoals({ projectId }: ProjectGoalsProps) {
     }
   }, [goals, projectId]);
 
-  const handleCreateGoal = (goalData: any) => {
+  const handleCreateGoal = (goalData: Goal) => {
     createGoal({ ...goalData, project_id: projectId });
     setIsGoalFormOpen(false);
   };
 
-  const handleUpdateGoal = (goalData: any) => {
+  const handleUpdateGoal = (goalData: Goal) => {
     if (editingGoal) {
       updateGoal({ id: editingGoal.id, updates: { ...goalData, project_id: projectId } });
       setEditingGoal(null);
