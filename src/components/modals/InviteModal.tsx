@@ -113,7 +113,7 @@ export function InviteModal({ projectId, isOpen, onClose }: InviteModalProps) {
 
             <div className="space-y-2">
               <Label htmlFor="role">Função no Projeto</Label>
-              <Select value={role} onValueChange={(value: any) => setRole(value)}>
+              <Select value={role} onValueChange={(value: 'admin' | 'member' | 'viewer') => setRole(value)}>
                 <SelectTrigger className="glass-card border-white/20">
                   <SelectValue />
                 </SelectTrigger>
