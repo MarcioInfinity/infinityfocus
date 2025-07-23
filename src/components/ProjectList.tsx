@@ -42,10 +42,10 @@ export function ProjectList({
     }
   });
 
-  const getUserRole = (project: any): ProjectRole => {
+  const getUserRole = (project: Project): ProjectRole => {
     if (!user) return 'viewer';
     if (project.owner_id === user.id) return 'owner';
-    const member = project.members?.find((m: any) => m.user_id === user.id);
+    const member = project.members?.find((m: ProjectMember) => m.user_id === user.id);
     return member?.role || 'viewer';
   };
 
@@ -86,7 +86,7 @@ export function ProjectList({
             filteredProjects.map((project) => {
               const userRole = getUserRole(project);
               const isSelected = selectedProjectId === project.id;
-              const completedTasks = project.tasks?.filter((t: any) => t.status === 'done').length || 0;
+              const completedTasks = project.tasks?.filter((t: Task) => t.status === 'done').length || 0;
               const totalTasks = project.tasks?.length || 0;
               const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
