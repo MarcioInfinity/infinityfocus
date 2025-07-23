@@ -13,8 +13,10 @@ import { useProjectInvites } from '@/hooks/useProjectInvites';
 import { useProjects } from '@/hooks/useProjects';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
+import { Project, ProjectMember, ProjectInvite } from '@/types';
+
 interface ProjectSettingsModalProps {
-  project: any;
+  project: Project;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -149,7 +151,7 @@ export function ProjectSettingsModal({ project, isOpen, onClose }: ProjectSettin
             
             {project.members && project.members.length > 0 ? (
               <div className="space-y-3">
-                {project.members.map((member: any) => {
+                {project.members.map((member: ProjectMember) => {
                   const RoleIcon = roleIcons[member.role as keyof typeof roleIcons];
                   return (
                     <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-white/10">
@@ -216,7 +218,7 @@ export function ProjectSettingsModal({ project, isOpen, onClose }: ProjectSettin
             
             {invitesQuery.data && invitesQuery.data.length > 0 ? (
               <div className="space-y-2">
-                {invitesQuery.data.filter((invite: any) => !invite.used_at).map((invite: any) => (
+                {invitesQuery.data.filter((invite: ProjectInvite) => !invite.used_at).map((invite: ProjectInvite) => (
                   <div key={invite.id} className="flex items-center justify-between p-3 rounded-lg border border-white/10">
                     <div>
                       <p className="font-medium">{invite.email || 'Link de convite'}</p>
