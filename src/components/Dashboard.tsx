@@ -88,19 +88,24 @@ export function Dashboard() {
   const pendingTasks = tasks.filter(task => task.status !== 'done');
   const highPriorityTasks = pendingTasks.filter(task => task.priority === 'high');
 
-  const handleCreateTask = (taskData: any) => {
+import { Task, Project, Goal } from '@/types';
+
+// ... (código existente)
+
+   const handleCreateTask = (taskData: Task) => {
     createTask(taskData);
     setIsTaskFormOpen(false);
   };
 
-  const handleCreateProject = (projectData: any) => {
+  const handleCreateProject = (projectData: Project) => {
     createProject(projectData);
     setIsProjectFormOpen(false);
   };
 
-  const handleCreateGoal = (goalData: any) => {
+  const handleCreateGoal = (goalData: Goal) => {
     createGoal(goalData);
     setIsGoalFormOpen(false);
+  };
   };
 
   const handleToggleTask = (taskId: string, currentStatus: string) => {
