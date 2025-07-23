@@ -1,8 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ProjectForm } from '@/components/forms/ProjectForm';
-import { useProjects } from '@/hooks/useProjects';
-import { useToastNotifications } from '@/hooks/use-toast-notifications';
+import { Project } from '@/types';
 
 interface EditProjectModalProps {
   projectId: string | null;
@@ -13,7 +9,7 @@ interface EditProjectModalProps {
 export function EditProjectModal({ projectId, isOpen, onClose }: EditProjectModalProps) {
   const { projects, updateProject } = useProjects();
   const { showSuccessToast, showErrorToast } = useToastNotifications();
-  const [projectData, setProjectData] = useState<any>(null);
+  const [projectData, setProjectData] = useState<Project | null>(null);
 
   useEffect(() => {
     if (projectId && isOpen) {
@@ -24,7 +20,7 @@ export function EditProjectModal({ projectId, isOpen, onClose }: EditProjectModa
     }
   }, [projectId, projects, isOpen]);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Project) => {
     if (!projectId) return;
 
     try {
