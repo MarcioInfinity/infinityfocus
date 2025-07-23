@@ -18,6 +18,17 @@ interface Reward {
   updated_at: string;
 }
 
+interface CreateRewardPayload {
+  title: string;
+  description?: string;
+  celebration_level: 'small' | 'medium' | 'large' | 'epic';
+  investment_value?: number;
+  currency?: string;
+  attributed_to_type: 'task' | 'project' | 'goal';
+  attributed_to_id: string;
+  attributed_item_name: string;
+}
+
 export function useRewards() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -51,7 +62,7 @@ export function useRewards() {
   });
 
   const createRewardMutation = useMutation({
-    mutationFn: async (rewardData: any) => {
+    mutationFn: async (rewardData: CreateRewardPayload) => {
       if (!user) throw new Error('User not authenticated');
 
       console.log('Creating reward with data:', rewardData);
