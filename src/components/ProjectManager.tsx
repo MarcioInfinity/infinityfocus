@@ -32,7 +32,7 @@ export function ProjectManager() {
   const { projects, createProject, isLoading } = useProjects();
   const [filter, setFilter] = useState<'all' | 'owned' | 'member'>('all');
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -46,26 +46,26 @@ export function ProjectManager() {
       case 'owned':
         return project.owner_id === user.id;
       case 'member':
-        return project.owner_id !== user.id && project.members?.some((m: any) => m.user_id === user.id);
+        return project.owner_id !== user.id && project.members?.some((m: ProjectMember) => m.user_id === user.id);
       default:
         return true;
     }
   });
 
-  const getProjectProgress = (project: any) => {
+  const getProjectProgress = (project: Project) => {
     if (!project.tasks || project.tasks.length === 0) return 0;
-    const completedTasks = project.tasks.filter((task: any) => task.status === 'done').length;
+    const completedTasks = project.tasks.filter((task: Task) => task.status === 'done').length;
     return (completedTasks / project.tasks.length) * 100;
   };
 
-  const getUserRole = (project: any): ProjectRole => {
+  const getUserRole = (project: Project): ProjectRole => {
     if (!user) return 'viewer';
     if (project.owner_id === user.id) return 'owner';
-    const member = project.members?.find((m: any) => m.user_id === user.id);
+    const member = project.members?.find((m: ProjectMember) => m.user_id === user.id);
     return member?.role || 'viewer';
   };
 
-  const handleCreateProject = (projectData: any) => {
+  const handleCreateProject = (projectData: Project) => {
     createProject(projectData);
     setIsProjectFormOpen(false);
   };
