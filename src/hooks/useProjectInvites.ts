@@ -190,7 +190,17 @@ export function useProjectInvites() {
     },
   });
 
-  export function useGetProjectInvites(projectId: string) {
+  return {
+    createInvite: createInviteMutation.mutate,
+    createInviteAsync: createInviteMutation.mutateAsync,
+    acceptInvite: acceptInviteMutation.mutate,
+    acceptInviteAsync: acceptInviteMutation.mutateAsync,
+    isCreatingInvite: createInviteMutation.isPending,
+    isAcceptingInvite: acceptInviteMutation.isPending,
+  };
+}
+
+export function useGetProjectInvites(projectId: string) {
     return useQuery({
       queryKey: ['project-invites', projectId],
       queryFn: async () => {
@@ -214,9 +224,9 @@ export function useProjectInvites() {
       },
       enabled: !!projectId && !!user,
     });
-  };
+}
 
-  export function useGetInviteByToken(token: string) {
+export function useGetInviteByToken(token: string) {
     return useQuery({
       queryKey: ['invite-by-token', token],
       queryFn: async () => {
@@ -250,7 +260,6 @@ export function useProjectInvites() {
       },
       enabled: !!token,
     });
-  };
 
   return {
     createInvite: createInviteMutation.mutate,
@@ -259,7 +268,5 @@ export function useProjectInvites() {
     acceptInviteAsync: acceptInviteMutation.mutateAsync,
     isCreatingInvite: createInviteMutation.isPending,
     isAcceptingInvite: acceptInviteMutation.isPending,
-    getProjectInvites,
-    getInviteByToken,
   };
 }
