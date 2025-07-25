@@ -66,3 +66,52 @@ interface TaskFormProps {
   goals?: Goal[];
   defaultProjectId?: string; // Adicionado para receber o ID do projeto do Kanban
 }
+
+
+export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, defaultProjectId }: TaskFormProps) {
+  const form = useForm<z.infer<typeof taskSchema>>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: initialData || {
+      title: "",
+      priority: "medium",
+      category: "",
+      is_indefinite: false,
+      notify_enabled: true,
+      repeat_enabled: false,
+      assign_to_project: !!defaultProjectId,
+      project_id: defaultProjectId || "",
+      assign_to_goal: false,
+    },
+  });
+
+  function handleSubmit(values: z.infer<typeof taskSchema>) {
+    // Implement task creation/update logic here
+    console.log(values);
+    onSubmit(values as Task);
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Título</FormLabel>
+              <FormControl>
+                <Input placeholder="Nome da tarefa" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {/* Add other form fields here based on the schema */}
+        <Button type="submit">Salvar Tarefa</Button>
+        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+      </form>
+    </Form>
+  );
+}
+
+
