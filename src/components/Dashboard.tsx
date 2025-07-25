@@ -18,6 +18,7 @@ import { useRealtime } from '@/hooks/useRealtime';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { getCurrentDateAndDay } from '@/utils/dateTime';
+import { Task, Project, Goal } from '@/types';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -77,6 +78,8 @@ export function Dashboard() {
     });
   }, [tasks, showBrowserNotification]);
 
+
+
   const completedToday = tasks.filter(task => {
     if (task.status !== 'done') return false;
     
@@ -86,13 +89,10 @@ export function Dashboard() {
   });
   
   const pendingTasks = tasks.filter(task => task.status !== 'done');
+
   const highPriorityTasks = pendingTasks.filter(task => task.priority === 'high');
 
-import { Task, Project, Goal } from '@/types';
-
-// ... (código existente)
-
-   const handleCreateTask = (taskData: Task) => {
+  const handleCreateTask = (taskData: Task) => {
     createTask(taskData);
     setIsTaskFormOpen(false);
   };
@@ -105,7 +105,6 @@ import { Task, Project, Goal } from '@/types';
   const handleCreateGoal = (goalData: Goal) => {
     createGoal(goalData);
     setIsGoalFormOpen(false);
-  };
   };
 
   const handleToggleTask = (taskId: string, currentStatus: string) => {
