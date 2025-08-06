@@ -30,13 +30,13 @@ export function useTasks(projectId?: string) {
       }
       
       // Adicionar propriedades requeridas que podem vir do DB
-      return (data || []).map(task => ({
+      return (data || []).map((task: any) => ({
         ...task,
         checklist: task.checklist || [],
         notifications: task.notifications || [],
         tags: task.tags || [],
         created_by: task.user_id || task.created_by,
-      }));
+      })) as Task[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 10, // 10 minutos
@@ -47,9 +47,21 @@ export function useTasks(projectId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      const taskToCreate = {
+        title: taskData.title || '',
+        created_by: user.id,
+        user_id: user.id,
+        priority: taskData.priority || 'medium',
+        category: taskData.category || 'professional',
+        status: taskData.status || 'todo',
+        notifications_enabled: taskData.notifications_enabled || false,
+        repeat_enabled: taskData.repeat_enabled || false,
+        ...taskData,
+      };
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{ ...taskData, user_id: user.id }])
+        .insert(taskToCreate)
         .select()
         .single();
 
@@ -134,8 +146,8 @@ export function useTasks(projectId?: string) {
       const { data, error } = await supabase
         .from('tasks')
         .update({ 
-          completed,
-          completed_at: completed ? new Date().toISOString() : null 
+          status: completed ? 'done' : 'todo',
+          updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .select()
@@ -154,7 +166,7 @@ export function useTasks(projectId?: string) {
       if (updatedTask.project_id) {
         queryClient.invalidateQueries({ queryKey: ['tasks', updatedTask.project_id] });
       }
-      toast.success(updatedTask.completed ? 'Tarefa concluída!' : 'Tarefa reaberta!');
+      toast.success(updatedTask.status === 'done' ? 'Tarefa concluída!' : 'Tarefa reaberta!');
     },
     onError: (error) => {
       console.error('Erro ao alterar status da tarefa:', error);

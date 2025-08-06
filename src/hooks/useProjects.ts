@@ -41,17 +41,24 @@ export function useProjects() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Mapear campos corretamente
-      const mappedData = {
-        ...projectData,
+      const projectToCreate = {
+        name: projectData.name || '',
+        owner_id: user.id,
         user_id: user.id,
+        priority: projectData.priority || 'medium',
+        category: projectData.category || 'professional',
+        color: projectData.color || '#3B82F6',
+        is_shared: projectData.is_shared || false,
+        notifications_enabled: projectData.notifications_enabled || false,
+        repeat_enabled: projectData.repeat_enabled || false,
         start_time: projectData.start_time || null,
         end_time: projectData.end_time || null,
+        ...projectData,
       };
 
       const { data, error } = await supabase
         .from('projects')
-        .insert([mappedData])
+        .insert(projectToCreate)
         .select()
         .single();
 
@@ -134,8 +141,7 @@ export function useProjects() {
       const { data, error } = await supabase
         .from('projects')
         .update({ 
-          completed,
-          completed_at: completed ? new Date().toISOString() : null 
+          updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .select()
@@ -148,9 +154,9 @@ export function useProjects() {
 
       return data;
     },
-    onSuccess: (updatedProject) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success(updatedProject.completed ? 'Projeto concluído!' : 'Projeto reaberto!');
+      toast.success('Status do projeto atualizado!');
     },
     onError: (error) => {
       console.error('Erro ao alterar status do projeto:', error);

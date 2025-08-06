@@ -1,172 +1,105 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 import { Goal } from '@/types';
 import { toast } from 'sonner';
 
 export function useGoals(projectId?: string) {
-  const queryClient = useQueryClient();
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: goals = [], isLoading, error } = useQuery({
-    queryKey: ['goals', projectId],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      let query = supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
+  const createGoal = async (goalData: Partial<Goal>) => {
+    try {
+      setIsLoading(true);
+      const newGoal: Goal = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: goalData.name || '',
+        created_by: 'current-user-id',
+        user_id: 'current-user-id',
+        assigned_projects: goalData.assigned_projects || [],
+        assigned_tasks: goalData.assigned_tasks || [],
+        priority: goalData.priority || 'medium',
+        category: goalData.category || 'professional',
+        progress: goalData.progress || 0,
+        is_shared: goalData.is_shared || false,
+        notifications_enabled: goalData.notifications_enabled || false,
+        reward_enabled: goalData.reward_enabled || false,
+        checklist: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...goalData,
+      };
+      
       if (projectId) {
-        query = query.eq('project_id', projectId);
-      }
-
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Erro ao buscar metas:', error);
-        throw error;
+        newGoal.project_id = projectId;
       }
       
-      // Retornar dados mapeados corretamente
-      return (data || []) as Goal[];
-    },
-    staleTime: 1000 * 60 * 5, // 5 minutos
-    gcTime: 1000 * 60 * 10, // 10 minutos
-  });
-
-  const createGoal = useMutation({
-    mutationFn: async (goalData: Partial<Goal>) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const { data, error } = await supabase
-        .from('goals')
-        .insert([{ ...goalData, user_id: user.id }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao criar meta:', error);
-        throw error;
-      }
-
-      return data;
-    },
-    onSuccess: (newGoal: any) => {
-      // Invalidar queries relacionadas de forma mais específica
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
-      if (newGoal.project_id) {
-        queryClient.invalidateQueries({ queryKey: ['goals', newGoal.project_id] });
-      }
+      setGoals(prev => [newGoal, ...prev]);
       toast.success('Meta criada com sucesso!');
-    },
-    onError: (error) => {
-      console.error('Erro ao criar meta:', error);
+    } catch (error) {
       toast.error('Erro ao criar meta. Tente novamente.');
-    },
-  });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const updateGoal = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Goal> }) => {
-      const { data, error } = await supabase
-        .from('goals')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao atualizar meta:', error);
-        throw error;
-      }
-
-      return data;
-    },
-    onSuccess: (updatedGoal: any) => {
-      // Invalidar queries relacionadas de forma mais específica
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
-      if (updatedGoal.project_id) {
-        queryClient.invalidateQueries({ queryKey: ['goals', updatedGoal.project_id] });
-      }
+  const updateGoal = async ({ id, updates }: { id: string; updates: Partial<Goal> }) => {
+    try {
+      setIsLoading(true);
+      setGoals(prev => prev.map(goal => 
+        goal.id === id 
+          ? { ...goal, ...updates, updated_at: new Date().toISOString() }
+          : goal
+      ));
       toast.success('Meta atualizada com sucesso!');
-    },
-    onError: (error) => {
-      console.error('Erro ao atualizar meta:', error);
+    } catch (error) {
       toast.error('Erro ao atualizar meta. Tente novamente.');
-    },
-  });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const deleteGoal = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('goals')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Erro ao excluir meta:', error);
-        throw error;
-      }
-
-      return id;
-    },
-    onSuccess: () => {
-      // Invalidar todas as queries de metas
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
+  const deleteGoal = async (id: string) => {
+    try {
+      setIsLoading(true);
+      setGoals(prev => prev.filter(goal => goal.id !== id));
       toast.success('Meta excluída com sucesso!');
-    },
-    onError: (error) => {
-      console.error('Erro ao excluir meta:', error);
+    } catch (error) {
       toast.error('Erro ao excluir meta. Tente novamente.');
-    },
-  });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const toggleGoalComplete = useMutation({
-    mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
-      const { data, error } = await supabase
-        .from('goals')
-        .update({ 
-          progress: completed ? 100 : 0,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Erro ao alterar status da meta:', error);
-        throw error;
-      }
-
-      return data;
-    },
-    onSuccess: (updatedGoal: any) => {
-      // Invalidar queries relacionadas de forma mais específica
-      queryClient.invalidateQueries({ queryKey: ['goals'] });
-      if (updatedGoal.project_id) {
-        queryClient.invalidateQueries({ queryKey: ['goals', updatedGoal.project_id] });
-      }
-      toast.success(updatedGoal.completed ? 'Meta concluída!' : 'Meta reaberta!');
-    },
-    onError: (error) => {
-      console.error('Erro ao alterar status da meta:', error);
+  const toggleGoalComplete = async ({ id, completed }: { id: string; completed: boolean }) => {
+    try {
+      setIsLoading(true);
+      setGoals(prev => prev.map(goal => 
+        goal.id === id 
+          ? { 
+              ...goal, 
+              progress: completed ? 100 : 0,
+              updated_at: new Date().toISOString()
+            }
+          : goal
+      ));
+      toast.success(completed ? 'Meta concluída!' : 'Meta reaberta!');
+    } catch (error) {
       toast.error('Erro ao alterar status da meta. Tente novamente.');
-    },
-  });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
-    goals,
+    goals: projectId ? goals.filter(goal => goal.project_id === projectId) : goals,
     isLoading,
-    error,
-    createGoal: createGoal.mutate,
-    updateGoal: updateGoal.mutate,
-    deleteGoal: deleteGoal.mutate,
-    toggleGoalComplete: toggleGoalComplete.mutate,
-    isCreating: createGoal.isPending,
-    isUpdating: updateGoal.isPending,
-    isDeleting: deleteGoal.isPending,
-    isToggling: toggleGoalComplete.isPending,
+    error: null,
+    createGoal,
+    updateGoal,
+    deleteGoal,
+    toggleGoalComplete,
+    isCreating: isLoading,
+    isUpdating: isLoading,
+    isDeleting: isLoading,
+    isToggling: isLoading,
   };
 }

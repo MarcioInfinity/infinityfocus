@@ -97,6 +97,20 @@ export interface CustomNotification {
   updated_at: string;
 }
 
+export interface ProjectInvite {
+  id: string;
+  project_id: string;
+  email?: string;
+  token: string;
+  role: ProjectRole;
+  invite_link: string;
+  expires_at: string;
+  used_at?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
   name: string;

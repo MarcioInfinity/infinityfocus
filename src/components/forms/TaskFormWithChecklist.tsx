@@ -24,7 +24,7 @@ export function TaskFormWithChecklist({ onClose }: TaskFormProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    priority: 'medium' as const,
+    priority: 'medium' as 'low' | 'medium' | 'high',
     category: 'professional' as const,
     project_id: null as string | null,
     goal_id: null as string | null,
@@ -53,6 +53,7 @@ export function TaskFormWithChecklist({ onClose }: TaskFormProps) {
       ...formData,
       repeat_days: formData.repeat_type === 'weekdays' ? ['1', '2', '3', '4', '5'] : 
                    formData.repeat_type === 'custom' ? formData.repeat_days : [],
+      checklist: [] as any[], // Will be handled after task creation
     };
 
     createTask(taskData);

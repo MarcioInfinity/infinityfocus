@@ -197,76 +197,71 @@ export function useProjectInvites() {
     acceptInviteAsync: acceptInviteMutation.mutateAsync,
     isCreatingInvite: createInviteMutation.isPending,
     isAcceptingInvite: acceptInviteMutation.isPending,
+    getProjectInvites: useGetProjectInvites,
+    getInviteByToken: useGetInviteByToken,
   };
 }
 
 export function useGetProjectInvites(projectId: string) {
-    return useQuery({
-      queryKey: ['project-invites', projectId],
-      queryFn: async () => {
-        if (!projectId || !user) return [];
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['project-invites', projectId],
+    queryFn: async () => {
+      if (!projectId || !user) return [];
 
-        console.log('Fetching invites for project:', projectId);
+      console.log('Fetching invites for project:', projectId);
 
-        const { data, error } = await supabase
-          .from('project_invites')
-          .select('*')
-          .eq('project_id', projectId)
-          .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('project_invites')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching project invites:', error);
-          throw error;
-        }
+      if (error) {
+        console.error('Error fetching project invites:', error);
+        throw error;
+      }
 
-        console.log('Project invites fetched:', data);
-        return data || [];
-      },
-      enabled: !!projectId && !!user,
-    });
+      console.log('Project invites fetched:', data);
+      return data || [];
+    },
+    enabled: !!projectId && !!user,
+  });
 }
 
 export function useGetInviteByToken(token: string) {
-    return useQuery({
-      queryKey: ['invite-by-token', token],
-      queryFn: async () => {
-        if (!token) return null;
+  return useQuery({
+    queryKey: ['invite-by-token', token],
+    queryFn: async () => {
+      if (!token) return null;
 
-        console.log('Fetching invite by token:', token);
+      console.log('Fetching invite by token:', token);
 
-        const { data, error } = await supabase
-          .from('project_invites')
-          .select(`
-            *,
-            projects (
-              id,
-              name,
-              description,
-              color
-            )
-          `)
-          .eq('token', token)
-          .gt('expires_at', new Date().toISOString())
-          .is('used_at', null)
-          .single();
+      const { data, error } = await supabase
+        .from('project_invites')
+        .select(`
+          *,
+          projects (
+            id,
+            name,
+            description,
+            color
+          )
+        `)
+        .eq('token', token)
+        .gt('expires_at', new Date().toISOString())
+        .is('used_at', null)
+        .single();
 
-        if (error) {
-          console.error('Error fetching invite by token:', error);
-          return null;
-        }
+      if (error) {
+        console.error('Error fetching invite by token:', error);
+        return null;
+      }
 
-        console.log('Invite by token fetched:', data);
-        return data;
-      },
-      enabled: !!token,
-    });
-
-  return {
-    createInvite: createInviteMutation.mutate,
-    createInviteAsync: createInviteMutation.mutateAsync,
-    acceptInvite: acceptInviteMutation.mutate,
-    acceptInviteAsync: acceptInviteMutation.mutateAsync,
-    isCreatingInvite: createInviteMutation.isPending,
-    isAcceptingInvite: acceptInviteMutation.isPending,
-  };
+      console.log('Invite by token fetched:', data);
+      return data;
+    },
+    enabled: !!token,
+  });
 }

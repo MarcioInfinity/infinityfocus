@@ -19,7 +19,8 @@ interface InviteModalProps {
 export function InviteModal({ projectId, isOpen, onClose }: InviteModalProps) {
   const { createInviteAsync, isCreatingInvite, getProjectInvites } = useProjectInvites();
   const { showSuccessToast } = useToastNotifications();
-  const { data: invites = [] } = getProjectInvites(projectId);
+  const invitesQuery = getProjectInvites(projectId);
+  const invites = invitesQuery.data || [];
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member' | 'viewer'>('member');

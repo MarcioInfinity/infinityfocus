@@ -218,7 +218,7 @@ export function ProjectSettingsModal({ project, isOpen, onClose }: ProjectSettin
             
             {invitesQuery.data && invitesQuery.data.length > 0 ? (
               <div className="space-y-2">
-                {invitesQuery.data.filter((invite: ProjectInvite) => !invite.used_at).map((invite: ProjectInvite) => (
+                {invitesQuery.data.filter((invite: any) => !invite.used_at).map((invite: any) => (
                   <div key={invite.id} className="flex items-center justify-between p-3 rounded-lg border border-white/10">
                     <div>
                       <p className="font-medium">{invite.email || 'Link de convite'}</p>
