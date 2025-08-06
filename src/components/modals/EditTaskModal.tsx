@@ -1,3 +1,10 @@
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TaskForm } from '@/components/forms/TaskForm';
+import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import { useGoals } from '@/hooks/useGoals';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { Task, Project, Goal } from '@/types';
 
 interface EditTaskModalProps {

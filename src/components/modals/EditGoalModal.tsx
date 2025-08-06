@@ -1,3 +1,8 @@
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { GoalForm } from '@/components/forms/GoalForm';
+import { useGoals } from '@/hooks/useGoals';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { Goal } from '@/types';
 
 interface EditGoalModalProps {

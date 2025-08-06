@@ -21,7 +21,7 @@ interface KanbanBoardProps {
 
 const columns = [
   { id: 'todo', title: 'A Fazer', color: 'bg-blue-500' },
-  { id: 'in_progress', title: 'Em Progresso', color: 'bg-yellow-500' },
+  { id: 'in-progress', title: 'Em Progresso', color: 'bg-yellow-500' },
   { id: 'review', title: 'Revisão', color: 'bg-purple-500' },
   { id: 'done', title: 'Concluído', color: 'bg-green-500' },
 ];
@@ -34,7 +34,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [tasksByColumn, setTasksByColumn] = useState<Record<string, Task[]>>({
     todo: [],
-    in_progress: [],
+    "in-progress": [],
     review: [],
     done: [],
   });
@@ -43,7 +43,7 @@ export function KanbanBoard({ projectId }: KanbanBoardProps) {
   useEffect(() => {
     const organized = {
       todo: tasks.filter(task => task.status === 'todo'),
-      in_progress: tasks.filter(task => task.status === 'in_progress'),
+      "in-progress": tasks.filter(task => task.status === 'in-progress'),
       review: tasks.filter(task => task.status === 'review'),
       done: tasks.filter(task => task.status === 'done'),
     };

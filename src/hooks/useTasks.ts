@@ -29,7 +29,14 @@ export function useTasks(projectId?: string) {
         throw error;
       }
       
-      return data || [];
+      // Adicionar propriedades requeridas que podem vir do DB
+      return (data || []).map(task => ({
+        ...task,
+        checklist: task.checklist || [],
+        notifications: task.notifications || [],
+        tags: task.tags || [],
+        created_by: task.user_id || task.created_by,
+      }));
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 10, // 10 minutos
@@ -155,8 +162,22 @@ export function useTasks(projectId?: string) {
     },
   });
 
+  // Calcular tarefas de hoje
+  const todayTasks = tasks.filter(task => {
+    const today = new Date();
+    const taskDate = task.due_date ? new Date(task.due_date) : null;
+    const isToday = taskDate && taskDate.toDateString() === today.toDateString();
+    const isRepeatingToday = task.repeat_enabled && (
+      (task.repeat_type === 'daily') ||
+      (task.repeat_type === 'weekly' && task.repeat_days?.includes(today.getDay().toString())) ||
+      (task.repeat_type === 'monthly' && parseInt(task.repeat_days?.[0] || '0') === today.getDate())
+    );
+    return isToday || isRepeatingToday;
+  });
+
   return {
     tasks,
+    todayTasks,
     isLoading,
     error,
     createTask: createTask.mutate,

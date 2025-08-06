@@ -29,7 +29,12 @@ export function useGoals(projectId?: string) {
         throw error;
       }
       
-      return data || [];
+      // Adicionar propriedades requeridas que podem vir do DB
+      return (data || []).map(goal => ({
+        ...goal,
+        checklist: goal.checklist || [],
+        created_by: goal.user_id || goal.created_by,
+      }));
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 10, // 10 minutos

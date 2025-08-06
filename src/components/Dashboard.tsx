@@ -264,9 +264,9 @@ export function Dashboard() {
                       const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) && task.status !== 'done';
                       const isRepeatingToday = task.repeat_enabled && (
                         (task.repeat_type === 'daily') ||
-                        (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay())) ||
-                        (task.repeat_type === 'monthly' && task.repeat_monthly_day === new Date().getDate()) ||
-                        (task.repeat_type === 'custom' && task.repeat_custom_dates?.some(d => new Date(d).toDateString() === new Date().toDateString()))
+                               (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay().toString())) ||
+                        (task.repeat_type === 'monthly' && parseInt(task.repeat_days?.[0] || '0') === new Date().getDate()) ||
+                        (task.repeat_type === 'custom' && task.repeat_days?.some(d => new Date(d).toDateString() === new Date().toDateString()))
                       );
                       const isDueToday = task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString() && task.status !== 'done';
 

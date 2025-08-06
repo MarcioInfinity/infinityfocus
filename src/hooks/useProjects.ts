@@ -23,7 +23,14 @@ export function useProjects() {
         throw error;
       }
       
-      return data || [];
+      // Adicionar propriedades requeridas que podem vir do DB
+      return (data || []).map(project => ({
+        ...project,
+        members: project.members || [],
+        tasks: project.tasks || [],
+        checklist: project.checklist || [],
+        owner_id: project.user_id || project.owner_id,
+      }));
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 10, // 10 minutos

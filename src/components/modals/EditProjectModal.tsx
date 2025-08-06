@@ -1,3 +1,8 @@
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ProjectForm } from '@/components/forms/ProjectForm';
+import { useProjects } from '@/hooks/useProjects';
+import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { Project } from '@/types';
 
 interface EditProjectModalProps {

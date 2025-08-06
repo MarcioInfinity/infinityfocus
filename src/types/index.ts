@@ -32,6 +32,7 @@ export interface Task {
   repeat_type?: 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
   repeat_days?: string[];
   repeat_interval?: number;
+  user_id: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -113,11 +114,15 @@ export interface Project {
   repeat_enabled: boolean;
   repeat_type?: 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
   repeat_days?: string[];
+  user_id: string;
   owner_id: string;
   members: ProjectMember[];
   tasks: Task[];
   checklist: ChecklistItem[];
   invite_link?: string;
+  invite_method?: 'link' | 'email';
+  invite_emails?: string[];
+  custom_category?: string;
   created_at: string;
   updated_at: string;
 }
@@ -168,9 +173,18 @@ export interface Goal {
   assigned_tasks: string[];
   notes?: string;
   checklist: ChecklistItem[];
+  user_id: string;
   created_by: string;
   created_at: string;
   updated_at: string;
+  custom_category?: string;
+  notify_enabled?: boolean;
+  repeat_enabled?: boolean;
+  repeat_type?: 'daily' | 'weekly' | 'monthly' | 'custom';
+  repeat_days?: string[];
+  time?: string;
+  share_emails?: string[];
+  share_link?: string;
 }
 
 export interface User {
