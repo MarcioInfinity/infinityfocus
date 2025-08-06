@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ProjectRole } from '@/types';
+import { ProjectRole, Project, Task, ProjectMember } from '@/types';
 import { ProjectForm } from './forms/ProjectForm';
 import { EditProjectModal } from './modals/EditProjectModal';
 import { ProjectSettingsModal } from './modals/ProjectSettingsModal';
@@ -371,7 +371,7 @@ export function ProjectManager() {
 
       {/* Edit Project Modal */}
       <EditProjectModal
-        project={selectedProject}
+        projectId={selectedProject?.id || null}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
       />

@@ -23,12 +23,12 @@ export function useProjects() {
         throw error;
       }
       
-      // Adicionar propriedades requeridas que podem vir do DB
+      // Retornar dados mapeados corretamente
       return (data || []).map(project => ({
         ...project,
-        members: project.members || [],
-        tasks: project.tasks || [],
-        checklist: project.checklist || [],
+        members: [],
+        tasks: [],
+        checklist: [],
         owner_id: project.user_id || project.owner_id,
       }));
     },

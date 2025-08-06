@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
-import { ProjectRole } from '@/types';
+import { ProjectRole, Project, ProjectMember, Task } from '@/types';
 import { ProjectContextMenu } from './ProjectContextMenu';
 
 interface ProjectListProps {

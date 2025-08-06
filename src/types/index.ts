@@ -185,6 +185,7 @@ export interface Goal {
   time?: string;
   share_emails?: string[];
   share_link?: string;
+  project_id?: string;
 }
 
 export interface User {

@@ -29,12 +29,8 @@ export function useGoals(projectId?: string) {
         throw error;
       }
       
-      // Adicionar propriedades requeridas que podem vir do DB
-      return (data || []).map(goal => ({
-        ...goal,
-        checklist: goal.checklist || [],
-        created_by: goal.user_id || goal.created_by,
-      }));
+      // Retornar dados mapeados corretamente
+      return (data || []) as Goal[];
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 10, // 10 minutos
@@ -58,7 +54,7 @@ export function useGoals(projectId?: string) {
 
       return data;
     },
-    onSuccess: (newGoal) => {
+    onSuccess: (newGoal: any) => {
       // Invalidar queries relacionadas de forma mais específica
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       if (newGoal.project_id) {
@@ -88,7 +84,7 @@ export function useGoals(projectId?: string) {
 
       return data;
     },
-    onSuccess: (updatedGoal) => {
+    onSuccess: (updatedGoal: any) => {
       // Invalidar queries relacionadas de forma mais específica
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       if (updatedGoal.project_id) {
@@ -132,8 +128,8 @@ export function useGoals(projectId?: string) {
       const { data, error } = await supabase
         .from('goals')
         .update({ 
-          completed,
-          completed_at: completed ? new Date().toISOString() : null 
+          progress: completed ? 100 : 0,
+          updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .select()
@@ -146,7 +142,7 @@ export function useGoals(projectId?: string) {
 
       return data;
     },
-    onSuccess: (updatedGoal) => {
+    onSuccess: (updatedGoal: any) => {
       // Invalidar queries relacionadas de forma mais específica
       queryClient.invalidateQueries({ queryKey: ['goals'] });
       if (updatedGoal.project_id) {

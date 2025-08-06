@@ -542,10 +542,9 @@ export function Goals() {
 
       {/* Edit Goal Modal */}
       <EditGoalModal 
-        goal={selectedGoal} 
+        goalId={selectedGoal?.id || null} 
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)} 
-        onSave={handleEditGoal} 
       />
 
       {/* Goal Details Modal */}

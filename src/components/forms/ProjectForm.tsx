@@ -93,10 +93,8 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
       end_time: initialData?.end_time || '',
       notifications_enabled: initialData?.notifications_enabled || false,
       repeat_enabled: initialData?.repeat_enabled || false,
-      repeat_type: initialData?.repeat_type || 'daily',
-      repeat_days: initialData?.repeat_days || [],
-      monthly_day: initialData?.monthly_day || undefined,
-      custom_dates: initialData?.custom_dates?.map((date: string) => new Date(date)) || [],
+      repeat_type: (initialData?.repeat_type === 'weekdays' ? 'weekly' : initialData?.repeat_type) || 'daily',
+      repeat_days: initialData?.repeat_days?.map(day => parseInt(day)) || [],
       description: initialData?.description || '',
       invite_method: initialData?.invite_method || 'link',
       invite_emails: initialData?.invite_emails || [''],
@@ -144,16 +142,23 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
 
   const handleSubmit = (values: z.infer<typeof projectSchema>) => {
     const projectData = {
+      id: initialData?.id || '',
+      color: initialData?.color || '#3B82F6',
+      user_id: initialData?.user_id || '',
+      owner_id: initialData?.owner_id || '',
+      members: initialData?.members || [],
+      tasks: initialData?.tasks || [],
+      checklist: initialData?.checklist || [],
+      created_at: initialData?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       ...values,
-      start_date: values.start_date?.toISOString() || null,
-      due_date: values.due_date?.toISOString() || null,
+      start_date: values.start_date?.toISOString().split('T')[0] || null,
+      due_date: values.due_date?.toISOString().split('T')[0] || null,
       custom_category: watchCategory === 'custom' ? customCategory : undefined,
       invite_emails: watchIsShared && watchInviteMethod === 'email' ? inviteEmails.filter(email => email.trim()) : [],
       repeat_days: values.repeat_days?.map(day => day.toString()) || [],
-      repeat_monthly_day: values.monthly_day || null,
-      repeat_custom_dates: values.custom_dates?.map(date => date.toISOString()) || [],
     };
-    onSubmit(projectData);
+    onSubmit(projectData as Project);
   };
 
   const addEmailField = () => {

@@ -129,7 +129,7 @@ export function NotificationManager() {
     }
   };
 
-  const formatNotificationDetails = (notification: CustomNotification) => {
+  const formatNotificationDetails = (notification: any) => {
     switch (notification.type) {
       case 'time':
         return `Horário: ${notification.time}`;

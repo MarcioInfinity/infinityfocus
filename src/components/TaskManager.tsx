@@ -325,7 +325,7 @@ export function TaskManager() {
 
       {/* Edit Task Modal */}
       <EditTaskModal
-        task={editingTask}
+        taskId={editingTask?.id || null}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
       />

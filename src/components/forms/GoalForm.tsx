@@ -80,14 +80,17 @@ const weekDays = [
   { value: 6, label: 'Sáb' },
 ];
 
+import { Goal } from '@/types';
+
 interface GoalFormProps {
   onSubmit: (data: Goal) => void;
   onCancel: () => void;
   initialData?: Goal;
+  defaultProjectId?: string;
 }
 
 export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
-  const [showCustomCategory, setShowCustomCategory] = useState(initialData?.category === 'custom');
+  const [showCustomCategory, setShowCustomCategory] = useState(initialData?.custom_category ? true : false);
   const [shareEmails, setShareEmails] = useState<string[]>(initialData?.share_emails || []);
   const [newEmail, setNewEmail] = useState("");
   const [selectedProjects, setSelectedProjects] = useState<string[]>(initialData?.assigned_projects || []);
@@ -113,9 +116,7 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
       reward_description: initialData?.reward_description || "",
       repeat_enabled: initialData?.repeat_enabled || false,
       repeat_type: initialData?.repeat_type || "daily",
-      repeat_days: initialData?.repeat_days || [],
-      monthly_day: initialData?.monthly_day || undefined,
-      custom_dates: initialData?.custom_dates?.map((date: string) => new Date(date)) || [],
+      repeat_days: initialData?.repeat_days?.map(day => parseInt(day)) || [],
       description: initialData?.description || "",
     },
   });
@@ -167,16 +168,24 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
 
   const handleSubmit = (values: z.infer<typeof goalSchema>) => {
     const goalData = {
+      id: initialData?.id || '',
+      progress: initialData?.progress || 0,
+      notifications_enabled: initialData?.notifications_enabled || false,
+      checklist: initialData?.checklist || [],
+      user_id: initialData?.user_id || '',
+      created_by: initialData?.created_by || '',
+      created_at: initialData?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       ...values,
+      start_date: values.start_date?.toISOString() || '',
+      due_date: values.due_date?.toISOString() || '',
       share_emails: shareEmails,
       share_link: watchIsShared ? generateShareLink() : undefined,
       assigned_projects: selectedProjects,
       assigned_tasks: selectedTasks,
       repeat_days: values.repeat_days?.map(day => day.toString()) || [],
-      repeat_monthly_day: values.monthly_day || null,
-      repeat_custom_dates: values.custom_dates?.map(date => date.toISOString()) || [],
     };
-    onSubmit(goalData);
+    onSubmit(goalData as Goal);
   };
 
   return (

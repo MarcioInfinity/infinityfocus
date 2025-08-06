@@ -73,9 +73,24 @@ interface TaskFormProps {
 export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, defaultProjectId }: TaskFormProps) {
   const form = useForm<z.infer<typeof taskSchema>>({
     resolver: zodResolver(taskSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      title: initialData.title,
+      description: initialData.description,
+      priority: initialData.priority,
+      category: initialData.category,
+      due_date: initialData.due_date ? new Date(initialData.due_date) : undefined,
+      start_date: initialData.start_date ? new Date(initialData.start_date) : undefined,
+      project_id: initialData.project_id,
+      goal_id: initialData.goal_id,
+      assign_to_project: !!initialData.project_id,
+      assign_to_goal: !!initialData.goal_id,
+      is_indefinite: initialData.is_indefinite,
+      notify_enabled: initialData.notifications_enabled,
+      repeat_enabled: initialData.repeat_enabled,
+      time: initialData.start_time
+    } : {
       title: "",
-      priority: "medium",
+      priority: "medium" as const,
       category: "",
       is_indefinite: false,
       notify_enabled: true,
@@ -87,9 +102,25 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, def
   });
 
   function handleSubmit(values: z.infer<typeof taskSchema>) {
-    // Implement task creation/update logic here
-    console.log(values);
-    onSubmit(values as Task);
+    const fullTaskData = {
+      ...values,
+      id: initialData?.id || '',
+      status: initialData?.status || 'todo' as const,
+      tags: initialData?.tags || [],
+      checklist: initialData?.checklist || [],
+      notifications: initialData?.notifications || [],
+      notifications_enabled: values.notify_enabled || false,
+      repeat_enabled: values.repeat_enabled || false,
+      repeat_days: values.repeat_days?.map(d => d.toString()) || [],
+      user_id: initialData?.user_id || '',
+      created_by: initialData?.created_by || '',
+      created_at: initialData?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      due_date: values.due_date?.toISOString().split('T')[0],
+      start_date: values.start_date?.toISOString().split('T')[0],
+      start_time: values.time
+    };
+    onSubmit(fullTaskData as any);
   }
 
   return (
