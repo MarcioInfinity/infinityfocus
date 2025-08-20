@@ -15,7 +15,7 @@ export function useProjects() {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) {
@@ -29,11 +29,13 @@ export function useProjects() {
         members: [],
         tasks: [],
         checklist: [],
-        owner_id: project.user_id || project.owner_id,
+        owner_id: project.owner_id,
       }));
     },
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 10, // 10 minutos
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const createProject = useMutation({

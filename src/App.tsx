@@ -17,56 +17,66 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import InvitePage from "./pages/InvitePage";
 import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: 2,
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      networkMode: 'offlineFirst',
+    },
+    mutations: {
+      retry: 1,
+      networkMode: 'offlineFirst',
     },
   },
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Auth Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* Invite Route - Public but requires auth */}
-            <Route path="/invite/:token" element={<InvitePage />} />
-            
-            {/* Main App Routes - Protected */}
-            <Route path="/" element={
-              <AuthGuard>
-                <Layout>
-                  <Outlet />
-                </Layout>
-              </AuthGuard>
-            }>
-              <Route index element={<Dashboard />} />
-              <Route path="tasks" element={<TaskManager />} />
-              <Route path="goals" element={<Goals />} />
-              <Route path="projects" element={<ProjectManager />} />
-              <Route path="projects/:projectId" element={<ProjectPage />} />
-              <Route path="notifications" element={<NotificationManager />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              {/* Auth Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              
+              {/* Invite Route - Public but requires auth */}
+              <Route path="/invite/:token" element={<InvitePage />} />
+              
+              {/* Main App Routes - Protected */}
+              <Route path="/" element={
+                <AuthGuard>
+                  <Layout>
+                    <Outlet />
+                  </Layout>
+                </AuthGuard>
+              }>
+                <Route index element={<Dashboard />} />
+                <Route path="tasks" element={<TaskManager />} />
+                <Route path="goals" element={<Goals />} />
+                <Route path="projects" element={<ProjectManager />} />
+                <Route path="projects/:projectId" element={<ProjectPage />} />
+                <Route path="notifications" element={<NotificationManager />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
+              
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
