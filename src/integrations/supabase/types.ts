@@ -7,10 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
+  // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "12.2.3 (519615d)"
   }
   public: {
     Tables: {
@@ -480,45 +480,6 @@ export type Database = {
         }
         Relationships: []
       }
-      project_goals: {
-        Row: {
-          created_at: string
-          goal_id: string | null
-          id: string
-          project_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          goal_id?: string | null
-          id?: string
-          project_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          goal_id?: string | null
-          id?: string
-          project_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_goals_goal_id_fkey"
-            columns: ["goal_id"]
-            isOneToOne: false
-            referencedRelation: "goals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_goals_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       project_invites: {
         Row: {
           created_at: string
@@ -673,114 +634,24 @@ export type Database = {
         }
         Relationships: []
       }
-      reward_claims: {
-        Row: {
-          claimed_at: string | null
-          created_at: string | null
-          id: string
-          notes: string | null
-          reward_id: string
-          user_id: string
-        }
-        Insert: {
-          claimed_at?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          reward_id: string
-          user_id: string
-        }
-        Update: {
-          claimed_at?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          reward_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reward_claims_reward_id_fkey"
-            columns: ["reward_id"]
-            isOneToOne: false
-            referencedRelation: "rewards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rewards: {
-        Row: {
-          attributed_item_name: string | null
-          attributed_to_id: string
-          attributed_to_type: string
-          celebration_level: string
-          claimed_at: string | null
-          created_at: string | null
-          currency: string | null
-          description: string | null
-          id: string
-          investment_value: number | null
-          is_claimed: boolean | null
-          title: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          attributed_item_name?: string | null
-          attributed_to_id: string
-          attributed_to_type: string
-          celebration_level: string
-          claimed_at?: string | null
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          investment_value?: number | null
-          is_claimed?: boolean | null
-          title: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          attributed_item_name?: string | null
-          attributed_to_id?: string
-          attributed_to_type?: string
-          celebration_level?: string
-          claimed_at?: string | null
-          created_at?: string | null
-          currency?: string | null
-          description?: string | null
-          id?: string
-          investment_value?: number | null
-          is_claimed?: boolean | null
-          title?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       tasks: {
         Row: {
           assigned_to: string | null
           category: Database["public"]["Enums"]["category_type"]
           created_at: string
           created_by: string
-          custom_dates: string[] | null
           description: string | null
           due_date: string | null
           end_time: string | null
           goal_id: string | null
           id: string
           is_indefinite: boolean
-          monthly_day: number | null
           notifications_enabled: boolean
           owner_id: string | null
           priority: Database["public"]["Enums"]["priority"]
           project_id: string | null
-          repeat_custom_dates: string[] | null
           repeat_days: string[] | null
           repeat_enabled: boolean
-          repeat_monthly_day: number | null
           repeat_type: Database["public"]["Enums"]["frequency_type"] | null
           start_date: string | null
           start_time: string | null
@@ -795,22 +666,18 @@ export type Database = {
           category?: Database["public"]["Enums"]["category_type"]
           created_at?: string
           created_by: string
-          custom_dates?: string[] | null
           description?: string | null
           due_date?: string | null
           end_time?: string | null
           goal_id?: string | null
           id?: string
           is_indefinite?: boolean
-          monthly_day?: number | null
           notifications_enabled?: boolean
           owner_id?: string | null
           priority?: Database["public"]["Enums"]["priority"]
           project_id?: string | null
-          repeat_custom_dates?: string[] | null
           repeat_days?: string[] | null
           repeat_enabled?: boolean
-          repeat_monthly_day?: number | null
           repeat_type?: Database["public"]["Enums"]["frequency_type"] | null
           start_date?: string | null
           start_time?: string | null
@@ -825,22 +692,18 @@ export type Database = {
           category?: Database["public"]["Enums"]["category_type"]
           created_at?: string
           created_by?: string
-          custom_dates?: string[] | null
           description?: string | null
           due_date?: string | null
           end_time?: string | null
           goal_id?: string | null
           id?: string
           is_indefinite?: boolean
-          monthly_day?: number | null
           notifications_enabled?: boolean
           owner_id?: string | null
           priority?: Database["public"]["Enums"]["priority"]
           project_id?: string | null
-          repeat_custom_dates?: string[] | null
           repeat_days?: string[] | null
           repeat_enabled?: boolean
-          repeat_monthly_day?: number | null
           repeat_type?: Database["public"]["Enums"]["frequency_type"] | null
           start_date?: string | null
           start_time?: string | null
@@ -899,18 +762,7 @@ export type Database = {
       }
     }
     Views: {
-      reward_stats: {
-        Row: {
-          avg_reward_value: number | null
-          claimed_rewards: number | null
-          pending_rewards: number | null
-          total_claimed_value: number | null
-          total_pending_value: number | null
-          total_rewards: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       create_project_safe: {
@@ -920,23 +772,6 @@ export type Database = {
       drop_all_policies_on_table: {
         Args: { p_schema_name: string; p_table_name: string }
         Returns: undefined
-      }
-      get_user_rewards: {
-        Args: { p_user_id?: string }
-        Returns: {
-          attributed_item_name: string
-          attributed_to_id: string
-          attributed_to_type: string
-          celebration_level: string
-          claimed_at: string
-          created_at: string
-          currency: string
-          description: string
-          id: string
-          investment_value: number
-          is_claimed: boolean
-          title: string
-        }[]
       }
       is_project_member: {
         Args: { p_project_id: string }

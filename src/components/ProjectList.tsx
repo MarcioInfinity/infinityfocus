@@ -1,5 +1,5 @@
 
-import React, { memo, useMemo } from 'react';
+import React from 'react';
 import { FolderKanban, Plus, Users, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,6 @@ import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
 import { ProjectRole, Project, ProjectMember, Task } from '@/types';
 import { ProjectContextMenu } from './ProjectContextMenu';
-import { ProjectListSkeleton } from './ProjectListSkeleton';
 
 interface ProjectListProps {
   onSelectProject?: (projectId: string) => void;
@@ -19,31 +18,29 @@ interface ProjectListProps {
   filter?: 'all' | 'owned' | 'member';
 }
 
-const ProjectListComponent = ({
+export function ProjectList({
   onSelectProject,
   onCreateProject,
   selectedProjectId,
   showCreateButton = true,
   maxHeight = "300px",
   filter = 'all'
-}: ProjectListProps) => {
+}: ProjectListProps) {
   const { user } = useAuth();
   const { projects, isLoading } = useProjects();
 
-  const filteredProjects = useMemo(() => {
-    if (!projects || !user) return [];
+  const filteredProjects = projects.filter(project => {
+    if (!user) return false;
     
-    return projects.filter(project => {
-      switch (filter) {
-        case 'owned':
-          return project.owner_id === user.id;
-        case 'member':
-          return project.owner_id !== user.id;
-        default:
-          return true;
-      }
-    });
-  }, [projects, user, filter]);
+    switch (filter) {
+      case 'owned':
+        return project.owner_id === user.id;
+      case 'member':
+        return project.owner_id !== user.id;
+      default:
+        return true;
+    }
+  });
 
   const getUserRole = (project: Project): ProjectRole => {
     if (!user) return 'viewer';
@@ -57,7 +54,11 @@ const ProjectListComponent = ({
   };
 
   if (isLoading) {
-    return <ProjectListSkeleton />;
+    return (
+      <div className="p-4 text-center text-muted-foreground">
+        Carregando projetos...
+      </div>
+    );
   }
 
   return (
@@ -161,6 +162,4 @@ const ProjectListComponent = ({
       </ScrollArea>
     </div>
   );
-};
-
-export const ProjectList = memo(ProjectListComponent);
+}
