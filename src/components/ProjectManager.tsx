@@ -14,7 +14,6 @@ import { EditProjectModal } from './modals/EditProjectModal';
 import { ProjectSettingsModal } from './modals/ProjectSettingsModal';
 import { useProjects } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
-import { KanbanBoard } from './KanbanBoard';
 import { ProjectGoals } from './ProjectGoals';
 import { InviteModal } from './modals/InviteModal';
 import { useNavigate } from 'react-router-dom';
