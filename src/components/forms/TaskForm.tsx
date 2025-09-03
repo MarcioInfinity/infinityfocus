@@ -452,6 +452,142 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, def
           )}
         />
 
+        {/* Repetir tarefa - Mostra opções quando ativado */}
+        {form.watch('repeat_enabled') && (
+          <div className="space-y-4 p-4 border rounded-lg glass-card border-white/20">
+            <FormField
+              control={form.control}
+              name="repeat_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Repetição</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="glass-card border-white/20">
+                        <SelectValue placeholder="Selecionar tipo..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="daily">Diariamente</SelectItem>
+                      <SelectItem value="weekly">Semanalmente</SelectItem>
+                      <SelectItem value="monthly">Mensalmente</SelectItem>
+                      <SelectItem value="custom">Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Opções específicas baseadas no tipo de repetição */}
+            {form.watch('repeat_type') === 'weekly' && (
+              <FormField
+                control={form.control}
+                name="repeat_days"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dias da Semana</FormLabel>
+                    <div className="grid grid-cols-4 gap-2">
+                      {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={(field.value || []).includes(index)}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, index]);
+                              } else {
+                                field.onChange(current.filter((d: number) => d !== index));
+                              }
+                            }}
+                          />
+                          <Label className="text-sm">{day}</Label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {form.watch('repeat_type') === 'monthly' && (
+              <FormField
+                control={form.control}
+                name="monthly_day"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dia do Mês</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="Ex: 15"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        className="glass-card border-white/20"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {form.watch('repeat_type') === 'custom' && (
+              <FormField
+                control={form.control}
+                name="custom_dates"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Datas Personalizadas</FormLabel>
+                    <div className="space-y-2">
+                      {(field.value || []).map((date: Date, index: number) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            type="date"
+                            value={format(date, 'yyyy-MM-dd')}
+                            onChange={(e) => {
+                              const newDates = [...(field.value || [])];
+                              newDates[index] = new Date(e.target.value);
+                              field.onChange(newDates);
+                            }}
+                            className="glass-card border-white/20"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const newDates = (field.value || []).filter((_: Date, i: number) => i !== index);
+                              field.onChange(newDates);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          field.onChange([...(field.value || []), new Date()]);
+                        }}
+                        className="glass-card border-white/20"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Adicionar Data
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+        )}
+
         {/* Botões */}
         <div className="flex gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel} className="flex-1">

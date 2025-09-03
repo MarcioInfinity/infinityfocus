@@ -11,7 +11,8 @@ import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import { useGoals } from '@/hooks/useGoals';
 import { EditTaskModal } from './modals/EditTaskModal';
-import { TaskFormWithChecklist } from './forms/TaskFormWithChecklist';
+import { TaskForm } from './forms/TaskForm';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const priorityColors = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
@@ -143,10 +144,20 @@ export function TaskManager() {
         </CardContent>
       </Card>
 
-      {/* Create Task Form */}
-      {showCreateForm && (
-        <TaskFormWithChecklist onClose={() => setShowCreateForm(false)} />
-      )}
+      {/* Create Task Modal */}
+      <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <TaskForm 
+            onSubmit={(taskData: any) => {
+              createTask(taskData);
+              setShowCreateForm(false);
+            }}
+            onCancel={() => setShowCreateForm(false)}
+            projects={projects}
+            goals={goals}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Tasks List/Grid */}
       <div className="space-y-4">

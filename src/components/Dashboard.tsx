@@ -259,88 +259,219 @@ export function Dashboard() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {todayTasks.map(task => {
+                  <div className="space-y-4">
+                    {/* 1. TAREFAS ATRASADAS */}
+                    {todayTasks.some(task => {
                       const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) && task.status !== 'done';
+                      return isOverdue;
+                    }) && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-red-400 flex items-center gap-2">
+                          ⚠️ Tarefas Atrasadas
+                        </h4>
+                        <div className="space-y-2">
+                          {todayTasks.filter(task => {
+                            const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) && task.status !== 'done';
+                            return isOverdue;
+                          }).map(task => (
+                            <div
+                              key={task.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-red-500/10 border-red-500/20 transition-all"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.status === 'done'}
+                                onChange={() => handleToggleTask(task.id, task.status)}
+                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                                    {task.title}
+                                  </p>
+                                  <Badge variant="destructive" className="text-xs">
+                                    Atrasada
+                                  </Badge>
+                                </div>
+                                {task.description && (
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                                )}
+                                <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                                  {task.start_time && (
+                                    <span className="flex items-center gap-1">
+                                      🕐 {formatTime(task.start_time)}
+                                    </span>
+                                  )}
+                                  {task.due_date && (
+                                    <span className="flex items-center gap-1">
+                                      📅 {formatDateWithTime(task.due_date, task.start_time)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  task.priority === 'high' ? 'border-red-500/50 text-red-400' :
+                                  task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
+                                  'border-green-500/50 text-green-400'
+                                }
+                              >
+                                {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. TAREFAS DO DIA */}
+                    {todayTasks.some(task => {
+                      const isDueToday = task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString() && task.status !== 'done';
+                      const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
+                      return isDueToday && isNotOverdue;
+                    }) && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-yellow-400 flex items-center gap-2">
+                          📅 Tarefas de Hoje
+                        </h4>
+                        <div className="space-y-2">
+                          {todayTasks.filter(task => {
+                            const isDueToday = task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString() && task.status !== 'done';
+                            const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
+                            return isDueToday && isNotOverdue;
+                          }).map(task => (
+                            <div
+                              key={task.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20 transition-all"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.status === 'done'}
+                                onChange={() => handleToggleTask(task.id, task.status)}
+                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                                    {task.title}
+                                  </p>
+                                  <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                                    Vence Hoje
+                                  </Badge>
+                                </div>
+                                {task.description && (
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                                )}
+                                <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                                  {task.start_time && (
+                                    <span className="flex items-center gap-1">
+                                      🕐 {formatTime(task.start_time)}
+                                    </span>
+                                  )}
+                                  {task.due_date && (
+                                    <span className="flex items-center gap-1">
+                                      📅 {formatDateWithTime(task.due_date, task.start_time)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  task.priority === 'high' ? 'border-red-500/50 text-red-400' :
+                                  task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
+                                  'border-green-500/50 text-green-400'
+                                }
+                              >
+                                {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. TAREFAS COM REPETIÇÃO */}
+                    {todayTasks.some(task => {
                       const isRepeatingToday = task.repeat_enabled && (
                         (task.repeat_type === 'daily') ||
-                               (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay().toString())) ||
+                        (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay().toString())) ||
                         (task.repeat_type === 'monthly' && parseInt(task.repeat_days?.[0] || '0') === new Date().getDate()) ||
                         (task.repeat_type === 'custom' && task.repeat_days?.some(d => new Date(d).toDateString() === new Date().toDateString()))
                       );
-                      const isDueToday = task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString() && task.status !== 'done';
-
-                      return (
-                        <div
-                          key={task.id}
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                            task.status === 'done' 
-                              ? 'bg-green-500/10 border-green-500/20' 
-                              : isOverdue
-                              ? 'bg-red-500/10 border-red-500/20'
-                              : isDueToday
-                              ? 'bg-yellow-500/10 border-yellow-500/20'
-                              : 'bg-card border-border hover:border-primary/50'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={task.status === 'done'}
-                            onChange={() => handleToggleTask(task.id, task.status)}
-                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                                {task.title}
-                              </p>
-                              {isOverdue && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Atrasada
-                                </Badge>
-                              )}
-                              {isDueToday && !isOverdue && (
-                                <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                                  Vence Hoje
-                                </Badge>
-                              )}
-                              {isRepeatingToday && (
-                                <Badge variant="outline" className="text-xs">
-                                  🔄 ${task.repeat_type === 'daily' ? 'Diário' : 
-                                      task.repeat_type === 'weekly' ? 'Semanal' :
-                                      task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
-                                </Badge>
-                              )}
+                      const isNotDueToday = !(task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString());
+                      const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
+                      return isRepeatingToday && isNotDueToday && isNotOverdue;
+                    }) && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-blue-400 flex items-center gap-2">
+                          🔄 Tarefas com Repetição
+                        </h4>
+                        <div className="space-y-2">
+                          {todayTasks.filter(task => {
+                            const isRepeatingToday = task.repeat_enabled && (
+                              (task.repeat_type === 'daily') ||
+                              (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay().toString())) ||
+                              (task.repeat_type === 'monthly' && parseInt(task.repeat_days?.[0] || '0') === new Date().getDate()) ||
+                              (task.repeat_type === 'custom' && task.repeat_days?.some(d => new Date(d).toDateString() === new Date().toDateString()))
+                            );
+                            const isNotDueToday = !(task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString());
+                            const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
+                            return isRepeatingToday && isNotDueToday && isNotOverdue;
+                          }).map(task => (
+                            <div
+                              key={task.id}
+                              className="flex items-center gap-3 p-3 rounded-lg border bg-blue-500/10 border-blue-500/20 transition-all"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.status === 'done'}
+                                onChange={() => handleToggleTask(task.id, task.status)}
+                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                                    {task.title}
+                                  </p>
+                                  <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                    🔄 {task.repeat_type === 'daily' ? 'Diário' : 
+                                        task.repeat_type === 'weekly' ? 'Semanal' :
+                                        task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
+                                  </Badge>
+                                </div>
+                                {task.description && (
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                                )}
+                                <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
+                                  {task.start_time && (
+                                    <span className="flex items-center gap-1">
+                                      🕐 {formatTime(task.start_time)}
+                                    </span>
+                                  )}
+                                  {task.due_date && (
+                                    <span className="flex items-center gap-1">
+                                      📅 {formatDateWithTime(task.due_date, task.start_time)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  task.priority === 'high' ? 'border-red-500/50 text-red-400' :
+                                  task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
+                                  'border-green-500/50 text-green-400'
+                                }
+                              >
+                                {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                              </Badge>
                             </div>
-                            {task.description && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
-                            )}
-                            <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                              {task.start_time && (
-                                <span className="flex items-center gap-1">
-                                  🕐 ${formatTime(task.start_time)}
-                                </span>
-                              )}
-                              {task.due_date && (
-                                <span className="flex items-center gap-1">
-                                  📅 ${formatDateWithTime(task.due_date, task.start_time)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <Badge 
-                            variant="outline" 
-                            className={
-                              task.priority === 'high' ? 'border-red-500/50 text-red-400' :
-                              task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
-                              'border-green-500/50 text-green-400'
-                            }
-                          >
-                            ${task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
-                          </Badge>
+                          ))}
                         </div>
-                      );
-                    })}
+                      </div>
+                    )}
                   </div>
                 )}
               </TabsContent>
