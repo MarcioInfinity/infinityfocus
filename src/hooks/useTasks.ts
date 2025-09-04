@@ -174,22 +174,75 @@ export function useTasks(projectId?: string) {
     },
   });
 
-  // Calcular tarefas de hoje
-  const todayTasks = tasks.filter(task => {
+  // Lógica para filtrar tarefas para o Dashboard
+  const getFilteredTasksForDashboard = () => {
     const today = new Date();
-    const taskDate = task.due_date ? new Date(task.due_date) : null;
-    const isToday = taskDate && taskDate.toDateString() === today.toDateString();
-    const isRepeatingToday = task.repeat_enabled && (
-      (task.repeat_type === 'daily') ||
-      (task.repeat_type === 'weekly' && task.repeat_days?.includes(today.getDay().toString())) ||
-      (task.repeat_type === 'monthly' && parseInt(task.repeat_days?.[0] || '0') === today.getDate())
-    );
-    return isToday || isRepeatingToday;
-  });
+    today.setHours(0, 0, 0, 0); // Resetar horas para comparação de datas
+
+    const overdueTasks: Task[] = [];
+    const dueTodayTasks: Task[] = [];
+    const repeatingTodayTasks: Task[] = [];
+
+    tasks.forEach(task => {
+      if (task.status === 'done') return; // Ignorar tarefas concluídas
+
+      const taskDueDate = task.due_date ? new Date(task.due_date) : null;
+      if (taskDueDate) {
+        taskDueDate.setHours(0, 0, 0, 0);
+      }
+
+      // 1. Tarefas Atrasadas
+      if (taskDueDate && taskDueDate < today) {
+        overdueTasks.push(task);
+        return;
+      }
+
+      // 2. Tarefas do Dia (com data de vencimento hoje)
+      if (taskDueDate && taskDueDate.toDateString() === today.toDateString()) {
+        dueTodayTasks.push(task);
+        return;
+      }
+
+      // 3. Tarefas com Repetição (que se aplicam a hoje)
+      if (task.repeat_enabled) {
+        const dayOfWeek = today.getDay().toString(); // 0 para Domingo, 1 para Segunda, etc.
+        const dayOfMonth = today.getDate();
+
+        switch (task.repeat_type) {
+          case 'daily':
+            repeatingTodayTasks.push(task);
+            break;
+          case 'weekly':
+            if (task.repeat_days?.includes(dayOfWeek)) {
+              repeatingTodayTasks.push(task);
+            }
+            break;
+          case 'monthly':
+            if (task.repeat_days?.includes(dayOfMonth.toString())) { // Assumindo que repeat_days guarda o dia do mês para mensal
+              repeatingTodayTasks.push(task);
+            }
+            break;
+          case 'custom':
+            // Para custom, assumimos que 'custom_dates' é um array de datas específicas
+            if (task.custom_dates?.some(dateStr => new Date(dateStr).toDateString() === today.toDateString())) {
+              repeatingTodayTasks.push(task);
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    });
+
+    return {
+      overdueTasks,
+      dueTodayTasks,
+      repeatingTodayTasks,
+    };
+  };
 
   return {
     tasks,
-    todayTasks,
     isLoading,
     error,
     createTask: createTask.mutate,
@@ -200,5 +253,6 @@ export function useTasks(projectId?: string) {
     isUpdating: updateTask.isPending,
     isDeleting: deleteTask.isPending,
     isToggling: toggleTaskComplete.isPending,
+    getFilteredTasksForDashboard,
   };
 }
