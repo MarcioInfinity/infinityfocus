@@ -22,14 +22,12 @@ import { Task, Project, Goal } from '@/types';
 
 export function Dashboard() {
   const { user } = useAuth();
-  // CORREÇÃO #2: Usar hook melhorado de tarefas
-  const { tasks, todayTasks, createTask, updateTask } = useTasks();
+  const { tasks, createTask, updateTask, getFilteredTasksForDashboard } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
   const { settings } = useUserSettings();
   const { requestNotificationPermission, showBrowserNotification } = useNotifications();
 
-  // Habilitar atualizações em tempo real
   useRealtime();
 
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
@@ -37,7 +35,6 @@ export function Dashboard() {
   const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState('');
 
-  // Update current date and time every minute
   useEffect(() => {
     const updateDateTime = () => {
       const timezone = settings?.timezone || 'America/Sao_Paulo';
@@ -45,12 +42,11 @@ export function Dashboard() {
     };
 
     updateDateTime();
-    const interval = setInterval(updateDateTime, 60000); // Update every minute
+    const interval = setInterval(updateDateTime, 60000);
 
     return () => clearInterval(interval);
   }, [settings]);
 
-  // Request notification permission on component mount
   useEffect(() => {
     requestNotificationPermission().then(permissionGranted => {
       if (permissionGranted) {
@@ -61,16 +57,14 @@ export function Dashboard() {
     });
   }, []);
 
-  // Logic to show notifications for upcoming tasks
   useEffect(() => {
     const now = new Date();
     tasks.forEach(task => {
       if (task.due_date && task.notifications_enabled) {
         const dueDate = new Date(task.due_date);
-        // Check if due date is today and task is not done
         if (dueDate.toDateString() === now.toDateString() && task.status !== 'done') {
           showBrowserNotification(`Tarefa Próxima: ${task.title}`, {
-            body: `A tarefa '${task.title}' vence hoje!`, 
+            body: `A tarefa '${task.title}' vence hoje!`,
             tag: task.id
           });
         }
@@ -78,18 +72,18 @@ export function Dashboard() {
     });
   }, [tasks, showBrowserNotification]);
 
+  const { overdueTasks, dueTodayTasks, repeatingTodayTasks } = getFilteredTasksForDashboard();
 
+  const allTodayTasks = [...overdueTasks, ...dueTodayTasks, ...repeatingTodayTasks];
 
   const completedToday = tasks.filter(task => {
     if (task.status !== 'done') return false;
-    
     const today = new Date();
     const updatedDate = new Date(task.updated_at);
     return updatedDate.toDateString() === today.toDateString();
   });
   
   const pendingTasks = tasks.filter(task => task.status !== 'done');
-
   const highPriorityTasks = pendingTasks.filter(task => task.priority === 'high');
 
   const handleCreateTask = (taskData: Task) => {
@@ -112,7 +106,6 @@ export function Dashboard() {
     updateTask({ id: taskId, updates: { status: newStatus } });
   };
 
-  // Format time for display
   const formatTime = (timeString: string) => {
     if (!timeString) return '';
     try {
@@ -123,7 +116,6 @@ export function Dashboard() {
     }
   };
 
-  // Format date with time for display
   const formatDateWithTime = (dateString: string, timeString?: string) => {
     try {
       const date = new Date(dateString);
@@ -146,7 +138,6 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -164,10 +155,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Stats */}
       <DashboardStats />
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
           <DialogTrigger asChild>
@@ -232,15 +221,13 @@ export function Dashboard() {
         </Dialog>
       </div>
 
-      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Tasks - CORREÇÃO #2: Usar todayTasks do hook melhorado */}
         <Card className="glass-card lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
               Tarefas de Hoje
-              <Badge variant="outline">{todayTasks.length}</Badge>
+              <Badge variant="outline">{allTodayTasks.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -250,7 +237,7 @@ export function Dashboard() {
                 <TabsTrigger value="all">Todas as Tarefas</TabsTrigger>
               </TabsList>
               <TabsContent value="today">
-                {todayTasks.length === 0 ? (
+                {allTodayTasks.length === 0 ? (
                   <div className="text-center py-8">
                     <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
                     <p className="text-muted-foreground">Nenhuma tarefa para hoje</p>
@@ -260,20 +247,13 @@ export function Dashboard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {/* 1. TAREFAS ATRASADAS */}
-                    {todayTasks.some(task => {
-                      const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) && task.status !== 'done';
-                      return isOverdue;
-                    }) && (
+                    {overdueTasks.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="text-sm font-semibold text-red-400 flex items-center gap-2">
                           ⚠️ Tarefas Atrasadas
                         </h4>
                         <div className="space-y-2">
-                          {todayTasks.filter(task => {
-                            const isOverdue = task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0) && task.status !== 'done';
-                            return isOverdue;
-                          }).map(task => (
+                          {overdueTasks.map(task => (
                             <div
                               key={task.id}
                               className="flex items-center gap-3 p-3 rounded-lg border bg-red-500/10 border-red-500/20 transition-all"
@@ -325,22 +305,13 @@ export function Dashboard() {
                       </div>
                     )}
 
-                    {/* 2. TAREFAS DO DIA */}
-                    {todayTasks.some(task => {
-                      const isDueToday = task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString() && task.status !== 'done';
-                      const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
-                      return isDueToday && isNotOverdue;
-                    }) && (
+                    {dueTodayTasks.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="text-sm font-semibold text-yellow-400 flex items-center gap-2">
-                          📅 Tarefas de Hoje
+                          📅 Tarefas do Dia
                         </h4>
                         <div className="space-y-2">
-                          {todayTasks.filter(task => {
-                            const isDueToday = task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString() && task.status !== 'done';
-                            const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
-                            return isDueToday && isNotOverdue;
-                          }).map(task => (
+                          {dueTodayTasks.map(task => (
                             <div
                               key={task.id}
                               className="flex items-center gap-3 p-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20 transition-all"
@@ -357,7 +328,7 @@ export function Dashboard() {
                                     {task.title}
                                   </p>
                                   <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                                    Vence Hoje
+                                    Hoje
                                   </Badge>
                                 </div>
                                 {task.description && (
@@ -392,34 +363,13 @@ export function Dashboard() {
                       </div>
                     )}
 
-                    {/* 3. TAREFAS COM REPETIÇÃO */}
-                    {todayTasks.some(task => {
-                      const isRepeatingToday = task.repeat_enabled && (
-                        (task.repeat_type === 'daily') ||
-                        (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay().toString())) ||
-                        (task.repeat_type === 'monthly' && parseInt(task.repeat_days?.[0] || '0') === new Date().getDate()) ||
-                        (task.repeat_type === 'custom' && task.repeat_days?.some(d => new Date(d).toDateString() === new Date().toDateString()))
-                      );
-                      const isNotDueToday = !(task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString());
-                      const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
-                      return isRepeatingToday && isNotDueToday && isNotOverdue;
-                    }) && (
+                    {repeatingTodayTasks.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="text-sm font-semibold text-blue-400 flex items-center gap-2">
                           🔄 Tarefas com Repetição
                         </h4>
                         <div className="space-y-2">
-                          {todayTasks.filter(task => {
-                            const isRepeatingToday = task.repeat_enabled && (
-                              (task.repeat_type === 'daily') ||
-                              (task.repeat_type === 'weekly' && task.repeat_days?.includes(new Date().getDay().toString())) ||
-                              (task.repeat_type === 'monthly' && parseInt(task.repeat_days?.[0] || '0') === new Date().getDate()) ||
-                              (task.repeat_type === 'custom' && task.repeat_days?.some(d => new Date(d).toDateString() === new Date().toDateString()))
-                            );
-                            const isNotDueToday = !(task.due_date && new Date(task.due_date).toDateString() === new Date().toDateString());
-                            const isNotOverdue = !(task.due_date && new Date(task.due_date).setHours(0,0,0,0) < new Date().setHours(0,0,0,0));
-                            return isRepeatingToday && isNotDueToday && isNotOverdue;
-                          }).map(task => (
+                          {repeatingTodayTasks.map(task => (
                             <div
                               key={task.id}
                               className="flex items-center gap-3 p-3 rounded-lg border bg-blue-500/10 border-blue-500/20 transition-all"
@@ -436,9 +386,7 @@ export function Dashboard() {
                                     {task.title}
                                   </p>
                                   <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/30">
-                                    🔄 {task.repeat_type === 'daily' ? 'Diário' : 
-                                        task.repeat_type === 'weekly' ? 'Semanal' :
-                                        task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
+                                    Repetição
                                   </Badge>
                                 </div>
                                 {task.description && (
@@ -453,6 +401,13 @@ export function Dashboard() {
                                   {task.due_date && (
                                     <span className="flex items-center gap-1">
                                       📅 {formatDateWithTime(task.due_date, task.start_time)}
+                                    </span>
+                                  )}
+                                  {task.repeat_enabled && (
+                                    <span className="flex items-center gap-1">
+                                      🔄 {task.repeat_type === 'daily' ? 'Diário' :
+                                          task.repeat_type === 'weekly' ? 'Semanal' :
+                                          task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
                                     </span>
                                   )}
                                 </div>
@@ -475,82 +430,11 @@ export function Dashboard() {
                   </div>
                 )}
               </TabsContent>
-              <TabsContent value="all">
-                {tasks.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                    <p className="text-muted-foreground">Nenhuma tarefa cadastrada</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Comece criando sua primeira tarefa! 😊
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {tasks.map(task => (
-                      <div
-                        key={task.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                          task.status === 'done' 
-                            ? 'bg-green-500/10 border-green-500/20' 
-                            : 'bg-card border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={task.status === 'done'}
-                          onChange={() => handleToggleTask(task.id, task.status)}
-                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
-                        />
-                        <div className="flex-1">
-                          <p className={`font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                            {task.title}
-                          </p>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
-                          )}
-                          {/* Exibir horário junto com a data */}
-                          <div className="flex flex-wrap gap-2 mt-1 text-xs text-muted-foreground">
-                            {task.start_time && (
-                              <span className="flex items-center gap-1">
-                                🕐 ${formatTime(task.start_time)}
-                              </span>
-                            )}
-                            {task.due_date && (
-                              <span className="flex items-center gap-1">
-                                📅 ${formatDateWithTime(task.due_date, task.start_time)}
-                              </span>
-                            )}
-                            {task.repeat_enabled && (
-                              <span className="flex items-center gap-1">
-                                🔄 ${task.repeat_type === 'daily' ? 'Diário' : 
-                                    task.repeat_type === 'weekly' ? 'Semanal' :
-                                    task.repeat_type === 'monthly' ? 'Mensal' : 'Personalizado'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <Badge 
-                          variant="outline" 
-                          className={
-                            task.priority === 'high' ? 'border-red-500/50 text-red-400' :
-                            task.priority === 'medium' ? 'border-yellow-500/50 text-yellow-400' :
-                            'border-green-500/50 text-green-400'
-                          }
-                        >
-                          ${task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
 
-        {/* Quick Overview */}
         <div className="space-y-6">
-          {/* Progress Card */}
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -562,27 +446,26 @@ export function Dashboard() {
               <div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Tarefas Concluídas</span>
-                  <span>${completedToday.length}/${todayTasks.length}</span>
+                  <span>{completedToday.length}/{allTodayTasks.length}</span>
                 </div>
                 <Progress 
-                  value={todayTasks.length > 0 ? (completedToday.length / todayTasks.length) * 100 : 0} 
+                  value={allTodayTasks.length > 0 ? (completedToday.length / allTodayTasks.length) * 100 : 0} 
                   className="h-2"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">${pendingTasks.length}</p>
+                  <p className="text-2xl font-bold text-primary">{pendingTasks.length}</p>
                   <p className="text-xs text-muted-foreground">Pendentes</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-400">${highPriorityTasks.length}</p>
+                  <p className="text-2xl font-bold text-red-400">{highPriorityTasks.length}</p>
                   <p className="text-xs text-muted-foreground">Alta Prioridade</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Projects Summary */}
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -622,7 +505,7 @@ export function Dashboard() {
                             className="h-1 flex-1"
                           />
                           <span className="text-xs text-muted-foreground">
-                            ${project.members?.length || 0} membro${(project.members?.length || 0) !== 1 ? 's' : ''}
+                            {project.members?.length || 0} membro{(project.members?.length || 0) !== 1 ? 's' : ''}
                           </span>
                         </div>
                       </div>
@@ -630,7 +513,7 @@ export function Dashboard() {
                   ))}
                   {projects.length > 3 && (
                     <p className="text-xs text-muted-foreground text-center pt-2">
-                      +${projects.length - 3} projeto${projects.length - 3 !== 1 ? 's' : ''} adicional${projects.length - 3 !== 1 ? 'is' : ''}
+                      +{projects.length - 3} projeto{projects.length - 3 !== 1 ? 's' : ''} adicional{projects.length - 3 !== 1 ? 'is' : ''}
                     </p>
                   )}
                 </div>
@@ -638,7 +521,6 @@ export function Dashboard() {
             </CardContent>
           </Card>
           
-          {/* Goals Summary */}
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -674,7 +556,7 @@ export function Dashboard() {
                             className="h-1 flex-1"
                           />
                           <span className="text-xs text-muted-foreground">
-                            ${Math.round(goal.progress || 0)}%
+                            {Math.round(goal.progress || 0)}%
                           </span>
                         </div>
                       </div>
@@ -682,7 +564,7 @@ export function Dashboard() {
                   ))}
                   {goals.length > 3 && (
                     <p className="text-xs text-muted-foreground text-center pt-2">
-                      +${goals.length - 3} meta${goals.length - 3 !== 1 ? 's' : ''} adicional${goals.length - 3 !== 1 ? 'is' : ''}
+                      +{goals.length - 3} meta{goals.length - 3 !== 1 ? 's' : ''} adicional{goals.length - 3 !== 1 ? 'is' : ''}
                     </p>
                   )}
                 </div>
@@ -694,4 +576,3 @@ export function Dashboard() {
     </div>
   );
 }
-
