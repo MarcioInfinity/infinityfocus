@@ -24,10 +24,10 @@ export const formatTimeWithTimezone = (date: string | Date, timeFormat: string =
 
 export const getCurrentDateAndDay = (timezone: string = 'America/Sao_Paulo') => {
   const now = new Date();
-  const today = format(now, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-  const dayOfWeek = format(now, 'EEEE', { locale: ptBR });
+  const today = format(now, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  const time = format(now, 'HH:mm', { locale: ptBR });
   
-  return `${today} - ${dayOfWeek}`;
+  return `${today} às ${time}`;
 };
 
 export const getTimezoneOptions = () => [

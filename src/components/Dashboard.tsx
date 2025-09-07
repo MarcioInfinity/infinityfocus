@@ -141,7 +141,7 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Bem-vindo de volta, {user?.email?.split('@')[0]}!
+            Bem-vindo de volta, {user?.user_metadata?.name || user?.email?.split('@')[0]}!
           </h1>
           <p className="text-muted-foreground mt-1">
             {currentDateTime}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,47 +20,68 @@ export default function Register() {
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     // Validações
     if (!name.trim()) {
       setError('Nome é obrigatório');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem');
+      setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres');
+      setIsLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem');
+      setIsLoading(false);
       return;
     }
 
     if (!acceptTerms) {
       setError('Você deve aceitar os Termos de Uso');
+      setIsLoading(false);
       return;
     }
 
     if (!acceptPrivacy) {
       setError('Você deve aceitar a Política de Privacidade');
+      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      await signUp(email, password, name.trim());
-      // Redirecionar para o dashboard após cadastro bem-sucedido
-      navigate("/");
+      await signUp(email, password, name);
+      navigate('/');
     } catch (error: unknown) {
-      setError((error instanceof Error) ? error.message : "Erro desconhecido ao criar conta");
+      if (error instanceof Error) {
+        if (error.message.includes('User already registered')) {
+          setError('Este email já está cadastrado. Tente fazer login.');
+        } else if (error.message.includes('Invalid email')) {
+          setError('Email inválido');
+        } else if (error.message.includes('Password should be at least 6 characters')) {
+          setError('A senha deve ter pelo menos 6 caracteres');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError('Erro desconhecido ao criar conta');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -76,10 +97,10 @@ export default function Register() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Infinity Focus
+            Criar Conta
           </CardTitle>
           <CardDescription>
-            Crie sua conta para começar
+            Crie sua conta no Infinity Focus
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -93,7 +114,7 @@ export default function Register() {
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                Nome
+                Nome completo
               </Label>
               <Input
                 id="name"
@@ -133,7 +154,7 @@ export default function Register() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Sua senha (mínimo 6 caracteres)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -160,13 +181,13 @@ export default function Register() {
             <div className="space-y-2">
               <Label htmlFor="confirmPassword" className="flex items-center gap-2">
                 <Lock className="w-4 h-4" />
-                Confirmar Senha
+                Confirmar senha
               </Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Digite a senha novamente"
+                  placeholder="Confirme sua senha"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -198,16 +219,15 @@ export default function Register() {
                   onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
                   disabled={isLoading}
                 />
-                <Label htmlFor="terms" className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
                   Aceito os{' '}
-                  <Link 
-                    to="/terms" 
-                    className="text-primary hover:text-primary/80 underline"
-                    target="_blank"
-                  >
+                  <Link to="/terms" className="text-primary hover:text-primary/80 underline">
                     Termos de Uso
                   </Link>
-                </Label>
+                </label>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -217,23 +237,22 @@ export default function Register() {
                   onCheckedChange={(checked) => setAcceptPrivacy(checked as boolean)}
                   disabled={isLoading}
                 />
-                <Label htmlFor="privacy" className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <label
+                  htmlFor="privacy"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
                   Aceito a{' '}
-                  <Link 
-                    to="/privacy" 
-                    className="text-primary hover:text-primary/80 underline"
-                    target="_blank"
-                  >
+                  <Link to="/privacy" className="text-primary hover:text-primary/80 underline">
                     Política de Privacidade
                   </Link>
-                </Label>
+                </label>
               </div>
             </div>
 
             <Button 
               type="submit" 
               className="w-full glow-button" 
-              disabled={isLoading || !acceptTerms || !acceptPrivacy}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
@@ -241,7 +260,7 @@ export default function Register() {
                   Criando conta...
                 </>
               ) : (
-                'Criar Conta'
+                'Criar conta'
               )}
             </Button>
           </form>

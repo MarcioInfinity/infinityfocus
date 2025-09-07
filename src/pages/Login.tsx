@@ -37,10 +37,21 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
-      // O redirecionamento será feito pelo useEffect acima
+      const { error } = await signIn(email, password);
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Email ou senha incorretos');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('Por favor, confirme seu email antes de fazer login');
+        } else if (error.message.includes('Too many requests')) {
+          setError('Muitas tentativas de login. Tente novamente em alguns minutos');
+        } else {
+          setError(error.message);
+        }
+      }
     } catch (error: unknown) {
-      setError((error instanceof Error) ? error.message : 'Erro desconhecido ao fazer login');
+      console.error('Erro durante o login:', error);
+      setError('Erro interno. Tente novamente.');
     } finally {
       setIsLoading(false);
     }

@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -49,12 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        showErrorToast('Erro no login', error.message);
+        return { error };
+      }
+      
       showSuccessToast('Login realizado com sucesso!');
+      return { error: null };
     } catch (error) {
       const authError = error as AuthError;
       showErrorToast('Erro no login', authError.message);
-      throw error;
+      return { error: authError };
     } finally {
       setLoading(false);
     }
@@ -63,10 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     try {
       setLoading(true);
+      const redirectUrl = `${window.location.origin}/`;
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             name: name,
           },
