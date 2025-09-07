@@ -32,6 +32,7 @@ export interface Task {
   repeat_type?: 'daily' | 'weekly' | 'monthly' | 'weekdays' | 'custom';
   repeat_days?: string[];
   repeat_interval?: number;
+  custom_dates?: string[];
   user_id: string;
   created_by: string;
   created_at: string;
