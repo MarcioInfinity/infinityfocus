@@ -10,9 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Gift, Target, FolderKanban, CheckSquare } from 'lucide-react';
-import { useTasks } from '@/hooks/useTasks';
-import { useProjects } from '@/hooks/useProjects';
-import { useGoals } from '@/hooks/useGoals';
+import { useRewards } from '@/hooks/useRewards';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 
 // Schema de validação para recompensas - CORRIGIDO
@@ -56,12 +54,9 @@ const currencies = [
 ];
 
 export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps) {
-  const { tasks } = useTasks();
-  const { projects } = useProjects();
-  const { goals } = useGoals();
+  const { availableItems, isLoading: itemsLoading } = useRewards();
   const { showErrorToast } = useToastNotifications();
   
-  const [availableItems, setAvailableItems] = useState<Array<{id: string, name: string}>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof rewardSchema>>({
@@ -82,35 +77,32 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
   const watchInvestmentValue = form.watch('investment_value');
   const watchCelebrationLevel = form.watch('celebration_level');
 
-  // Atualizar itens disponíveis baseado no tipo selecionado
-  useEffect(() => {
-    let items: Array<{id: string, name: string}> = [];
+  // Obter itens disponíveis baseado no tipo selecionado
+  const getAvailableItemsForType = () => {
+    if (!availableItems) return [];
     
-    try {
-      switch (watchAttributedType) {
-        case 'task':
-          items = tasks?.map(task => ({ id: task.id, name: task.title })) || [];
-          break;
-        case 'project':
-          items = projects?.map(project => ({ id: project.id, name: project.name })) || [];
-          break;
-        case 'goal':
-          items = goals?.map(goal => ({ id: goal.id, name: goal.name })) || [];
-          break;
-      }
-      
-      setAvailableItems(items);
-      
-      // Limpar seleção se o item atual não estiver disponível no novo tipo
-      const currentSelection = form.getValues('attributed_to_id');
-      if (currentSelection && !items.find(item => item.id === currentSelection)) {
-        form.setValue('attributed_to_id', '');
-      }
-    } catch (error) {
-      console.error('Erro ao carregar itens:', error);
-      setAvailableItems([]);
+    switch (watchAttributedType) {
+      case 'task':
+        return availableItems.tasks || [];
+      case 'project':
+        return availableItems.projects || [];
+      case 'goal':
+        return availableItems.goals || [];
+      default:
+        return [];
     }
-  }, [watchAttributedType, tasks, projects, goals, form]);
+  };
+
+  const currentAvailableItems = getAvailableItemsForType();
+
+  // Limpar seleção se o item atual não estiver disponível no novo tipo
+  useEffect(() => {
+    const currentSelection = form.getValues('attributed_to_id');
+    const items = getAvailableItemsForType();
+    if (currentSelection && !items.find(item => item.id === currentSelection)) {
+      form.setValue('attributed_to_id', '');
+    }
+  }, [watchAttributedType, availableItems, form]);
 
   // CORREÇÃO #5: Implementar corretamente o handleSubmit
   const handleSubmit = async (values: z.infer<typeof rewardSchema>) => {
@@ -120,7 +112,7 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
     
     try {
       // Encontrar o nome do item selecionado para incluir nos dados
-      const selectedItem = availableItems.find(item => item.id === values.attributed_to_id);
+      const selectedItem = getAvailableItemsForType().find(item => item.id === values.attributed_to_id);
       
       if (!selectedItem) {
         showErrorToast('Item selecionado não encontrado');
@@ -341,12 +333,12 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableItems.length === 0 ? (
+                      {getAvailableItemsForType().length === 0 ? (
                         <SelectItem value="" disabled>
                           Nenhuma {attributionTypes.find(t => t.value === watchAttributedType)?.label.toLowerCase()} disponível
                         </SelectItem>
                       ) : (
-                        availableItems.map((item) => (
+                        getAvailableItemsForType().map((item) => (
                           <SelectItem key={item.id} value={item.id}>
                             {item.name}
                           </SelectItem>
@@ -377,7 +369,7 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
                     </div>
                   )}
                   <div className="text-muted-foreground">
-                    Será liberada quando a {attributionTypes.find(t => t.value === watchAttributedType)?.label.toLowerCase()} "{availableItems.find(item => item.id === form.watch('attributed_to_id'))?.name}" for concluída.
+                    Será liberada quando a {attributionTypes.find(t => t.value === watchAttributedType)?.label.toLowerCase()} "{getAvailableItemsForType().find(item => item.id === form.watch('attributed_to_id'))?.name}" for concluída.
                   </div>
                 </div>
               </div>
@@ -388,7 +380,7 @@ export function RewardForm({ onSubmit, onCancel, initialData }: RewardFormProps)
               <Button 
                 type="submit" 
                 className="flex-1" 
-                disabled={availableItems.length === 0 || isSubmitting}
+                disabled={getAvailableItemsForType().length === 0 || isSubmitting}
               >
                 {isSubmitting ? 'Criando...' : (initialData ? 'Atualizar Recompensa' : 'Criar Recompensa')}
               </Button>
