@@ -209,6 +209,7 @@ export type Database = {
           reward_enabled: boolean
           start_date: string | null
           updated_at: string
+          user_id: string
         }
         Insert: {
           assigned_projects?: string[] | null
@@ -229,6 +230,7 @@ export type Database = {
           reward_enabled?: boolean
           start_date?: string | null
           updated_at?: string
+          user_id: string
         }
         Update: {
           assigned_projects?: string[] | null
@@ -249,6 +251,7 @@ export type Database = {
           reward_enabled?: boolean
           start_date?: string | null
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -913,6 +916,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_goal_progress: {
+        Args: { goal_id_param: string }
+        Returns: number
+      }
       create_project_safe: {
         Args: { p_name: string; p_owner_id: string }
         Returns: string
