@@ -938,14 +938,8 @@ export type Database = {
           title: string
         }[]
       }
-      is_project_member: {
-        Args: { p_project_id: string }
-        Returns: boolean
-      }
-      is_project_owner: {
-        Args: { p_project_id: string }
-        Returns: boolean
-      }
+      is_project_member: { Args: { p_project_id: string }; Returns: boolean }
+      is_project_owner: { Args: { p_project_id: string }; Returns: boolean }
       user_has_project_access: {
         Args: { project_uuid: string; user_uuid: string }
         Returns: boolean
