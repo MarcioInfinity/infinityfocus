@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
-import { useChecklists } from '@/hooks/useChecklists';
-import { ChecklistItem } from '@/types';
+import { useGoalChecklists } from '@/hooks/useGoalChecklists';
 
 interface GoalChecklistProps {
   goalId: string;
@@ -16,14 +15,14 @@ export function GoalChecklist({ goalId }: GoalChecklistProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
   const { 
-    checklist, 
+    checklistItems: checklist, 
     isLoading, 
-    createItem, 
-    updateItem, 
-    deleteItem,
+    createChecklistItem: createItem, 
+    updateChecklistItem: updateItem, 
+    deleteChecklistItem: deleteItem,
     isCreating,
     isUpdating 
-  } = useChecklists(goalId, 'goal');
+  } = useGoalChecklists(goalId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +37,7 @@ export function GoalChecklist({ goalId }: GoalChecklistProps) {
     setIsAdding(false);
   };
 
-  const handleToggleComplete = (item: ChecklistItem) => {
+  const handleToggleComplete = (item: any) => {
     updateItem({
       id: item.id,
       updates: { completed: !item.completed }

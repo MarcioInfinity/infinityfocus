@@ -15,7 +15,7 @@ export function useGoals(projectId?: string) {
       let query = supabase
         .from('goals')
         .select('*')
-        .eq('created_by', user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (projectId) {
@@ -59,6 +59,7 @@ export function useGoals(projectId?: string) {
 
       const goalToCreate = {
         name: goalData.name || '',
+        user_id: user.id,
         created_by: user.id,
         priority: goalData.priority || 'medium',
         category: goalData.category || 'professional',
