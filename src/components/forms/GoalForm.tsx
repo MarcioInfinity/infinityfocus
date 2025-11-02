@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Goal } from '@/types';
+import { GoalChecklist } from '@/components/GoalChecklist';
 
 const goalSchema = z.object({
   name: z.string().min(1, 'Nome da meta é obrigatório'),
@@ -79,8 +81,6 @@ const weekDays = [
   { value: 5, label: 'Sex' },
   { value: 6, label: 'Sáb' },
 ];
-
-import { Goal } from '@/types';
 
 interface GoalFormProps {
   onSubmit: (data: Goal) => void;
@@ -795,6 +795,14 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
                 </FormItem>
               )}
             />
+
+            {/* Checklist - Only show for editing existing goals */}
+            {initialData?.id && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Checklist de Progresso</Label>
+                <GoalChecklist goalId={initialData.id} />
+              </div>
+            )}
 
             {/* Botões */}
             <div className="flex gap-3 pt-6">

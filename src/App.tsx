@@ -18,6 +18,8 @@ import Register from "./pages/Register";
 import InvitePage from "./pages/InvitePage";
 import NotFound from "./pages/NotFound";
 
+import { useNotificationSystem } from './hooks/useNotificationSystem';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -28,14 +30,18 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+const App = () => {
+  // Enable notification system
+  useNotificationSystem();
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
             {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -67,6 +73,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

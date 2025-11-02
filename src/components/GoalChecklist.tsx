@@ -1,11 +1,12 @@
-
 import { useState } from 'react';
 import { Plus, Check, X, Trash2, GripVertical } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGoalChecklists } from '@/hooks/useGoalChecklists';
+import { toast } from 'sonner';
 
 interface GoalChecklistProps {
   goalId: string;
@@ -46,6 +47,26 @@ export function GoalChecklist({ goalId }: GoalChecklistProps) {
 
   const handleDeleteItem = (itemId: string) => {
     deleteItem(itemId);
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+
+    const items = Array.from(checklist);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update positions for all affected items
+    items.forEach((item, index) => {
+      if (item.position !== index) {
+        updateItem({
+          id: item.id,
+          updates: { position: index }
+        });
+      }
+    });
+
+    toast.success('Ordem atualizada!');
   };
 
   const completedCount = checklist.filter(item => item.completed).length;
@@ -89,42 +110,69 @@ export function GoalChecklist({ goalId }: GoalChecklistProps) {
           )}
         </div>
 
-        <div className="space-y-2">
-          {checklist.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
-            >
-              <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-move" />
-              
-              <Checkbox
-                checked={item.completed}
-                onCheckedChange={() => handleToggleComplete(item)}
-                disabled={isUpdating}
-                className="shrink-0"
-              />
-              
-              <span 
-                className={`flex-1 text-sm ${
-                  item.completed 
-                    ? 'line-through text-muted-foreground' 
-                    : 'text-foreground'
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="checklist">
+            {(provided, snapshot) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className={`space-y-2 transition-colors ${
+                  snapshot.isDraggingOver ? 'bg-muted/30 rounded-lg p-2' : ''
                 }`}
               >
-                {item.title}
-              </span>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDeleteItem(item.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive h-8 w-8 p-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
+                {checklist.map((item, index) => (
+                  <Draggable key={item.id} draggableId={item.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={`flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-all group ${
+                          snapshot.isDragging 
+                            ? 'shadow-lg bg-card border border-primary/50 scale-105' 
+                            : 'bg-muted/20'
+                        }`}
+                      >
+                        <div
+                          {...provided.dragHandleProps}
+                          className="cursor-grab active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        
+                        <Checkbox
+                          checked={item.completed}
+                          onCheckedChange={() => handleToggleComplete(item)}
+                          disabled={isUpdating}
+                          className="shrink-0"
+                        />
+                        
+                        <span 
+                          className={`flex-1 text-sm transition-all ${
+                            item.completed 
+                              ? 'line-through text-muted-foreground' 
+                              : 'text-foreground font-medium'
+                          }`}
+                        >
+                          {item.title}
+                        </span>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteItem(item.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive h-8 w-8 p-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
 
         {isAdding ? (
           <form onSubmit={handleSubmit} className="space-y-2">
