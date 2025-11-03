@@ -170,20 +170,22 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
     const goalData = {
       id: initialData?.id || '',
       progress: initialData?.progress || 0,
-      notifications_enabled: initialData?.notifications_enabled || false,
-      checklist: initialData?.checklist || [],
+      notifications_enabled: values.notify_enabled || false,
       user_id: initialData?.user_id || '',
       created_by: initialData?.created_by || '',
       created_at: initialData?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
       ...values,
-      start_date: values.start_date?.toISOString() || '',
-      due_date: values.due_date?.toISOString() || '',
+      start_date: values.start_date?.toISOString().split('T')[0] || '',
+      due_date: values.due_date?.toISOString().split('T')[0] || '',
       share_emails: shareEmails,
       share_link: watchIsShared ? generateShareLink() : undefined,
       assigned_projects: selectedProjects,
       assigned_tasks: selectedTasks,
       repeat_days: values.repeat_days?.map(day => day.toString()) || [],
+      repeat_enabled: values.repeat_enabled || false,
+      reward_enabled: values.reward_enabled || false,
+      reward_description: values.reward_description || '',
     };
     onSubmit(goalData as Goal);
   };

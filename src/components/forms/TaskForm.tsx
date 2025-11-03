@@ -107,8 +107,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, def
       id: initialData?.id || '',
       status: initialData?.status || 'todo' as const,
       tags: initialData?.tags || [],
-      checklist: initialData?.checklist || [],
-      notifications: initialData?.notifications || [],
       notifications_enabled: values.notify_enabled || false,
       repeat_enabled: values.repeat_enabled || false,
       repeat_days: values.repeat_days?.map(d => d.toString()) || [],
@@ -118,7 +116,9 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, def
       updated_at: new Date().toISOString(),
       due_date: values.due_date?.toISOString().split('T')[0],
       start_date: values.start_date?.toISOString().split('T')[0],
-      start_time: values.time
+      start_time: values.time,
+      project_id: values.assign_to_project ? values.project_id : undefined,
+      goal_id: values.assign_to_goal ? values.goal_id : undefined,
     };
     onSubmit(fullTaskData as any);
   }
