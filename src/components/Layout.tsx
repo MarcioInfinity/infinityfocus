@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'sonner'; // Alterado de '@/components/ui/sonner' para 'sonner'
 import { useAuth } from '@/hooks/useAuth';
+import { useNotificationSystem } from '@/hooks/useNotificationSystem';
 import { useProfile } from '@/hooks/useProfile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,6 +73,9 @@ export function Layout({
     profile
   } = useProfile();
   const isMobile = useIsMobile();
+  
+  // Enable notification system
+  useNotificationSystem();
   
   const isActivePath = (path: string) => {
     if (path === '/') {

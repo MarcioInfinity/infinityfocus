@@ -18,8 +18,6 @@ import Register from "./pages/Register";
 import InvitePage from "./pages/InvitePage";
 import NotFound from "./pages/NotFound";
 
-import { useNotificationSystem } from './hooks/useNotificationSystem';
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -31,9 +29,6 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  // Enable notification system
-  useNotificationSystem();
-  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
