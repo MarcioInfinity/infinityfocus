@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Bell, Clock, Calendar, CalendarDays, Plus, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { Bell, Clock, Calendar, CalendarDays, Plus, Trash2, Volume2, VolumeX, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { NotificationType } from '@/types';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTasks } from '@/hooks/useTasks';
+import { EditNotificationModal } from './modals/EditNotificationModal';
 
 const daysOfWeek = [
   { value: 0, label: 'Domingo' },
@@ -48,6 +49,9 @@ export function NotificationManager() {
   });
   
   const { showSuccessToast, showErrorToast } = useToastNotifications();
+  
+  const [editingNotificationId, setEditingNotificationId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Request notification permission on component mount
   useEffect(() => {
@@ -116,6 +120,11 @@ export function NotificationManager() {
     if (confirm('Tem certeza que deseja excluir esta notificação?')) {
       deleteNotification(id);
     }
+  };
+
+  const handleOpenEditModal = (id: string) => {
+    setEditingNotificationId(id);
+    setIsEditModalOpen(true);
   };
 
   const getNotificationIcon = (type: NotificationType) => {
@@ -367,6 +376,13 @@ export function NotificationManager() {
                         <Button 
                           variant="ghost" 
                           size="sm" 
+                          onClick={() => handleOpenEditModal(notification.id)}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
                           onClick={() => toggleNotification(notification.id)}
                         >
                           {notification.is_active ? 
@@ -408,6 +424,16 @@ export function NotificationManager() {
       >
         <Plus className="w-6 h-6" />
       </Button>
+
+      {/* Edit Notification Modal */}
+      <EditNotificationModal
+        notificationId={editingNotificationId}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingNotificationId(null);
+        }}
+      />
     </div>
   );
 }
