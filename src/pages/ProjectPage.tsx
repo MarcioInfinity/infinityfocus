@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { KanbanBoardImproved } from '@/components/KanbanBoardImproved';
+import { KanbanBoard } from '@/components/KanbanBoard';
 import { ProjectGoals } from '@/components/ProjectGoals';
 import { useProjects } from '@/hooks/useProjects';
 import { Card, CardContent } from '@/components/ui/card';
@@ -58,7 +58,7 @@ export function ProjectPage() {
         </TabsList>
         
         <TabsContent value="kanban" className="mt-6">
-          <KanbanBoardImproved projectId={projectId!} />
+          <KanbanBoard projectId={projectId!} />
         </TabsContent>
         
         <TabsContent value="goals" className="mt-6">

@@ -450,20 +450,20 @@ export function Goals() {
           )}
         </TabsContent>
 
-        {/* CORREÇÃO #3: Aba de recompensas corrigida */}
+        {/* CORREÇÃO #2: Aba de recompensas corrigida - usando rewards ao invés de goalRewards */}
         <TabsContent value="recompensas" className="space-y-4">
-          {goalRewards.length === 0 ? (
+          {rewards.length === 0 ? (
             <Card className="glass-card">
               <CardContent className="text-center py-12">
-                <Award className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-semibold mb-2">Nenhuma recompensa criada</h3>
+                <Gift className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma recompensa cadastrada</h3>
                 <p className="text-muted-foreground mb-4">
-                  Crie recompensas para suas metas para vê-las aqui
+                  Crie recompensas para celebrar suas conquistas quando completar suas metas
                 </p>
                 <Dialog open={isRewardFormOpen} onOpenChange={setIsRewardFormOpen}>
                   <DialogTrigger asChild>
                     <Button className="glow-button">
-                      <Gift className="w-4 h-4 mr-2" />
+                      <Plus className="w-4 h-4 mr-2" />
                       Criar Primeira Recompensa
                     </Button>
                   </DialogTrigger>
@@ -478,51 +478,82 @@ export function Goals() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {goalRewards.map(reward => (
-                <Card key={reward.id} className="glass-card border-yellow-500/30">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{getCelebrationIcon(reward.celebration_level)}</span>
-                      <CardTitle className="text-lg">{reward.title}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {reward.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {reward.description}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="border-yellow-500/50 text-yellow-400">
-                        {reward.celebration_level === 'small' && '🎉 Pequena'}
-                        {reward.celebration_level === 'medium' && '🎊 Média'}
-                        {reward.celebration_level === 'large' && '🏆 Grande'}
-                        {reward.celebration_level === 'epic' && '🎆 Épica'}
-                      </Badge>
+              {rewards.map(reward => {
+                const isGoalCompleted = goals.find(g => g.id === reward.attributed_to_id)?.progress === 100;
+                return (
+                  <Card key={reward.id} className={`glass-card border-yellow-500/30 ${reward.is_claimed ? 'opacity-60' : ''}`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{getCelebrationIcon(reward.celebration_level)}</span>
+                          <div>
+                            <CardTitle className="text-lg">{reward.title}</CardTitle>
+                            {reward.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {reward.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            if (confirm('Tem certeza que deseja excluir esta recompensa?')) {
+                              deleteReward(reward.id);
+                            }
+                          }}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={reward.is_claimed ? 'default' : 'outline'} className="text-xs">
+                          {reward.is_claimed ? '✓ Resgatada' : isGoalCompleted ? '🎉 Disponível' : '⏳ Pendente'}
+                        </Badge>
+                      </div>
+                      
                       {reward.investment_value > 0 && (
-                        <span className="text-sm font-medium">
-                          {reward.currency === 'BRL' ? 'R$' : reward.currency} {reward.investment_value.toFixed(2)}
-                        </span>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Valor: </span>
+                          <span className="font-medium">
+                            {reward.currency === 'BRL' ? 'R$ ' : reward.currency === 'USD' ? '$ ' : '€ '}
+                            {Number(reward.investment_value).toFixed(2)}
+                          </span>
+                        </div>
                       )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <strong>Meta:</strong> {reward.attributed_item_name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Criada em {new Date(reward.created_at).toLocaleDateString('pt-BR')}
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10"
-                      onClick={() => deleteReward(reward.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Excluir Recompensa
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                      
+                      <div className="text-xs text-muted-foreground">
+                        <strong>Meta:</strong> {reward.attributed_item_name || goals.find(g => g.id === reward.attributed_to_id)?.name || 'N/A'}
+                      </div>
+                      
+                      {reward.is_claimed && reward.claimed_at && (
+                        <div className="text-xs text-muted-foreground">
+                          Resgatada em: {new Date(reward.claimed_at).toLocaleDateString('pt-BR')}
+                        </div>
+                      )}
+                      
+                      {!reward.is_claimed && isGoalCompleted && (
+                        <Button 
+                          className="w-full glow-button" 
+                          size="sm"
+                          onClick={() => handleClaimReward(reward.attributed_to_id)}
+                        >
+                          <Gift className="w-4 h-4 mr-2" />
+                          Resgatar Recompensa
+                        </Button>
+                      )}
+                      
+                      <div className="text-xs text-muted-foreground">
+                        Criada em {new Date(reward.created_at).toLocaleDateString('pt-BR')}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
