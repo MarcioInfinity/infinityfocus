@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/types';
 import { toast } from 'sonner';
+import { sanitizeProjectData } from '@/utils/formSanitizers';
 
 export function useProjects() {
   const queryClient = useQueryClient();
@@ -81,16 +82,12 @@ export function useProjects() {
 
   const updateProject = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Project> }) => {
-      // Mapear campos corretamente
-      const mappedUpdates = {
-        ...updates,
-        start_time: updates.start_time || null,
-        end_time: updates.end_time || null,
-      };
+      // Sanitizar dados antes de enviar ao banco
+      const sanitizedUpdates = sanitizeProjectData(updates);
 
       const { data, error } = await supabase
         .from('projects')
-        .update(mappedUpdates)
+        .update(sanitizedUpdates)
         .eq('id', id)
         .select()
         .single();

@@ -28,7 +28,7 @@ const statusColors = {
 };
 
 export function TaskManager() {
-  const { tasks, createTask, updateTask, deleteTask, isLoading } = useTasks();
+  const { tasks, createTask, updateTask, deleteTask, toggleTaskInModule, isLoading } = useTasks();
   const { projects } = useProjects();
   const { goals } = useGoals();
   
@@ -184,9 +184,7 @@ export function TaskManager() {
                   <div key={task.id} className={`flex items-center gap-4 p-4 ${index !== filteredTasks.length - 1 ? 'border-b border-white/10' : ''}`}>
                     <Checkbox
                       checked={task.status === 'done'}
-                      onCheckedChange={(checked) => 
-                        handleUpdateTask(task.id, { status: checked ? 'done' : 'todo' })
-                      }
+                      onCheckedChange={() => toggleTaskInModule(task.id)}
                     />
                     
                     <div className="flex-1 min-w-0">
@@ -297,9 +295,7 @@ export function TaskManager() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleUpdateTask(task.id, { 
-                        status: task.status === 'done' ? 'todo' : 'done' 
-                      })}
+                      onClick={() => toggleTaskInModule(task.id)}
                       className="flex-1"
                     >
                       {task.status === 'done' ? (

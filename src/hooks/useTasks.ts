@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/types';
 import { toast } from 'sonner';
+import { sanitizeTaskData } from '@/utils/formSanitizers';
 
 export function useTasks(projectId?: string) {
   const queryClient = useQueryClient();
@@ -88,9 +89,12 @@ export function useTasks(projectId?: string) {
 
   const updateTask = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Task> }) => {
+      // Sanitizar dados antes de enviar ao banco
+      const sanitizedUpdates = sanitizeTaskData(updates);
+      
       const { data, error } = await supabase
         .from('tasks')
-        .update(updates)
+        .update(sanitizedUpdates)
         .eq('id', id)
         .select()
         .single();
@@ -141,38 +145,71 @@ export function useTasks(projectId?: string) {
     },
   });
 
-  const toggleTaskComplete = useMutation({
-    mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
+  // Toggle para uso no módulo de Tarefas - DESATIVA repetição ao concluir
+  const toggleTaskInModule = useMutation({
+    mutationFn: async (id: string) => {
+      const task = tasks?.find(t => t.id === id);
+      if (!task) throw new Error('Task not found');
+
+      const newStatus = task.status === 'done' ? 'todo' : 'done';
+      
+      // Se está marcando como concluída, desativa a repetição
+      const updates: any = { status: newStatus };
+      if (newStatus === 'done' && task.repeat_enabled) {
+        updates.repeat_enabled = false;
+      }
+      
       const { data, error } = await supabase
         .from('tasks')
-        .update({ 
-          status: completed ? 'done' : 'todo',
-          updated_at: new Date().toISOString()
-        })
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
 
-      if (error) {
-        console.error('Erro ao alterar status da tarefa:', error);
-        throw error;
-      }
-
+      if (error) throw error;
       return data;
     },
-    onSuccess: (updatedTask) => {
-      // Invalidar queries relacionadas de forma mais específica
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      if (updatedTask.project_id) {
-        queryClient.invalidateQueries({ queryKey: ['tasks', updatedTask.project_id] });
-      }
-      toast.success(updatedTask.status === 'done' ? 'Tarefa concluída!' : 'Tarefa reaberta!');
+      toast.success('Tarefa atualizada!');
     },
     onError: (error) => {
-      console.error('Erro ao alterar status da tarefa:', error);
-      toast.error('Erro ao alterar status da tarefa. Tente novamente.');
+      console.error('Error toggling task:', error);
+      toast.error('Erro ao atualizar tarefa');
     },
   });
+
+  // Toggle para uso no Dashboard - MANTÉM repetição ativa ao concluir
+  const toggleTaskInDashboard = useMutation({
+    mutationFn: async (id: string) => {
+      const task = tasks?.find(t => t.id === id);
+      if (!task) throw new Error('Task not found');
+
+      const newStatus = task.status === 'done' ? 'todo' : 'done';
+      
+      // Mantém repeat_enabled ativo mesmo ao marcar como concluída
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({ status: newStatus })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Tarefa concluída no dashboard!');
+    },
+    onError: (error) => {
+      console.error('Error toggling task in dashboard:', error);
+      toast.error('Erro ao atualizar tarefa');
+    },
+  });
+
+  // Manter compatibilidade com código antigo (usa comportamento do módulo)
+  const toggleTaskComplete = toggleTaskInModule;
 
   // Lógica para filtrar tarefas para o Dashboard
   const getFilteredTasksForDashboard = () => {
@@ -249,6 +286,8 @@ export function useTasks(projectId?: string) {
     updateTask: updateTask.mutate,
     deleteTask: deleteTask.mutate,
     toggleTaskComplete: toggleTaskComplete.mutate,
+    toggleTaskInModule: toggleTaskInModule.mutate,
+    toggleTaskInDashboard: toggleTaskInDashboard.mutate,
     isCreating: createTask.isPending,
     isUpdating: updateTask.isPending,
     isDeleting: deleteTask.isPending,

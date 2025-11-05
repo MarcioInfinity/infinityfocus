@@ -13,6 +13,7 @@ import { RewardForm } from './forms/RewardForm';
 import { EditGoalModal } from './modals/EditGoalModal';
 import { GoalDetailsModal } from './modals/GoalDetailsModal';
 import { GoalChecklist } from './GoalChecklist';
+import { RewardCard } from './RewardCard';
 import { useGoals } from '@/hooks/useGoals';
 import { useRewards } from '@/hooks/useRewards';
 import { useToastNotifications } from '@/hooks/use-toast-notifications';
@@ -478,82 +479,9 @@ export function Goals() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {rewards.map(reward => {
-                const isGoalCompleted = goals.find(g => g.id === reward.attributed_to_id)?.progress === 100;
-                return (
-                  <Card key={reward.id} className={`glass-card border-yellow-500/30 ${reward.is_claimed ? 'opacity-60' : ''}`}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">{getCelebrationIcon(reward.celebration_level)}</span>
-                          <div>
-                            <CardTitle className="text-lg">{reward.title}</CardTitle>
-                            {reward.description && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                {reward.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => {
-                            if (confirm('Tem certeza que deseja excluir esta recompensa?')) {
-                              deleteReward(reward.id);
-                            }
-                          }}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={reward.is_claimed ? 'default' : 'outline'} className="text-xs">
-                          {reward.is_claimed ? '✓ Resgatada' : isGoalCompleted ? '🎉 Disponível' : '⏳ Pendente'}
-                        </Badge>
-                      </div>
-                      
-                      {reward.investment_value > 0 && (
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Valor: </span>
-                          <span className="font-medium">
-                            {reward.currency === 'BRL' ? 'R$ ' : reward.currency === 'USD' ? '$ ' : '€ '}
-                            {Number(reward.investment_value).toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      <div className="text-xs text-muted-foreground">
-                        <strong>Meta:</strong> {reward.attributed_item_name || goals.find(g => g.id === reward.attributed_to_id)?.name || 'N/A'}
-                      </div>
-                      
-                      {reward.is_claimed && reward.claimed_at && (
-                        <div className="text-xs text-muted-foreground">
-                          Resgatada em: {new Date(reward.claimed_at).toLocaleDateString('pt-BR')}
-                        </div>
-                      )}
-                      
-                      {!reward.is_claimed && isGoalCompleted && (
-                        <Button 
-                          className="w-full glow-button" 
-                          size="sm"
-                          onClick={() => handleClaimReward(reward.attributed_to_id)}
-                        >
-                          <Gift className="w-4 h-4 mr-2" />
-                          Resgatar Recompensa
-                        </Button>
-                      )}
-                      
-                      <div className="text-xs text-muted-foreground">
-                        Criada em {new Date(reward.created_at).toLocaleDateString('pt-BR')}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {rewards.map(reward => (
+                <RewardCard key={reward.id} reward={reward} />
+              ))}
             </div>
           )}
         </TabsContent>

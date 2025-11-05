@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Goal } from '@/types';
 import { toast } from 'sonner';
+import { sanitizeGoalData } from '@/utils/formSanitizers';
 
 export function useGoals(projectId?: string) {
   const queryClient = useQueryClient();
@@ -109,9 +110,12 @@ export function useGoals(projectId?: string) {
 
   const updateGoal = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Goal> }) => {
+      // Sanitizar dados antes de enviar ao banco
+      const sanitizedUpdates = sanitizeGoalData(updates);
+      
       const { data, error } = await supabase
         .from('goals')
-        .update(updates)
+        .update(sanitizedUpdates)
         .eq('id', id)
         .select()
         .single();

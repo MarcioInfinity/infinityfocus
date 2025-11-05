@@ -22,7 +22,7 @@ import { Task, Project, Goal } from '@/types';
 
 export function Dashboard() {
   const { user } = useAuth();
-  const { tasks, createTask, updateTask, getFilteredTasksForDashboard } = useTasks();
+  const { tasks, createTask, toggleTaskInDashboard, getFilteredTasksForDashboard } = useTasks();
   const { projects, createProject } = useProjects();
   const { goals, createGoal } = useGoals();
   const { settings } = useUserSettings();
@@ -101,9 +101,8 @@ export function Dashboard() {
     setIsGoalFormOpen(false);
   };
 
-  const handleToggleTask = (taskId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'done' ? 'todo' : 'done';
-    updateTask({ id: taskId, updates: { status: newStatus } });
+  const handleToggleTask = (taskId: string) => {
+    toggleTaskInDashboard(taskId);
   };
 
   const formatTime = (timeString: string) => {
@@ -261,7 +260,7 @@ export function Dashboard() {
                               <input
                                 type="checkbox"
                                 checked={task.status === 'done'}
-                                onChange={() => handleToggleTask(task.id, task.status)}
+                                onChange={() => handleToggleTask(task.id)}
                                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
                               />
                               <div className="flex-1">
@@ -319,7 +318,7 @@ export function Dashboard() {
                               <input
                                 type="checkbox"
                                 checked={task.status === 'done'}
-                                onChange={() => handleToggleTask(task.id, task.status)}
+                                onChange={() => handleToggleTask(task.id)}
                                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
                               />
                               <div className="flex-1">
@@ -377,7 +376,7 @@ export function Dashboard() {
                               <input
                                 type="checkbox"
                                 checked={task.status === 'done'}
-                                onChange={() => handleToggleTask(task.id, task.status)}
+                                onChange={() => handleToggleTask(task.id)}
                                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-2"
                               />
                               <div className="flex-1">
