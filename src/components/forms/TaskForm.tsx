@@ -29,6 +29,7 @@ import {
 import { Priority, CategoryType, FrequencyType, Task, Project, Goal } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { sanitizeTaskData } from '@/utils/formSanitizers';
 
 // Schema corrigido com validação de horário mais flexível
 const taskSchema = z.object({
@@ -107,8 +108,6 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, def
       id: initialData?.id || '',
       status: initialData?.status || 'todo' as const,
       tags: initialData?.tags || [],
-      notifications_enabled: values.notify_enabled || false,
-      repeat_enabled: values.repeat_enabled || false,
       repeat_days: values.repeat_days?.map(d => d.toString()) || [],
       user_id: initialData?.user_id || '',
       created_by: initialData?.created_by || '',
@@ -117,10 +116,11 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, def
       due_date: values.due_date?.toISOString().split('T')[0],
       start_date: values.start_date?.toISOString().split('T')[0],
       start_time: values.time,
-      project_id: values.assign_to_project ? values.project_id : undefined,
-      goal_id: values.assign_to_goal ? values.goal_id : undefined,
     };
-    onSubmit(fullTaskData as any);
+    
+    // Sanitizar dados antes de enviar
+    const sanitizedData = sanitizeTaskData(fullTaskData);
+    onSubmit(sanitizedData as Task);
   }
 
   return (

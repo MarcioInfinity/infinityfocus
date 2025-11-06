@@ -29,6 +29,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Goal } from '@/types';
 import { GoalChecklist } from '@/components/GoalChecklist';
+import { sanitizeGoalData } from '@/utils/formSanitizers';
 
 const goalSchema = z.object({
   name: z.string().min(1, 'Nome da meta é obrigatório'),
@@ -170,7 +171,6 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
     const goalData = {
       id: initialData?.id || '',
       progress: initialData?.progress || 0,
-      notifications_enabled: values.notify_enabled || false,
       user_id: initialData?.user_id || '',
       created_by: initialData?.created_by || '',
       created_at: initialData?.created_at || new Date().toISOString(),
@@ -187,7 +187,10 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
       reward_enabled: values.reward_enabled || false,
       reward_description: values.reward_description || '',
     };
-    onSubmit(goalData as Goal);
+    
+    // Sanitizar dados antes de enviar
+    const sanitizedData = sanitizeGoalData(goalData);
+    onSubmit(sanitizedData as Goal);
   };
 
   return (

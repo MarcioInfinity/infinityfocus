@@ -26,6 +26,7 @@ import { Priority } from '@/types';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { sanitizeProjectData } from '@/utils/formSanitizers';
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Nome do projeto é obrigatório'),
@@ -158,7 +159,10 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
       invite_emails: watchIsShared && watchInviteMethod === 'email' ? inviteEmails.filter(email => email.trim()) : [],
       repeat_days: values.repeat_days?.map(day => day.toString()) || [],
     };
-    onSubmit(projectData as Project);
+    
+    // Sanitizar dados antes de enviar
+    const sanitizedData = sanitizeProjectData(projectData);
+    onSubmit(sanitizedData as Project);
   };
 
   const addEmailField = () => {
