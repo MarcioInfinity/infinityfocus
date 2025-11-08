@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/types';
 import { toast } from 'sonner';
-import { sanitizeProjectData } from '@/utils/formSanitizers';
+import { sanitizeProjectDataForCreate, sanitizeProjectDataForUpdate } from '@/utils/formSanitizers';
 
 export function useProjects() {
   const queryClient = useQueryClient();
@@ -42,24 +42,17 @@ export function useProjects() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      const projectToCreate = {
-        name: projectData.name || '',
-        owner_id: user.id,
-        user_id: user.id,
-        priority: projectData.priority || 'medium',
-        category: projectData.category || 'professional',
-        color: projectData.color || '#3B82F6',
-        is_shared: projectData.is_shared || false,
-        notifications_enabled: projectData.notifications_enabled || false,
-        repeat_enabled: projectData.repeat_enabled || false,
-        start_time: projectData.start_time || null,
-        end_time: projectData.end_time || null,
-        ...projectData,
-      };
+      // Usar sanitização específica para CREATE
+      const projectToCreate = sanitizeProjectDataForCreate(projectData, user.id);
+      
+      // Validar campos obrigatórios
+      if (!projectToCreate.name) {
+        throw new Error('Nome do projeto é obrigatório');
+      }
 
       const { data, error } = await supabase
         .from('projects')
-        .insert(projectToCreate)
+        .insert([projectToCreate as any])
         .select()
         .single();
 
@@ -82,8 +75,8 @@ export function useProjects() {
 
   const updateProject = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Project> }) => {
-      // Sanitizar dados antes de enviar ao banco
-      const sanitizedUpdates = sanitizeProjectData(updates);
+      // Usar sanitização específica para UPDATE
+      const sanitizedUpdates = sanitizeProjectDataForUpdate(updates);
 
       const { data, error } = await supabase
         .from('projects')

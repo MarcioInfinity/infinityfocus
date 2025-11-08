@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Goal } from '@/types';
 import { toast } from 'sonner';
-import { sanitizeGoalData } from '@/utils/formSanitizers';
+import { sanitizeGoalDataForCreate, sanitizeGoalDataForUpdate } from '@/utils/formSanitizers';
 
 export function useGoals(projectId?: string) {
   const queryClient = useQueryClient();
@@ -58,25 +58,13 @@ export function useGoals(projectId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      const goalToCreate = {
-        name: goalData.name || '',
-        user_id: user.id,
-        created_by: user.id,
-        priority: goalData.priority || 'medium',
-        category: goalData.category || 'professional',
-        progress: goalData.progress || 0,
-        is_shared: goalData.is_shared || false,
-        notifications_enabled: goalData.notifications_enabled || false,
-        reward_enabled: goalData.reward_enabled || false,
-        assigned_projects: goalData.assigned_projects || [],
-        assigned_tasks: goalData.assigned_tasks || [],
-        description: goalData.description || null,
-        start_date: goalData.start_date || null,
-        due_date: goalData.due_date || null,
-        reward_description: goalData.reward_description || null,
-        notes: goalData.notes || null,
-        ...goalData,
-      };
+      // Usar sanitização específica para CREATE
+      const goalToCreate = sanitizeGoalDataForCreate(goalData, user.id);
+      
+      // Validar campos obrigatórios
+      if (!goalToCreate.name) {
+        throw new Error('Nome da meta é obrigatório');
+      }
 
       // Se projectId for fornecido, adicionar à lista de projetos atribuídos
       if (projectId && goalToCreate.assigned_projects) {
@@ -87,7 +75,7 @@ export function useGoals(projectId?: string) {
 
       const { data, error } = await supabase
         .from('goals')
-        .insert(goalToCreate)
+        .insert([goalToCreate as any])
         .select()
         .single();
 
@@ -110,8 +98,8 @@ export function useGoals(projectId?: string) {
 
   const updateGoal = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Goal> }) => {
-      // Sanitizar dados antes de enviar ao banco
-      const sanitizedUpdates = sanitizeGoalData(updates);
+      // Usar sanitização específica para UPDATE
+      const sanitizedUpdates = sanitizeGoalDataForUpdate(updates);
       
       const { data, error } = await supabase
         .from('goals')

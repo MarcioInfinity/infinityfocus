@@ -169,28 +169,34 @@ export function GoalForm({ onSubmit, onCancel, initialData }: GoalFormProps) {
 
   const handleSubmit = (values: z.infer<typeof goalSchema>) => {
     const goalData = {
-      id: initialData?.id || '',
-      progress: initialData?.progress || 0,
-      user_id: initialData?.user_id || '',
-      created_by: initialData?.created_by || '',
-      created_at: initialData?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      ...values,
+      name: values.name,
+      description: values.description || null,
+      priority: values.priority,
+      category: values.category,
+      custom_category: watchCategory === 'custom' ? values.custom_category : undefined,
+      is_shared: values.is_shared,
       start_date: values.start_date?.toISOString().split('T')[0] || '',
       due_date: values.due_date?.toISOString().split('T')[0] || '',
+      time: values.time || null,
+      notify_enabled: values.notify_enabled,
+      reward_enabled: values.reward_enabled || false,
+      reward_description: values.reward_description || null,
+      repeat_enabled: values.repeat_enabled || false,
+      repeat_type: values.repeat_type || null,
+      repeat_days: values.repeat_days?.map(day => day.toString()) || [],
+      monthly_day: values.monthly_day || null,
+      custom_dates: values.custom_dates?.map(d => d.toISOString().split('T')[0]) || [],
       share_emails: shareEmails,
       share_link: watchIsShared ? generateShareLink() : undefined,
       assigned_projects: selectedProjects,
       assigned_tasks: selectedTasks,
-      repeat_days: values.repeat_days?.map(day => day.toString()) || [],
-      repeat_enabled: values.repeat_enabled || false,
-      reward_enabled: values.reward_enabled || false,
-      reward_description: values.reward_description || '',
+      ...(initialData && {
+        id: initialData.id,
+        progress: initialData.progress,
+      }),
     };
     
-    // Sanitizar dados antes de enviar
-    const sanitizedData = sanitizeGoalData(goalData);
-    onSubmit(sanitizedData as Goal);
+    onSubmit(goalData as any);
   };
 
   return (

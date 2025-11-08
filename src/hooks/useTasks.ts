@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/types';
 import { toast } from 'sonner';
-import { sanitizeTaskData } from '@/utils/formSanitizers';
+import { sanitizeTaskDataForCreate, sanitizeTaskDataForUpdate } from '@/utils/formSanitizers';
 
 export function useTasks(projectId?: string) {
   const queryClient = useQueryClient();
@@ -48,21 +48,17 @@ export function useTasks(projectId?: string) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      const taskToCreate = {
-        title: taskData.title || '',
-        created_by: user.id,
-        user_id: user.id,
-        priority: taskData.priority || 'medium',
-        category: taskData.category || 'professional',
-        status: taskData.status || 'todo',
-        notifications_enabled: taskData.notifications_enabled || false,
-        repeat_enabled: taskData.repeat_enabled || false,
-        ...taskData,
-      };
+      // Usar sanitização específica para CREATE
+      const taskToCreate = sanitizeTaskDataForCreate(taskData, user.id);
+      
+      // Validar campos obrigatórios
+      if (!taskToCreate.title) {
+        throw new Error('Título é obrigatório');
+      }
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert(taskToCreate)
+        .insert([taskToCreate as any])
         .select()
         .single();
 
@@ -89,8 +85,8 @@ export function useTasks(projectId?: string) {
 
   const updateTask = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Task> }) => {
-      // Sanitizar dados antes de enviar ao banco
-      const sanitizedUpdates = sanitizeTaskData(updates);
+      // Usar sanitização específica para UPDATE
+      const sanitizedUpdates = sanitizeTaskDataForUpdate(updates);
       
       const { data, error } = await supabase
         .from('tasks')

@@ -103,24 +103,33 @@ export function TaskForm({ onSubmit, onCancel, initialData, projects, goals, def
   });
 
   function handleSubmit(values: z.infer<typeof taskSchema>) {
-    const fullTaskData = {
-      ...values,
-      id: initialData?.id || '',
-      status: initialData?.status || 'todo' as const,
-      tags: initialData?.tags || [],
+    const taskData = {
+      title: values.title,
+      description: values.description || null,
+      priority: values.priority,
+      category: values.category,
+      due_date: values.due_date?.toISOString().split('T')[0] || null,
+      start_date: values.start_date?.toISOString().split('T')[0] || null,
+      start_time: values.time || null,
+      is_indefinite: values.is_indefinite || false,
+      notify_enabled: values.notify_enabled,
+      repeat_enabled: values.repeat_enabled,
+      repeat_type: values.repeat_type || null,
       repeat_days: values.repeat_days?.map(d => d.toString()) || [],
-      user_id: initialData?.user_id || '',
-      created_by: initialData?.created_by || '',
-      created_at: initialData?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      due_date: values.due_date?.toISOString().split('T')[0],
-      start_date: values.start_date?.toISOString().split('T')[0],
-      start_time: values.time,
+      repeat_monthly_day: values.monthly_day || null,
+      repeat_custom_dates: values.custom_dates?.map(d => d.toISOString().split('T')[0]) || [],
+      assign_to_project: values.assign_to_project,
+      assign_to_goal: values.assign_to_goal,
+      project_id: values.project_id || null,
+      goal_id: values.goal_id || null,
+      ...(initialData && {
+        id: initialData.id,
+        status: initialData.status,
+        tags: initialData.tags,
+      }),
     };
     
-    // Sanitizar dados antes de enviar
-    const sanitizedData = sanitizeTaskData(fullTaskData);
-    onSubmit(sanitizedData as Task);
+    onSubmit(taskData as any);
   }
 
   return (

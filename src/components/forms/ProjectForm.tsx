@@ -143,26 +143,32 @@ export function ProjectForm({ onSubmit, onCancel, initialData }: ProjectFormProp
 
   const handleSubmit = (values: z.infer<typeof projectSchema>) => {
     const projectData = {
-      id: initialData?.id || '',
-      color: initialData?.color || '#3B82F6',
-      user_id: initialData?.user_id || '',
-      owner_id: initialData?.owner_id || '',
-      members: initialData?.members || [],
-      tasks: initialData?.tasks || [],
-      checklist: initialData?.checklist || [],
-      created_at: initialData?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      ...values,
+      name: values.name,
+      description: values.description || null,
+      priority: values.priority,
+      category: values.category,
+      custom_category: watchCategory === 'custom' ? customCategory : undefined,
+      is_shared: values.is_shared,
       start_date: values.start_date?.toISOString().split('T')[0] || null,
       due_date: values.due_date?.toISOString().split('T')[0] || null,
-      custom_category: watchCategory === 'custom' ? customCategory : undefined,
-      invite_emails: watchIsShared && watchInviteMethod === 'email' ? inviteEmails.filter(email => email.trim()) : [],
+      is_indefinite: values.is_indefinite || false,
+      start_time: values.start_time || null,
+      end_time: values.end_time || null,
+      notify_enabled: values.notifications_enabled,
+      repeat_enabled: values.repeat_enabled,
+      repeat_type: values.repeat_type || null,
       repeat_days: values.repeat_days?.map(day => day.toString()) || [],
+      monthly_day: values.monthly_day || null,
+      custom_dates: values.custom_dates?.map(d => d.toISOString().split('T')[0]) || [],
+      invite_method: values.invite_method,
+      invite_emails: watchIsShared && watchInviteMethod === 'email' ? inviteEmails.filter(email => email.trim()) : [],
+      ...(initialData && {
+        id: initialData.id,
+        color: initialData.color,
+      }),
     };
     
-    // Sanitizar dados antes de enviar
-    const sanitizedData = sanitizeProjectData(projectData);
-    onSubmit(sanitizedData as Project);
+    onSubmit(projectData as any);
   };
 
   const addEmailField = () => {
